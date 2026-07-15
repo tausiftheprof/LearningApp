@@ -1,0 +1,42 @@
+name: CI
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+
+jobs:
+  quality-gates:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        run: npm ci --no-audit --no-fund
+
+      - name: Typecheck (strict TS, all workspaces)
+        run: npm run typecheck
+
+      - name: Unit tests (@littlehands/core)
+        run: npm test
+
+      - name: Dependency audit (fail on high/critical)
+        run: npm audit --audit-level=high
+
+      - name: Secret scan
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Child-safety manifest audit
+        # No location/contacts/camera/microphone/AD_ID may ever enter the app
+        # config (docs/06 rows 9-10, docs/07 data inventory "not collected").
+        run: |
+          ! grep -R -n -E "ACCESS_(FINE|COARSE)_LOCATION|READ_CONTACTS|RECORD_AUDIO|permission.CAMERA|AD_ID" \
+            apps/mobile/app.json --include='*.json' \
+            | grep -v blockedPermissions

@@ -1,0 +1,113 @@
+openapi: 3.1.0
+info:
+  title: Little Hands Content & CMS API (Phase 2)
+  version: 0.1.0
+  description: >
+    Content-delivery endpoints (used by the mobile app; unauthenticated, read-only,
+    no personal data in either direction) and CMS workflow endpoints (staff only,
+    SSO+MFA, RBAC). The MVP mobile app functions fully without this service
+    (bundled starter pack). No endpoint accepts child personal information.
+servers:
+  - url: https://content.littlehands.example.au/v1
+    description: Production (AU region). Placeholder domain — not a real service.
+tags: [content, cms]
+paths:
+  /manifest:
+    get:
+      tags: [content]
+      summary: List published content packs (id, version, hash, size, locales, minAppVersion)
+      parameters:
+        - { name: locale, in: query, schema: { type: string, example: en-AU } }
+        - { name: appVersion, in: query, required: true, schema: { type: string } }
+      responses:
+        "200":
+          description: Published pack index
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Manifest" }
+  /packs/{packId}/{version}:
+    get:
+      tags: [content]
+      summary: Download a signed content-pack archive (zip)
+      parameters:
+        - { name: packId, in: path, required: true, schema: { type: string } }
+        - { name: version, in: path, required: true, schema: { type: string } }
+      responses:
+        "200": { description: Pack archive, content: { application/zip: {} } }
+        "404": { description: Unknown or unpublished pack }
+  /revocations:
+    get:
+      tags: [content]
+      summary: List revoked pack/activity ids (rapid unpublish; app checks on parent-area entry)
+      responses:
+        "200":
+          description: Revocation list
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [revokedPacks, revokedActivities, generatedAt]
+                properties:
+                  revokedPacks: { type: array, items: { type: string } }
+                  revokedActivities: { type: array, items: { type: string } }
+                  generatedAt: { type: string, format: date-time }
+  /cms/activities:
+    post:
+      tags: [cms]
+      security: [{ staffAuth: [author] }]
+      summary: Create draft activity (metadata + asset upload refs)
+      responses: { "201": { description: Draft created } }
+  /cms/activities/{id}/transition:
+    post:
+      tags: [cms]
+      security: [{ staffAuth: [reviewer, approver, publisher] }]
+      summary: >
+        Move an activity through the workflow: draft -> in_review -> approved ->
+        scheduled/published -> unpublished. Server enforces role-per-transition,
+        mandatory review checklists (editorial, child-safety, accessibility,
+        cultural) and writes an immutable audit record.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [action]
+              properties:
+                action: { type: string, enum: [submit_review, approve, reject, publish, schedule, unpublish, rollback] }
+                note: { type: string }
+                scheduleAt: { type: string, format: date-time }
+      responses:
+        "200": { description: Transitioned }
+        "403": { description: Role not permitted for this transition }
+        "422": { description: Required review checklist incomplete }
+  /cms/audit:
+    get:
+      tags: [cms]
+      security: [{ staffAuth: [admin] }]
+      summary: Query immutable audit log (who, what, when, prior state)
+      responses: { "200": { description: Audit entries } }
+components:
+  securitySchemes:
+    staffAuth:
+      type: openIdConnect
+      openIdConnectUrl: https://sso.littlehands.example.au/.well-known/openid-configuration
+  schemas:
+    Manifest:
+      type: object
+      required: [formatVersion, packs, generatedAt]
+      properties:
+        formatVersion: { type: integer }
+        generatedAt: { type: string, format: date-time }
+        packs:
+          type: array
+          items:
+            type: object
+            required: [packId, version, sha256, sizeBytes, locales, minAppVersion]
+            properties:
+              packId: { type: string }
+              version: { type: string }
+              sha256: { type: string }
+              sizeBytes: { type: integer }
+              locales: { type: array, items: { type: string } }
+              minAppVersion: { type: string }
+              entitlement: { type: string, enum: [free, full_library] }

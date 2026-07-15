@@ -1,0 +1,18 @@
+{
+  "name": "littlehands-monorepo",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Little Hands - children's fine-motor-skills learning app (Android/iOS). Local-first, ad-free, child-safe by design.",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "test": "npm run test --workspace=@littlehands/core",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

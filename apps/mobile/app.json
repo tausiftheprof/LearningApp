@@ -1,0 +1,33 @@
+{
+  "expo": {
+    "name": "Little Hands",
+    "slug": "little-hands",
+    "version": "0.1.0",
+    "orientation": "default",
+    "userInterfaceStyle": "light",
+    "assetBundlePatterns": ["assets/**/*"],
+    "ios": {
+      "bundleIdentifier": "au.example.littlehands",
+      "supportsTablet": true,
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    },
+    "android": {
+      "package": "au.example.littlehands",
+      "blockedPermissions": [
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.READ_CONTACTS",
+        "com.google.android.gms.permission.AD_ID"
+      ]
+    },
+    "extra": {
+      "childSafety": {
+        "note": "No analytics, advertising, crash-reporting or social SDKs may be added without the assessment in docs/07 section 7.7."
+      }
+    }
+  }
+}
