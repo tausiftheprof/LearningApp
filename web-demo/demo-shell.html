@@ -200,6 +200,7 @@
   .picker-grid .big-tile { min-height: clamp(84px, 10vw, 108px); gap: 6px; padding: 10px 8px; }
   .picker-label { font-size: clamp(13px, 1.9vw, 18px); white-space: normal; line-height: 1.15; max-width: 20ch; }
   .picker-grid .tile-illo .lg-img, .picker-grid .tile-illo svg { width: clamp(38px, 5.4vw, 58px) !important; height: clamp(38px, 5.4vw, 58px) !important; }
+  .glyph-big { font-size: clamp(36px, 5.6vw, 60px); font-weight: 800; color: var(--tile-ink, #4A3B32); letter-spacing: 0.06em; line-height: 1; }
   #app:not(.parent-mode) .instruction-bar { box-shadow: 0 3px 8px rgba(69, 61, 91, 0.08); }
   #app:not(.parent-mode) .play-stage { border-radius: 22px; box-shadow: 0 6px 14px rgba(69, 61, 91, 0.08); }
   #app:not(.parent-mode) .icon-btn { box-shadow: 0 3px 8px rgba(69, 61, 91, 0.12); }
@@ -798,10 +799,17 @@ function renderPicker(category) {
     else if (/^sketch-/.test(a.id)) imgName = imageNameFromRef(a.steps?.[0]?.prompt || '');
     else if (a.type === 'colouring') imgName = (/^colour-([a-z]+)/.exec(a.id) || [])[1] || null;
     if (!imgName || !IMAGES[imgName]) imgName = th.tileImages?.[catIndex[a.category] ?? 0] ?? null;
-    const iconHtml = imgName && IMAGES[imgName] && !highContrast()
-      ? `<span class="tile-illo" aria-hidden="true">${imgHtml(imgName, 52)}</span>`
-      : `<span class="emoji">${emojiFor[a.category]}</span>`;
-    const tile = el(`<button class="big-tile" style="background:${tiles()[i % tiles().length]}">${iconHtml}<span class="label picker-label">${a.title}</span></button>`);
+    // Letter/number tracing tiles show just the big glyph pair, no icon or
+    // "Letter" prefix (owner direction): "A a", "B b", ... "9".
+    const letterM = /^trace-letter-(.)$/.exec(a.id);
+    const numberM = /^trace-number-(.)$/.exec(a.id);
+    const glyph = letterM ? `${letterM[1].toUpperCase()} ${letterM[1]}` : numberM ? numberM[1] : null;
+    const inner = glyph
+      ? `<span class="glyph-big" aria-hidden="true">${glyph}</span>`
+      : (imgName && IMAGES[imgName] && !highContrast()
+        ? `<span class="tile-illo" aria-hidden="true">${imgHtml(imgName, 52)}</span>`
+        : `<span class="emoji">${emojiFor[a.category]}</span>`) + `<span class="label picker-label">${a.title}</span>`;
+    const tile = el(`<button class="big-tile" aria-label="${a.title}" style="background:${tiles()[i % tiles().length]}">${inner}</button>`);
     tile.onclick = () => { speak(a.title); if (guardScreenTime()) navigate({ name: 'activity', activity: a, from: 'picker' }); };
     grid.append(tile);
   });

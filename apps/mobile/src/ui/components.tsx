@@ -16,8 +16,10 @@ export function BigTile(props: {
   onPress: () => void;
   /** Approved home design: small line under the label, e.g. "Trace and learn". */
   subtitle?: string;
+  /** Letter/number tracing tiles: show just this big glyph pair ("A a"). */
+  glyph?: string;
 }): React.JSX.Element {
-  const { label, emoji, colour, theme, onPress, subtitle } = props;
+  const { label, emoji, colour, theme, onPress, subtitle, glyph } = props;
   return (
     <Pressable
       accessibilityRole="button"
@@ -34,13 +36,21 @@ export function BigTile(props: {
         },
       ]}
     >
-      <View style={[styles.tileMedallion, { backgroundColor: theme.surface }]} accessibilityElementsHidden>
-        <Text style={styles.tileEmoji}>{emoji}</Text>
-      </View>
-      <Text style={[styles.tileLabel, { color: theme.textOnTile }]}>{label}</Text>
-      {subtitle ? (
-        <Text style={[styles.tileSubtitle, { color: theme.textOnTile }]}>{subtitle}</Text>
-      ) : null}
+      {glyph ? (
+        <Text style={[styles.tileGlyph, { color: theme.textOnTile }]} accessibilityElementsHidden>
+          {glyph}
+        </Text>
+      ) : (
+        <>
+          <View style={[styles.tileMedallion, { backgroundColor: theme.surface }]} accessibilityElementsHidden>
+            <Text style={styles.tileEmoji}>{emoji}</Text>
+          </View>
+          <Text style={[styles.tileLabel, { color: theme.textOnTile }]}>{label}</Text>
+          {subtitle ? (
+            <Text style={[styles.tileSubtitle, { color: theme.textOnTile }]}>{subtitle}</Text>
+          ) : null}
+        </>
+      )}
     </Pressable>
   );
 }
@@ -162,6 +172,7 @@ const styles = StyleSheet.create({
   tileEmoji: { fontSize: 38 },
   tileLabel: { fontSize: 20, fontWeight: '700', marginTop: 6 },
   tileSubtitle: { fontSize: 12, opacity: 0.75, marginTop: 2, textAlign: 'center' },
+  tileGlyph: { fontSize: 46, fontWeight: '800', letterSpacing: 2 },
   instructionBar: {
     flexDirection: 'row',
     alignItems: 'center',

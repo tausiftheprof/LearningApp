@@ -34,6 +34,14 @@ export function ActivityPickerScreen(props: { category: ActivityCategory }): Rea
   const emojiFor = (a: Activity): string =>
     ({ drawing: '🖍️', colouring: '🎨', puzzles: '🧩', tracing: '✏️', toddler: '🐣', preschool: '🦘', logic: '💡' })[a.category];
 
+  // Letter/number tracing tiles show just the big glyph pair (owner direction).
+  function glyphFor(id: string): string | undefined {
+    const letter = /^trace-letter-(.)$/.exec(id);
+    if (letter) return `${letter[1]!.toUpperCase()} ${letter[1]!}`;
+    const num = /^trace-number-(.)$/.exec(id);
+    return num ? num[1]! : undefined;
+  }
+
   return (
     <View style={styles.root}>
       <View style={styles.topBar}>
@@ -46,6 +54,7 @@ export function ActivityPickerScreen(props: { category: ActivityCategory }): Rea
             <BigTile
               label={activity.title}
               emoji={emojiFor(activity)}
+              glyph={glyphFor(activity.id) ?? ''}
               colour={theme.tileColours[i % theme.tileColours.length]!}
               theme={theme}
               onPress={() => navigate({ name: 'activity', activity })}
