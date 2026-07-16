@@ -58,5 +58,5 @@ Operational security: least-privilege access to stores/CMS; MFA everywhere; admi
 | R-05 | Content production (20 pages, 30 games, audio) slips | H×M | CMS-independent pack format; illustrative placeholders clearly labelled; content sprint in phase 2 | M |
 | R-06 | Subscription flow breaches ACL/UTP timing | M×H | docs/11 checklist; legal review pre-launch; 1 Jul 2027 UTP readiness review | L |
 | R-07 | Scope creep into high-risk features | M×H | R-20 governance rule | L |
-| R-08 | Single-dev bus factor on core engine | M×M | Docs + tests in `@littlehands/core`; pairing in phase 2 | L |
+| R-08 | Single-dev bus factor on core engine | M×M | Docs + tests in `@littlegrip/core`; pairing in phase 2 | L |
 | R-20 | High-risk feature (UGC/AI/multiplayer/sharing) built without assessment | L×H | Mandatory separate safety/privacy/moderation assessment gate; enforced in delivery plan | L |

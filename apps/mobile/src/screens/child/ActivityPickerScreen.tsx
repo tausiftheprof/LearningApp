@@ -1,7 +1,7 @@
 import React from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
-import type { Activity, ActivityCategory } from '@littlehands/core';
-import { defaultAccessibilitySettings, recommendActivities, ACTIVITY_CATEGORIES } from '@littlehands/core';
+import type { Activity, ActivityCategory } from '@littlegrip/core';
+import { defaultAccessibilitySettings, recommendActivities, ACTIVITY_CATEGORIES } from '@littlegrip/core';
 import { useAppStore } from '../../state/appStore';
 import { childTheme } from '../../ui/theme';
 import { BigTile, HoldToHomeButton } from '../../ui/components';

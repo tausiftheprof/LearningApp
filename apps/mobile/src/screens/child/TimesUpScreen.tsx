@@ -1,6 +1,6 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { defaultAccessibilitySettings, pickFeedback } from '@littlehands/core';
+import { defaultAccessibilitySettings, pickFeedback } from '@littlegrip/core';
 import { useAppStore } from '../../state/appStore';
 import { childTheme } from '../../ui/theme';
 import { PrimaryButton } from '../../ui/components';

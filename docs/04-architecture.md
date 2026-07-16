@@ -7,7 +7,7 @@
 | Mobile app | **React Native (Expo SDK 53+, TypeScript strict)** | One strongly-typed codebase for Android + iOS (PRD §21); first-class accessibility APIs; RN-Web path for the future web/Chromebook expansion; EAS build/signing pipeline; huge hiring pool. |
 | Drawing/canvas | **@shopify/react-native-skia** | GPU-accelerated Skia canvas gives the <16 ms stroke latency the PRD demands (§22, §27); powers production drawing apps; supports replay by re-rendering the stroke model. |
 | Local data | **SQLite (expo-sqlite, WAL mode) + typed repository layer** | Reliable, transactional, offline-first (§17, §22); WAL survives interruption; simple encrypted-at-rest option via SQLCipher build flag. Artwork = files (vector JSON + PNG thumbnail) in app sandbox. |
-| Domain logic | **`@littlehands/core` — pure TypeScript package, zero RN dependencies** | Tracing engine, rewards, screen-time, recommendation, parental gate, content-pack schema all unit-testable in Node CI and reusable by the future web app and CMS validator. |
+| Domain logic | **`@littlegrip/core` — pure TypeScript package, zero RN dependencies** | Tracing engine, rewards, screen-time, recommendation, parental gate, content-pack schema all unit-testable in Node CI and reusable by the future web app and CMS validator. |
 | Validation | **zod** | Runtime validation of content packs and stored records; schema = single source of truth. |
 | State | **zustand** (UI state) + repositories (persistent state) | Minimal, typed, testable. |
 | Backend (phase 2) | **Fastify (Node/TS) + PostgreSQL** on Australian-region hosting (e.g. AWS ap-southeast-2 / Sydney) | Only needed for CMS + content delivery + (later) parent accounts; same language as app team; AU data residency simplifies APP 8 (overseas disclosure). |
@@ -25,7 +25,7 @@
 │  Child space (RN screens)      Parent space (gated)        │
 │      │  activity runtime            │ settings/reports     │
 │  ┌───▼─────────────────────────────▼───┐                   │
-│  │        @littlehands/core (TS)       │                   │
+│  │        @littlegrip/core (TS)       │                   │
 │  │ tracing · puzzles · rewards · plan  │                   │
 │  │ recommendation · gate · feedback    │                   │
 │  │ progress · settings · content-pack  │                   │

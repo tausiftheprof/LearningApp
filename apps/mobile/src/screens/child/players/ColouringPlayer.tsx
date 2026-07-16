@@ -1,8 +1,8 @@
 import React, { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Canvas, Path, Skia } from '@shopify/react-native-skia';
-import type { ColouringActivity } from '@littlehands/core';
-import { PALETTES } from '@littlehands/core';
+import type { ColouringActivity } from '@littlegrip/core';
+import { PALETTES } from '@littlegrip/core';
 import type { Theme } from '../../../ui/theme';
 import { CompletionBanner } from '../ActivityPlayerScreen';
 

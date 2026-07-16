@@ -2,7 +2,7 @@
 
 ## 8.1 Parent privacy notice (plain English)
 
-**Little Hands — Privacy Notice (draft vX, not yet legally reviewed)**
+**Little Grip — Privacy Notice (draft vX, not yet legally reviewed)**
 
 **The short version:** your child's play stays on your device. We don't ask for your child's name (a nickname is fine), we don't collect emails for children, we show no ads, and there's no chat. You can delete everything, any time, in Parent Settings.
 

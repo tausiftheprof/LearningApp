@@ -1,6 +1,6 @@
 # 3. Product & UX Design
 
-Working title: **Little Hands**. Child users are pre-readers or early readers; every child-facing design decision assumes **zero reading ability** at Level 1.
+Working title: **Little Grip**. Child users are pre-readers or early readers; every child-facing design decision assumes **zero reading ability** at Level 1.
 
 ---
 

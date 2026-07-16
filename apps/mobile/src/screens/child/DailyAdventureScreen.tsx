@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { ACTIVITY_CATEGORIES, buildDailyPlan, defaultAccessibilitySettings } from '@littlehands/core';
+import { ACTIVITY_CATEGORIES, buildDailyPlan, defaultAccessibilitySettings } from '@littlegrip/core';
 import { useAppStore } from '../../state/appStore';
 import { childTheme } from '../../ui/theme';
 import { HoldToHomeButton, PrimaryButton } from '../../ui/components';

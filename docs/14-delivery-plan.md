@@ -4,7 +4,7 @@
 
 | Phase | Weeks | Deliverables (milestone gate) | Depends on |
 |---|---|---|---|
-| 0 — Foundations *(this repo)* | 1–2 | Docs 01–14; monorepo; `@littlehands/core` domain engines + tests; mobile scaffold; CI gates | PRD |
+| 0 — Foundations *(this repo)* | 1–2 | Docs 01–14; monorepo; `@littlegrip/core` domain engines + tests; mobile scaffold; CI gates | PRD |
 | 1 — Child core | 3–8 | Drawing, tracing, colouring players on-device at perf budget; design system; onboarding + gate; local storage/migrations; starter pack v1 (illustrative) | 0; visual identity decision (OD-1) |
 | 2 — Full MVP + content | 9–16 | Puzzles + 30 games via templates; Daily Adventure; rewards; parent dashboard complete (reports, deletion, screen time); real content production (20 pages, audio recordings) through interim review workflow; CMS service + publishing pipeline; subscription integration | 1; content budget; price decision (OD-2) |
 | 3 — Hardening & compliance | 17–20 | Device-lab perf/offline/E2E suites; accessibility audit + child usability rounds; pen test; PIA/legal sign-offs; store assets, privacy labels | 2; legal engagement |

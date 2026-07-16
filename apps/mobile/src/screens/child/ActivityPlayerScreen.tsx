@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useRef } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import type { Activity } from '@littlehands/core';
-import { defaultAccessibilitySettings, pickFeedback } from '@littlehands/core';
+import type { Activity } from '@littlegrip/core';
+import { defaultAccessibilitySettings, pickFeedback } from '@littlegrip/core';
 import { useAppStore } from '../../state/appStore';
 import { childTheme } from '../../ui/theme';
 import { HoldToHomeButton, InstructionBar } from '../../ui/components';

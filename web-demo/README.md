@@ -1,7 +1,7 @@
-# Web demo of the Little Hands MVP
+# Web demo of the Little Grip MVP
 
 `index.html` is a self-contained, static demo of the app's MVP flows, driven by the **real
-`@littlehands/core` engines** (tracing corridors, puzzle snapping, capped rewards, screen-time
+`@littlegrip/core` engines** (tracing corridors, puzzle snapping, capped rewards, screen-time
 ledger, parental gate, progress reports, deletion) bundled inline. Emoji art and browser speech
 synthesis are illustrative stand-ins for the production illustrations and recorded voice.
 

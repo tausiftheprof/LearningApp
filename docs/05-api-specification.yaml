@@ -1,6 +1,6 @@
 openapi: 3.1.0
 info:
-  title: Little Hands Content & CMS API (Phase 2)
+  title: Little Grip Content & CMS API (Phase 2)
   version: 0.1.0
   description: >
     Content-delivery endpoints (used by the mobile app; unauthenticated, read-only,
@@ -8,7 +8,7 @@ info:
     SSO+MFA, RBAC). The MVP mobile app functions fully without this service
     (bundled starter pack). No endpoint accepts child personal information.
 servers:
-  - url: https://content.littlehands.example.au/v1
+  - url: https://content.littlegrip.example.au/v1
     description: Production (AU region). Placeholder domain — not a real service.
 tags: [content, cms]
 paths:
@@ -90,7 +90,7 @@ components:
   securitySchemes:
     staffAuth:
       type: openIdConnect
-      openIdConnectUrl: https://sso.littlehands.example.au/.well-known/openid-configuration
+      openIdConnectUrl: https://sso.littlegrip.example.au/.well-known/openid-configuration
   schemas:
     Manifest:
       type: object

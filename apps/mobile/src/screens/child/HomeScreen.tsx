@@ -1,7 +1,7 @@
 import React from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { dayKeyFrom, canStartNewActivity, defaultAccessibilitySettings } from '@littlehands/core';
-import type { ActivityCategory } from '@littlehands/core';
+import { dayKeyFrom, canStartNewActivity, defaultAccessibilitySettings } from '@littlegrip/core';
+import type { ActivityCategory } from '@littlegrip/core';
 import { useAppStore } from '../../state/appStore';
 import { childTheme } from '../../ui/theme';
 import { BigTile } from '../../ui/components';

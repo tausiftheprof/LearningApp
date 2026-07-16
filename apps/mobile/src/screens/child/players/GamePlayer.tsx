@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import type { GameActivity } from '@littlehands/core';
-import { pickFeedback } from '@littlehands/core';
+import type { GameActivity } from '@littlegrip/core';
+import { pickFeedback } from '@littlegrip/core';
 import type { Theme } from '../../../ui/theme';
 import { CompletionBanner } from '../ActivityPlayerScreen';
 import { audioService } from '../../../services/audio';

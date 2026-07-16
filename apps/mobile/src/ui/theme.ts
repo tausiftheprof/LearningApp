@@ -1,4 +1,4 @@
-import type { AccessibilitySettings } from '@littlehands/core';
+import type { AccessibilitySettings } from '@littlegrip/core';
 
 /**
  * Design system tokens (docs/03 section 3.3).

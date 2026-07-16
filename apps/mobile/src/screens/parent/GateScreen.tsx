@@ -6,7 +6,7 @@ import { parentTheme } from '../../ui/theme';
 /**
  * Parental gate (FR-017, docs/03 section 3.4). Word-form arithmetic answered
  * on a keypad; 3 misses -> 60s calm pause; unlock navigates to the parent
- * dashboard. Core state machine: @littlehands/core parentalGate.
+ * dashboard. Core state machine: @littlegrip/core parentalGate.
  */
 export function GateScreen(): React.JSX.Element {
   const { gate, gateBegin, gateSubmit, navigate } = useAppStore();

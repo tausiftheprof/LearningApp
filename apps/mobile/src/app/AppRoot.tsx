@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { AppState, SafeAreaView, StyleSheet, Text, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { defaultAccessibilitySettings } from '@littlehands/core';
+import { defaultAccessibilitySettings } from '@littlegrip/core';
 import { useAppStore } from '../state/appStore';
 import { childTheme } from '../ui/theme';
 import { OnboardingScreen } from '../screens/OnboardingScreen';

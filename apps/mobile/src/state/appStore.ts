@@ -5,7 +5,7 @@ import type {
   GateState,
   RewardsState,
   ScreenTimeState,
-} from '@littlehands/core';
+} from '@littlegrip/core';
 import {
   applyRewardEvent,
   beginChallenge,
@@ -20,7 +20,7 @@ import {
   submitAnswer,
   touchSession,
   type RewardEvent,
-} from '@littlehands/core';
+} from '@littlegrip/core';
 import { getRepositories } from '../storage/db';
 
 /**

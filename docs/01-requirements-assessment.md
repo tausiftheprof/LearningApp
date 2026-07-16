@@ -1,6 +1,17 @@
 # 1. Requirements Assessment
 
-**Product:** Kids Fine Motor Skills Learning App ("Little Hands" — working title)
+> **Scope revision — 16 July 2026 (product owner direction):** the owner has superseded the
+> recommended MVP boundary (§1.4) and directed development of the **full product scope** per the
+> updated PRD, which also fixes the product name (**"Little Grip, big learning adventures"**) and
+> requires a **soft female voice** for all spoken output. Additional owner directions: original
+> image-based artwork (dolphins, whales, unicorns, dinosaurs and similar child-friendly subjects;
+> no third-party imagery), a single replaceable image folder (`assets/images/`), and verified
+> Home-button behaviour on every screen. Items requiring external infrastructure (store billing
+> accounts, CMS hosting, cloud sync) remain implementation-ready designs pending those services —
+> tracked in the RTM. Assumption A-06 (freemium boundary) and §1.4 are superseded accordingly;
+> A-12 is amended: instruction audio is recorded/generated with a **soft female voice**.
+
+**Product:** Kids Fine Motor Skills Learning App — **Little Grip, big learning adventures**
 **Source of truth:** Product Requirements Document (Requirements.docx, §1–§30)
 **Date:** 15 July 2026
 **Status:** Draft for product-owner review. Compliance conclusions require review by qualified Australian legal counsel.

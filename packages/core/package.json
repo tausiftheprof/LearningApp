@@ -1,8 +1,8 @@
 {
-  "name": "@littlehands/core",
+  "name": "@littlegrip/core",
   "version": "0.1.0",
   "private": true,
-  "description": "Platform-independent domain logic for Little Hands: tracing engine, puzzles, rewards, screen time, recommendation, parental gate, content-pack schema. No React Native dependencies - runs in Node, mobile and (future) web.",
+  "description": "Platform-independent domain logic for Little Grip: tracing engine, puzzles, rewards, screen time, recommendation, parental gate, content-pack schema. No React Native dependencies - runs in Node, mobile and (future) web.",
   "main": "src/index.ts",
   "types": "src/index.ts",
   "scripts": {

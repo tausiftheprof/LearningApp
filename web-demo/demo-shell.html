@@ -1,4 +1,4 @@
-<title>Little Hands — working MVP demo</title>
+<title>Little Grip — full product demo</title>
 <style>
   :root {
     --chrome-bg: #efe9e2;
@@ -237,9 +237,8 @@
 </style>
 
 <header>
-  <h1>Little Hands — working MVP demo</h1>
-  <p>The mobile app’s screens, running in a browser on the <strong>same engine code</strong> that ships in the repo:
-  the bundle below is <code>@littlehands/core</code> compiled as-is — real tracing corridors, puzzle snapping, reward caps, screen-time ledger and parental gate.</p>
+  <h1>Little Grip <span style="font-weight:400">— big learning adventures</span></h1>
+  <p>Full-scope product demo on the repo's real <code>@littlegrip/core</code> engines: tracing corridors, image jigsaws, fifteen game types, capped rewards, screen-time ledger, parental gate and multi-child profiles. Artwork: <code>assets/images/</code> · Voice: soft female (synthesised stand-in for the PRD's recorded voice).</p>
 </header>
 
 <div class="status-strip" aria-live="polite">
@@ -250,36 +249,41 @@
 <div class="device"><div id="app"></div></div>
 
 <footer>
-  Placeholder art (emoji) and silent audio are stand-ins labelled illustrative in the repo — production illustrations and recorded voice arrive via the CMS workflow (docs/12).
-  Spoken labels here use your browser’s speech synthesis as a stand-in for the recorded child-friendly voice.
-  Data persists in this page’s local storage only; <em>Parent&nbsp;→&nbsp;Privacy&nbsp;&amp;&nbsp;Data&nbsp;→&nbsp;Delete</em> runs the app’s real one-shot deletion and verification path.
-  Tip: set the screen-time target to “1 minute (demo)” in Parent → Screen time to see the calm end-of-day flow.
+  Every picture comes from <code>assets/images/</code> — original artwork generated for this project; replace any .svg there (same filename) and rebuild to swap it in everywhere.
+  Voice uses your browser's speech synthesis tuned to a <strong>soft female voice</strong>, standing in for the production recordings specified in the PRD.
+  Data persists in this page's local storage only; <em>Parent → Privacy & Data → Delete</em> runs the real one-shot deletion and verification path.
+  Tip: “1 minute (demo)” in Parent → Screen time shows the calm end-of-day flow.
 </footer>
 
 <script>/*__CORE_BUNDLE__*/</script>
+<script>/*__IMAGES__*/</script>
 <script>
 'use strict';
-/* ============ Demo app driving @littlehands/core ============ */
+/* ============ Demo app driving @littlegrip/core ============ */
 
 const app = document.getElementById('app');
 const statusScreen = document.getElementById('statusScreen');
 const statusEngines = document.getElementById('statusEngines');
 
 /* ---------- persistence: localStorage-backed core repositories ---------- */
-const LS_KEY = 'littlehands-demo-v1';
+const LS_KEY = 'littlegrip-demo-v2';
 const repos = LH.inMemoryRepositories();
 
 function persistSoon() { clearTimeout(persistSoon.t); persistSoon.t = setTimeout(persist, 80); }
 async function persist() {
-  const profile = state.profile;
-  const snapshot = {
-    profile,
-    rewards: state.rewards,
-    screenTime: state.screenTime,
-    progress: profile ? await repos.progress.forProfile(profile.id) : [],
-    artwork: profile ? await repos.artwork.forProfile(profile.id) : [],
-  };
-  try { localStorage.setItem(LS_KEY, JSON.stringify(snapshot)); } catch (e) { /* storage full: demo keeps running in memory */ }
+  const profiles = await repos.profiles.getAll();
+  const byProfile = {};
+  for (const pr of profiles) {
+    byProfile[pr.id] = {
+      rewards: await repos.rewards.forProfile(pr.id),
+      screenTime: await repos.screenTime.forProfile(pr.id),
+      progress: await repos.progress.forProfile(pr.id),
+      artwork: await repos.artwork.forProfile(pr.id),
+    };
+  }
+  try {
+    localStorage.setItem(LS_KEY, JSON.stringify({ profiles, activeId: state.profile?.id ?? null, byProfile }));
+  } catch (e) { /* storage full: demo keeps running in memory */ }
 }
 
 /* ---------- state ---------- */
@@ -295,20 +299,69 @@ const state = {
   activityStartedAt: null,
 };
 
-const IMPLEMENTED_TEMPLATES = ['pop-bubbles', 'tap-target', 'match-pairs', 'memory-cards', 'counting', 'odd-one-out'];
+// Full product scope: every template defined by the content schema is playable.
+const IMPLEMENTED_TEMPLATES = [
+  'pop-bubbles', 'tap-target', 'match-pairs', 'memory-cards', 'counting', 'odd-one-out',
+  'drag-sort', 'shadow-match', 'feed-animal', 'reveal-wipe', 'stack-blocks', 'path-maze',
+  'sequence', 'pattern-complete', 'letter-match',
+];
 const playable = (a) => a.type !== 'game' || IMPLEMENTED_TEMPLATES.includes(a.template);
 
 const TILE_COLOURS = ['#F48FB1', '#81C784', '#64B5F6', '#FFB74D', '#BA68C8', '#4DB6AC', '#FF8A65', '#9575CD'];
 const HC_COLOURS = ['#0000CC', '#CC0000', '#006600', '#663300', '#330066', '#004466', '#660033', '#333300'];
 const tiles = () => (state.profile?.accessibility.highContrast ? HC_COLOURS : TILE_COLOURS);
 
+/* ---------- images: every picture comes from assets/images/ (see its README) ---------- */
+const IMAGES = window.LG_IMAGES || {};
+function img(name, sizePx) {
+  const holder = document.createElement('span');
+  holder.className = 'lg-img';
+  holder.setAttribute('role', 'img');
+  holder.setAttribute('aria-label', name);
+  holder.innerHTML = IMAGES[name] || IMAGES.star || '';
+  const s = holder.querySelector('svg');
+  if (s) { s.style.width = sizePx + 'px'; s.style.height = sizePx + 'px'; s.style.display = 'block'; }
+  return holder;
+}
+function imgHtml(name, sizePx, extraStyle = '') {
+  const raw = IMAGES[name] || IMAGES.star || '';
+  return `<span class="lg-img" role="img" aria-label="${name}" style="display:inline-block;width:${sizePx}px;height:${sizePx}px;${extraStyle}">${raw.replace('<svg ', `<svg style="width:${sizePx}px;height:${sizePx}px;display:block" `)}</span>`;
+}
+/** Image name for a jigsaw's pack-relative ref, e.g. images/dolphin.svg -> dolphin. */
+function imageNameFromRef(ref) {
+  const m = /images\/([a-z0-9-]+)\.svg$/i.exec(ref || '');
+  return m ? m[1] : 'star';
+}
+
+/* ---------- voice: soft female voice (PRD "Voice - Soft Female voice") ----------
+   The browser's speech synthesis stands in for the production recordings, which
+   are specified as a recorded soft female voice (docs/01 A-12). */
+let chosenVoice = null;
+function pickFemaleVoice() {
+  try {
+    const voices = speechSynthesis.getVoices();
+    if (!voices.length) return null;
+    const en = voices.filter((v) => /^en(-|_|$)/i.test(v.lang));
+    const pool = en.length ? en : voices;
+    const female = pool.find((v) =>
+      /female|woman|samantha|karen|catherine|zira|jenny|aria|natasha|moira|tessa|serena|martha|libby|olivia/i.test(v.name));
+    return female || pool.find((v) => /en-AU/i.test(v.lang)) || pool[0];
+  } catch (e) { return null; }
+}
+if ('speechSynthesis' in window) {
+  speechSynthesis.onvoiceschanged = () => { chosenVoice = pickFemaleVoice(); };
+  chosenVoice = pickFemaleVoice();
+}
 function speak(text) {
   if (!state.profile || state.profile.sound.voice === false) return;
   try {
     if (!('speechSynthesis' in window)) return;
     speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(text);
-    u.rate = 0.95; u.pitch = 1.15;
+    if (!chosenVoice) chosenVoice = pickFemaleVoice();
+    if (chosenVoice) u.voice = chosenVoice;
+    u.rate = 0.92;  // unhurried
+    u.pitch = 1.12; // soft, warm
     speechSynthesis.speak(u);
   } catch (e) { /* stand-in only */ }
 }
@@ -326,6 +379,16 @@ function celebrate() {
     app.appendChild(s);
     setTimeout(() => s.remove(), 2200);
   }
+}
+
+/* ---------- profile activation (multi-profile, FR-001/C-01 full scope) ---------- */
+async function activateProfile(profileId) {
+  const pr = await repos.profiles.get(profileId);
+  if (!pr) return;
+  state.profile = pr;
+  state.rewards = (await repos.rewards.forProfile(pr.id)) || LH.emptyRewardsState(todayKey());
+  state.screenTime = (await repos.screenTime.forProfile(pr.id)) || LH.emptyScreenTime(pr.dailyScreenTimeMinutes);
+  state.daily = null;
 }
 
 /* ---------- navigation ---------- */
@@ -433,7 +496,7 @@ function renderOnboarding(step = 'welcome', draft = { nickname: '', ageBand: '3-
   const wrap = el(`<div class="form-scroll"></div>`);
   if (step === 'welcome') {
     wrap.append(
-      el(`<h2>Welcome to Little Hands 🖐️</h2>`),
+      el(`<h2>Welcome to Little Grip 🖐️</h2>`),
       el(`<p>Playful drawing, tracing, puzzles and games that help little hands grow strong — for children aged 2 to 7.</p>`),
       el(`<p><em>For grown-ups: set-up takes under a minute. No account. No ads. No chat. Everything stays on this device.</em></p>`),
     );
@@ -857,6 +920,7 @@ function renderColouring(activity) {
 function renderPuzzle(activity) {
   setStatus('Puzzle — ' + activity.title, ['puzzles.PuzzleSession', 'puzzles.puzzleConfigFor']);
   const config = LH.puzzleConfigFor(state.profile?.difficulty ?? 1);
+  const imageName = imageNameFromRef(activity.image);
   const stage = el(`<div class="play-stage" aria-label="Puzzle board"></div>`);
   app.append(stage);
 
@@ -865,33 +929,47 @@ function renderPuzzle(activity) {
 
   function layout() {
     const r = stage.getBoundingClientRect();
-    const cell = Math.min(r.width / activity.cols, (r.height * 0.55) / activity.rows);
+    const cell = Math.min((r.width * 0.9) / activity.cols, (r.height * 0.55) / activity.rows);
     const originX = (r.width - cell * activity.cols) / 2;
     const slot = (row, col) => ({ x: originX + col * cell + cell / 2, y: 14 + row * cell + cell / 2 });
     pieces = [];
     let n = 0;
     for (let row = 0; row < activity.rows; row++) for (let col = 0; col < activity.cols; col++) {
-      const trayX = 30 + ((n * 97) % Math.max(97, r.width - 110));
-      const trayY = r.height * 0.66 + (n % 2) * (cell * 0.75);
-      pieces.push({ id: row + '-' + col, row, col, x: trayX, y: trayY, trayX, trayY, placed: false, colour: TILE_COLOURS[n % TILE_COLOURS.length], n: ++n });
+      const trayX = 40 + ((n * 111) % Math.max(111, r.width - 120));
+      const trayY = r.height * 0.68 + (n % 2) * (cell * 0.6);
+      pieces.push({ id: row + '-' + col, row, col, x: trayX, y: trayY, trayX, trayY, placed: false, n: ++n });
     }
     session = new LH.PuzzleSession(pieces.map((p) => ({ id: p.id, target: slot(p.row, p.col) })), config);
     slotFn = slot; cellSize = cell;
     paint();
   }
 
+  /** One jigsaw piece = a window onto the full image (assets/images/). */
+  function pieceHtml(p, cell) {
+    const w = cell * activity.cols, h = cell * activity.rows;
+    const inner = (IMAGES[imageName] || IMAGES.star).replace(
+      '<svg ',
+      `<svg preserveAspectRatio="none" style="width:${w}px;height:${h}px;position:absolute;left:${-p.col * cell}px;top:${-p.row * cell}px" `,
+    );
+    return `<div style="position:absolute;inset:0;overflow:hidden;border-radius:${p.placed ? 4 : 12}px">${inner}</div>`;
+  }
+
   function paint() {
     stage.innerHTML = '';
     const cell = cellSize;
+    // Faint full image behind the board: "background guidance" (PRD section 6.4).
+    const board = slotFn(0, 0);
+    const gw = cell * activity.cols, gh = cell * activity.rows;
+    const guideSvg = (IMAGES[imageName] || IMAGES.star).replace('<svg ', `<svg preserveAspectRatio="none" style="width:${gw}px;height:${gh}px;display:block" `);
+    stage.append(el(`<div style="position:absolute;left:${board.x - cell / 2}px;top:${board.y - cell / 2}px;opacity:0.22;pointer-events:none">${guideSvg}</div>`));
     for (const p of pieces) {
-      const s = slotFn(p.row, p.col);
-      stage.append(el(`<div style="position:absolute;width:${cell - 8}px;height:${cell - 8}px;left:${s.x - cell / 2 + 4}px;top:${s.y - cell / 2 + 4}px;border:${hintFor === p.id ? '4px solid #FF8A65' : '2px dashed #D7CCC8'};border-radius:8px;background:#FAF3EC"></div>`));
+      const sl = slotFn(p.row, p.col);
+      const hinted = hintFor === p.id;
+      stage.append(el(`<div style="position:absolute;width:${cell - 6}px;height:${cell - 6}px;left:${sl.x - cell / 2 + 3}px;top:${sl.y - cell / 2 + 3}px;border:${hinted ? '4px solid #FF8A65' : '2px dashed #D7CCC8'};border-radius:8px"></div>`));
     }
     for (const p of pieces) {
-      const d = el(`<div role="img" aria-label="${p.placed ? 'Placed piece' : 'Puzzle piece ' + p.n}" style="position:absolute;width:${cell - 12}px;height:${cell - 12}px;left:${p.x - cell / 2 + 6}px;top:${p.y - cell / 2 + 6}px;background:${p.colour};border-radius:${p.placed ? 6 : 14}px;display:grid;place-items:center;color:#fff;font-weight:800;font-size:20px;cursor:${p.placed ? 'default' : 'grab'};box-shadow:0 3px 8px rgba(74,59,50,0.25)">${p.n}</div>`);
-      if (!p.placed) {
-        d.addEventListener('pointerdown', (e) => { dragging = p; d.setPointerCapture(e.pointerId); });
-      }
+      const d = el(`<div role="img" aria-label="${p.placed ? 'Placed piece' : 'Puzzle piece ' + p.n}" style="position:absolute;width:${cell - 8}px;height:${cell - 8}px;left:${p.x - cell / 2 + 4}px;top:${p.y - cell / 2 + 4}px;cursor:${p.placed ? 'default' : 'grab'};box-shadow:${p.placed ? 'none' : '0 3px 8px rgba(74,59,50,0.3)'};background:#FFFDF9;border-radius:${p.placed ? 4 : 12}px">${pieceHtml(p, cell - 8)}</div>`);
+      if (!p.placed) d.addEventListener('pointerdown', (e) => { dragging = p; d.setPointerCapture(e.pointerId); });
       stage.append(d);
     }
     if (done) stage.append(completionBanner(onDone));
@@ -909,8 +987,8 @@ function renderPuzzle(activity) {
     const result = session.drop(p.id, { x: p.x, y: p.y });
     if (result.kind === 'snapped') {
       hintFor = null;
-      const s = slotFn(p.row, p.col);
-      p.x = s.x; p.y = s.y; p.placed = true;
+      const sl = slotFn(p.row, p.col);
+      p.x = sl.x; p.y = sl.y; p.placed = true;
       speak(LH.pickFeedback('completed'));
       if (result.puzzleComplete) {
         done = true;
@@ -927,33 +1005,438 @@ function renderPuzzle(activity) {
   requestAnimationFrame(layout);
 }
 
-/* ---------- game templates ---------- */
+/* ---------- game templates: all 15 schema templates (FR-008..FR-010) ---------- */
+
+const EMOJI_FALLBACK = { nose: '👃', ears: '👂', hands: '🙌', happy: '🙂', sad: '😢', red: '🟥', blue: '🟦' };
+function itemHtml(name, size) {
+  return IMAGES[name] ? imgHtml(name, size) : `<span style="font-size:${size * 0.8}px;line-height:${size}px">${EMOJI_FALLBACK[name] || '⭐'}</span>`;
+}
+
+/** Generic pointer-drag onto drop zones. zones: [{el, onDrop(itemEl)->accepted}] */
+function makeDraggable(stage, itemEl, getZones, onMiss) {
+  let dragging = false;
+  itemEl.style.touchAction = 'none';
+  itemEl.style.cursor = 'grab';
+  itemEl.addEventListener('pointerdown', (e) => { dragging = true; itemEl.setPointerCapture(e.pointerId); itemEl.style.zIndex = 30; });
+  itemEl.addEventListener('pointermove', (e) => {
+    if (!dragging) return;
+    const r = stage.getBoundingClientRect();
+    itemEl.style.left = e.clientX - r.left - itemEl.offsetWidth / 2 + 'px';
+    itemEl.style.top = e.clientY - r.top - itemEl.offsetHeight / 2 + 'px';
+  });
+  itemEl.addEventListener('pointerup', (e) => {
+    if (!dragging) return;
+    dragging = false; itemEl.style.zIndex = 1;
+    const hit = getZones().find((z) => {
+      const zr = z.el.getBoundingClientRect();
+      return e.clientX >= zr.left && e.clientX <= zr.right && e.clientY >= zr.top && e.clientY <= zr.bottom;
+    });
+    if (!hit || !hit.onDrop(itemEl)) {
+      itemEl.style.left = itemEl.dataset.homeX; itemEl.style.top = itemEl.dataset.homeY;
+      if (onMiss) onMiss();
+    }
+  });
+}
+function placeItem(stage, name, size, x, y, label) {
+  const it = el(`<div role="img" aria-label="${label || name}" style="position:absolute;left:${x}px;top:${y}px;width:${size}px;height:${size}px">${itemHtml(name, size)}</div>`);
+  it.dataset.homeX = x + 'px'; it.dataset.homeY = y + 'px'; it.dataset.name = name;
+  stage.append(it);
+  return it;
+}
+
 function renderGame(activity) {
   setStatus('Game — ' + activity.title, ['game template: ' + activity.template, 'feedback registry']);
   const stage = el(`<div class="play-stage" style="background:#FFF8F0"></div>`);
   const note = el(`<div class="encourage" role="status"></div>`);
   app.append(stage, note);
-  let attempts = 1;
-  const finish = () => { completeActivity(activity, { attempts }); stage.append(completionBanner(onDone)); };
+  let attempts = 1, finished = false;
+  const params = activity.params || {};
+  const finish = () => {
+    if (finished) return;
+    finished = true;
+    completeActivity(activity, { attempts });
+    stage.append(completionBanner(onDone));
+  };
   const say = (m) => { note.textContent = m; speak(m); };
+  const miss = (moment = 'try-again') => { attempts++; say(LH.pickFeedback(moment)); };
 
-  const t = activity.template;
-  if (t === 'pop-bubbles' || t === 'tap-target') {
-    let left = 8;
-    for (let i = 0; i < 8; i++) {
-      const b = el(`<button aria-label="Bubble" style="position:absolute;left:${8 + (i % 4) * 23}%;top:${14 + Math.floor(i / 4) * 38}%;width:76px;height:76px;border:none;background:none;font-size:54px;cursor:pointer">🫧</button>`);
-      b.onclick = () => { b.remove(); if (--left === 0) finish(); };
-      stage.append(b);
-    }
-  } else if (t === 'match-pairs' || t === 'memory-cards') {
-    const faceUp = t === 'match-pairs';
-    const EMOJI = ['🐨', '🦘', '🐸', '🦋'];
-    const deck = [...EMOJI, ...EMOJI].map((e, i) => ({ id: i, e })).sort((a, b) => ((a.id * 7) % 8) - ((b.id * 7) % 8));
+  const T = {
+    'pop-bubbles': () => {
+      let left = 8;
+      for (let i = 0; i < 8; i++) {
+        const b = el(`<button aria-label="Bubble" style="position:absolute;left:${8 + (i % 4) * 23}%;top:${14 + Math.floor(i / 4) * 38}%;width:76px;height:76px;border:none;background:none;font-size:54px;cursor:pointer">🫧</button>`);
+        b.onclick = () => { b.remove(); if (--left === 0) finish(); };
+        stage.append(b);
+      }
+    },
+
+    'tap-target': () => {
+      const targets = params.targets || ['dog', 'cat', 'duck'];
+      const rounds = params.rounds || 5;
+      let round = 0;
+      const box = el(`<div class="center-col"></div>`);
+      stage.append(box);
+      function paint() {
+        const want = targets[round % targets.length];
+        box.innerHTML = `<h2>Tap the ${want}!</h2>`;
+        const row = el(`<div style="display:flex;gap:14px;flex-wrap:wrap;justify-content:center"></div>`);
+        const options = [...targets].sort((a, b) => ((a + round).length * 7) % 3 - ((b + round).length * 7) % 3);
+        for (const t of options) {
+          const b = el(`<button aria-label="${t}" style="border:none;background:#fff;border-radius:18px;padding:10px;cursor:pointer;min-width:96px;min-height:96px">${itemHtml(t, 84)}</button>`);
+          b.onclick = () => {
+            if (t === want) { if (++round >= rounds) finish(); else { say(LH.pickFeedback('completed')); paint(); } }
+            else miss();
+          };
+          row.append(b);
+        }
+        box.append(row);
+        speak('Tap the ' + want + '!');
+      }
+      paint();
+    },
+
+    'match-pairs': () => memoryGame(true),
+    'memory-cards': () => memoryGame(false),
+
+    counting: () => {
+      const item = params.item || 'fish';
+      const rounds = [2, 3, Math.min(params.max || 4, 6)];
+      let round = 0;
+      const box = el(`<div class="center-col"></div>`);
+      stage.append(box);
+      function paint() {
+        const target = rounds[round];
+        const opts = [...new Set([target, target + 1, Math.max(1, target - 1)])].sort((a, b) => a - b);
+        box.innerHTML = `<h2>How many ${item === 'fish' ? 'fish' : item + 's'}?</h2>`;
+        const rowImgs = el(`<div style="display:flex;gap:6px;justify-content:center;flex-wrap:wrap"></div>`);
+        for (let i = 0; i < target; i++) rowImgs.append(el(itemHtml(item, 64)));
+        const row = el(`<div style="display:flex;gap:12px;margin-top:10px"></div>`);
+        for (const n of opts) {
+          const b = el(`<button class="primary-btn" style="border-radius:50%;width:76px;height:76px;padding:0;font-size:28px" aria-label="${n}">${n}</button>`);
+          b.onclick = () => {
+            if (n === target) { if (++round >= rounds.length) finish(); else { say(LH.pickFeedback('completed')); paint(); } }
+            else miss();
+          };
+          row.append(b);
+        }
+        box.append(rowImgs, row);
+      }
+      paint();
+    },
+
+    'odd-one-out': () => {
+      const rounds = params.kind === 'emotions'
+        ? [{ items: ['🙂', '🙂', '😴', '🙂'], odd: 2, emoji: true }, { items: ['😄', '😢', '😄', '😄'], odd: 1, emoji: true }, { items: ['😮', '😮', '😮', '🥱'], odd: 3, emoji: true }]
+        : [{ items: ['dog', 'dog', 'car', 'dog'], odd: 2 }, { items: ['fish', 'star', 'fish', 'fish'], odd: 1 }, { items: ['unicorn', 'unicorn', 'unicorn', 'dinosaur'], odd: 3 }];
+      let round = 0;
+      const box = el(`<div class="center-col"></div>`);
+      stage.append(box);
+      function paint() {
+        const cur = rounds[round];
+        box.innerHTML = `<h2>Which one is different?</h2>`;
+        const row = el(`<div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center"></div>`);
+        cur.items.forEach((it, i) => {
+          const inner = cur.emoji ? `<span style="font-size:52px">${it}</span>` : itemHtml(it, 80);
+          const b = el(`<button aria-label="Choice ${i + 1}" style="width:96px;height:96px;border:none;border-radius:16px;background:#fff;cursor:pointer">${inner}</button>`);
+          b.onclick = () => {
+            if (i === cur.odd) { if (++round >= rounds.length) finish(); else { say(LH.pickFeedback('completed')); paint(); } }
+            else miss('almost');
+          };
+          row.append(b);
+        });
+        box.append(row);
+      }
+      paint();
+    },
+
+    'letter-match': () => {
+      const letters = params.letters || ['A', 'B', 'C', 'D'];
+      let round = 0;
+      const box = el(`<div class="center-col"></div>`);
+      stage.append(box);
+      function paint() {
+        const want = letters[round];
+        const opts = [...letters].sort((a, b) => ((a.charCodeAt(0) + round) % 3) - ((b.charCodeAt(0) + round) % 3)).slice(0, 3);
+        if (!opts.includes(want)) opts[0] = want;
+        box.innerHTML = `<h2>Find the little ${want}</h2><div style="font-size:72px;font-weight:800;color:#4A3B32">${want}</div>`;
+        const row = el(`<div style="display:flex;gap:12px"></div>`);
+        for (const L of opts) {
+          const b = el(`<button aria-label="lowercase ${L}" style="width:84px;height:84px;border:none;border-radius:16px;background:#fff;cursor:pointer;font-size:44px;font-weight:700;color:#4A3B32">${L.toLowerCase()}</button>`);
+          b.onclick = () => {
+            if (L === want) { if (++round >= letters.length) finish(); else { say(LH.pickFeedback('completed')); paint(); } }
+            else miss();
+          };
+          row.append(b);
+        }
+        box.append(row);
+      }
+      paint();
+    },
+
+    sequence: () => sequenceGame(false),
+    'pattern-complete': () => sequenceGame(true),
+
+    'drag-sort': () => {
+      const r = () => stage.getBoundingClientRect();
+      requestAnimationFrame(() => {
+        const zones = [];
+        if (params.ordered) {
+          // Small to big: drop each dinosaur onto the matching-size outline.
+          const sizes = [48, 68, 88, 108];
+          const item = params.item || 'dinosaur';
+          let placed = 0;
+          sizes.forEach((sz, i) => {
+            const zone = el(`<div aria-label="Size ${i + 1} spot" style="position:absolute;left:${8 + i * 24}%;top:12%;width:${sz + 16}px;height:${sz + 16}px;border:3px dashed #D7CCC8;border-radius:14px;display:grid;place-items:center"><div style="opacity:0.25">${itemHtml(item, sz)}</div></div>`);
+            stage.append(zone);
+            zones.push({ el: zone, size: sz, filled: false, onDrop: (it) => {
+              if (Number(it.dataset.size) !== sz || zone.filled) return false;
+              zone.filled = true;
+              zone.innerHTML = itemHtml(item, sz);
+              it.remove();
+              say(LH.pickFeedback('completed'));
+              if (++placed === sizes.length) finish();
+              return true;
+            } });
+          });
+          [...sizes].reverse().forEach((sz, i) => {
+            const it = placeItem(stage, item, sz, 30 + i * (r().width - 160) / 3, r().height * 0.62, `${item} size`);
+            it.dataset.size = String(sz);
+            makeDraggable(stage, it, () => zones, () => miss());
+          });
+        } else {
+          const bins = params.bins || ['box'];
+          const items = Array.isArray(params.items) ? params.items : ['bear', 'car', 'duck', 'star', 'balloon'];
+          const colourFor = { red: '#E0525E', blue: '#5C8FD6', box: '#B07B4F' };
+          let placed = 0, total;
+          const binEls = bins.map((b, i) => {
+            const zone = el(`<div aria-label="${b} box" style="position:absolute;left:${12 + i * 46}%;top:8%;width:130px;height:110px;background:${colourFor[b] || '#B07B4F'};border-radius:14px;opacity:0.9;display:grid;place-items:center;color:#fff;font-weight:800;font-size:18px">${b === 'box' ? '🧺' : b}</div>`);
+            stage.append(zone);
+            return { name: b, el: zone };
+          });
+          if (bins.length > 1 && bins.every((b) => colourFor[b])) {
+            // sort by colour: tint copies of the star image per bin
+            total = 6;
+            const zones2 = binEls.map((z) => ({ el: z.el, onDrop: (it) => {
+              if (it.dataset.bin !== z.name) return false;
+              it.remove(); say(LH.pickFeedback('completed'));
+              if (++placed === total) finish();
+              return true;
+            } }));
+            for (let i = 0; i < total; i++) {
+              const bin = bins[i % bins.length];
+              const it = el(`<div role="img" aria-label="${bin} shape" style="position:absolute;left:${20 + i * 14}%;top:62%;width:56px;height:56px;border-radius:14px;background:${colourFor[bin]}"></div>`);
+              it.dataset.homeX = 20 + i * 14 + '%'; it.dataset.homeY = '62%'; it.dataset.bin = bin;
+              stage.append(it);
+              makeDraggable(stage, it, () => zones2, () => miss());
+            }
+          } else {
+            total = items.length;
+            const zones2 = binEls.map((z) => ({ el: z.el, onDrop: (it) => {
+              it.remove(); say(LH.pickFeedback('completed'));
+              if (++placed === total) finish();
+              return true;
+            } }));
+            items.forEach((name, i) => {
+              const it = placeItem(stage, name, 62, 24 + i * (r().width - 140) / Math.max(1, items.length - 1), r().height * 0.62);
+              makeDraggable(stage, it, () => zones2, () => miss());
+            });
+          }
+        }
+      });
+    },
+
+    'shadow-match': () => {
+      const items = Array.isArray(params.items) ? params.items : ['dolphin', 'dinosaur', 'rocket'];
+      requestAnimationFrame(() => {
+        const r = stage.getBoundingClientRect();
+        let placed = 0;
+        const zones = items.map((name, i) => {
+          const zone = el(`<div aria-label="Shadow of ${name}" style="position:absolute;left:${10 + i * 30}%;top:8%;width:100px;height:100px;filter:brightness(0) opacity(0.35)">${itemHtml(name, 96)}</div>`);
+          stage.append(zone);
+          return { el: zone, name, onDrop: (it) => {
+            if (it.dataset.name !== name) return false;
+            zone.style.filter = 'none';
+            it.remove(); say(LH.pickFeedback('completed'));
+            if (++placed === items.length) finish();
+            return true;
+          } };
+        });
+        const shuffled = [...items].reverse();
+        shuffled.forEach((name, i) => {
+          const it = placeItem(stage, name, 88, 30 + i * (r.width - 160) / Math.max(1, items.length - 1), r.height * 0.6);
+          makeDraggable(stage, it, () => zones, () => miss());
+        });
+      });
+    },
+
+    'feed-animal': () => {
+      const animal = params.animal || 'bear';
+      const food = params.food || 'fish';
+      const total = typeof params.foods === 'number' ? params.foods : 4;
+      requestAnimationFrame(() => {
+        const r = stage.getBoundingClientRect();
+        let fed = 0;
+        stage.append(el(`<div style="position:absolute;left:50%;top:6%;transform:translateX(-50%)">${itemHtml(animal, Math.min(190, r.height * 0.45))}</div>`));
+        const mouth = el(`<div aria-label="Feed me!" style="position:absolute;left:50%;top:${Math.min(190, r.height * 0.45) * 0.72}px;transform:translateX(-50%);width:110px;height:64px;border:3px dashed #FF8A65;border-radius:32px;display:grid;place-items:center;font-size:14px;color:#4A3B32;background:rgba(255,255,255,0.6)">yum yum</div>`);
+        stage.append(mouth);
+        const zones = [{ el: mouth, onDrop: (it) => {
+          it.remove(); fed++;
+          say(fed >= total ? 'All full! ' + LH.pickFeedback('completed') : 'Yum! ' + LH.pickFeedback('completed'));
+          if (fed >= total) finish();
+          return true;
+        } }];
+        for (let i = 0; i < total; i++) {
+          const it = placeItem(stage, food, 64, 24 + i * (r.width - 130) / Math.max(1, total - 1), r.height * 0.68);
+          makeDraggable(stage, it, () => zones, () => miss());
+        }
+      });
+    },
+
+    'reveal-wipe': () => {
+      const pictures = Array.isArray(params.pictures) ? params.pictures : ['unicorn', 'whale', 'treehouse'];
+      let idx = 0;
+      const wrap = el(`<div style="position:absolute;inset:0;display:grid;place-items:center"></div>`);
+      const pic = el(`<div></div>`);
+      const canvas = el(`<canvas class="stage" aria-label="Wipe the screen to see the picture" style="touch-action:none"></canvas>`);
+      wrap.append(pic); stage.append(wrap, canvas);
+      const ctx = canvas.getContext('2d');
+      let cleared = 0, wiping = false, target;
+      function nextPicture() {
+        const r = stage.getBoundingClientRect();
+        canvas.width = r.width; canvas.height = r.height;
+        pic.innerHTML = imgHtml(pictures[idx], Math.min(r.width, r.height) * 0.7);
+        ctx.globalCompositeOperation = 'source-over';
+        ctx.fillStyle = '#C9BEB2';
+        ctx.fillRect(0, 0, r.width, r.height);
+        ctx.fillStyle = '#8D7F71';
+        ctx.font = '700 24px system-ui'; ctx.textAlign = 'center';
+        ctx.fillText('Wipe me!', r.width / 2, r.height / 2);
+        ctx.globalCompositeOperation = 'destination-out';
+        cleared = 0;
+        target = (r.width * r.height) * 0.5;
+      }
+      canvas.addEventListener('pointerdown', () => { wiping = true; });
+      canvas.addEventListener('pointermove', (e) => {
+        if (!wiping) return;
+        const r = canvas.getBoundingClientRect();
+        ctx.beginPath();
+        ctx.arc(e.clientX - r.left, e.clientY - r.top, 34, 0, Math.PI * 2);
+        ctx.fill();
+        cleared += 34 * 34 * 2.2;
+        if (cleared >= target) {
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          wiping = false;
+          say('A ' + pictures[idx] + '! ' + LH.pickFeedback('completed'));
+          if (++idx >= pictures.length) finish();
+          else setTimeout(nextPicture, 900);
+        }
+      });
+      window.addEventListener('pointerup', () => { wiping = false; });
+      requestAnimationFrame(nextPicture);
+    },
+
+    'stack-blocks': () => {
+      const total = params.blocks || 4;
+      requestAnimationFrame(() => {
+        const r = stage.getBoundingClientRect();
+        let stacked = 0;
+        const blockH = Math.min(52, r.height * 0.11);
+        const column = el(`<div aria-label="Stack here" style="position:absolute;left:50%;transform:translateX(-50%);top:8%;width:150px;height:${blockH * total + 24}px;border:3px dashed #D7CCC8;border-radius:12px"></div>`);
+        stage.append(column);
+        const zones = [{ el: column, onDrop: (it) => {
+          it.remove();
+          const w = 140 - stacked * 18;
+          column.append(el(`<div style="position:absolute;bottom:${stacked * blockH + 4}px;left:50%;transform:translateX(-50%);width:${w}px;height:${blockH - 6}px;background:${TILE_COLOURS[stacked % TILE_COLOURS.length]};border-radius:10px"></div>`));
+          stacked++;
+          say(LH.pickFeedback(stacked === total ? 'completed' : 'almost'));
+          if (stacked === total) finish();
+          return true;
+        } }];
+        for (let i = 0; i < total; i++) {
+          const w = 140 - i * 18;
+          const it = el(`<div role="img" aria-label="Block" style="position:absolute;left:${16 + i * (r.width - 170) / Math.max(1, total - 1)}px;top:${r.height * 0.72}px;width:${w}px;height:${blockH - 6}px;background:${TILE_COLOURS[i % TILE_COLOURS.length]};border-radius:10px"></div>`);
+          it.dataset.homeX = it.style.left; it.dataset.homeY = it.style.top;
+          stage.append(it);
+          makeDraggable(stage, it, () => zones, () => miss());
+        }
+      });
+    },
+
+    'path-maze': () => {
+      // The maze is a corridor-follow: the same core TracingSession engine,
+      // with a wide forgiving corridor and a picture to carry to the goal.
+      const mover = params.mover || 'fish';
+      const goal = params.goal || 'treehouse';
+      const complexity = params.pathComplexity || 1;
+      const paths = {
+        1: [{ x: 120, y: 500 }, { x: 500, y: 500 }, { x: 880, y: 500 }],
+        2: [{ x: 120, y: 260 }, { x: 500, y: 260 }, { x: 500, y: 700 }, { x: 880, y: 700 }],
+        3: [{ x: 120, y: 200 }, { x: 760, y: 200 }, { x: 760, y: 520 }, { x: 240, y: 520 }, { x: 240, y: 800 }, { x: 880, y: 800 }],
+      };
+      const path = paths[complexity] || paths[1];
+      const config = { ...LH.tracingConfigFor(1, { accessibilityWiderCorridor: true }), coverageToComplete: 0.7 };
+      const session = new LH.TracingSession(path, config);
+      const canvas = el(`<canvas class="stage" aria-label="Maze path" style="touch-action:none"></canvas>`);
+      const moverEl = el(`<div style="position:absolute;width:64px;height:64px;pointer-events:none">${itemHtml(mover, 64)}</div>`);
+      const goalEl = el(`<div style="position:absolute;width:76px;height:76px;pointer-events:none">${itemHtml(goal, 76)}</div>`);
+      stage.append(canvas, moverEl, goalEl);
+      const ctx = canvas.getContext('2d');
+      let scale = 1, doneMaze = false;
+      function fit() {
+        const r = stage.getBoundingClientRect();
+        canvas.width = r.width * devicePixelRatio; canvas.height = r.height * devicePixelRatio;
+        ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+        scale = Math.min(r.width, r.height) / 1000;
+        const start = path[0], endP = path[path.length - 1];
+        moverEl.style.left = start.x * scale - 32 + 'px'; moverEl.style.top = start.y * scale - 32 + 'px';
+        goalEl.style.left = endP.x * scale - 38 + 'px'; goalEl.style.top = endP.y * scale - 38 + 'px';
+        draw();
+      }
+      function draw() {
+        const r = stage.getBoundingClientRect();
+        ctx.clearRect(0, 0, r.width, r.height);
+        ctx.beginPath();
+        path.forEach((pt, i) => (i ? ctx.lineTo(pt.x * scale, pt.y * scale) : ctx.moveTo(pt.x * scale, pt.y * scale)));
+        ctx.lineCap = ctx.lineJoin = 'round';
+        ctx.strokeStyle = '#EAD9C4'; ctx.lineWidth = config.corridorWidth * 2 * scale; ctx.stroke();
+        ctx.strokeStyle = '#D8C2A6'; ctx.lineWidth = 5; ctx.setLineDash([14, 12]); ctx.stroke(); ctx.setLineDash([]);
+      }
+      let tracking = false;
+      canvas.addEventListener('pointerdown', () => { tracking = !doneMaze; });
+      canvas.addEventListener('pointermove', (e) => {
+        if (!tracking || doneMaze) return;
+        const r = canvas.getBoundingClientRect();
+        const x = e.clientX - r.left, y = e.clientY - r.top;
+        const result = session.addPoint({ x: x / scale, y: y / scale });
+        if (result.onPath) { moverEl.style.left = x - 32 + 'px'; moverEl.style.top = y - 32 + 'px'; }
+        if (result.completed) {
+          doneMaze = true; tracking = false;
+          const summary = session.endAttempt();
+          completeActivity(activity, { attempts: summary.attemptNumber, accuracyScore: summary.accuracyScore });
+          stage.append(completionBanner(onDone));
+        }
+      });
+      window.addEventListener('pointerup', () => {
+        if (!tracking || doneMaze) return;
+        tracking = false;
+        const summary = session.endAttempt();
+        if (!summary.completed) say(LH.pickFeedback(summary.coverage > 0.4 ? 'almost' : 'try-again'));
+      });
+      requestAnimationFrame(fit);
+      new ResizeObserver(fit).observe(stage);
+    },
+  };
+
+  function memoryGame(faceUp) {
+    const names = Array.isArray(params.images) ? params.images : ['dolphin', 'whale', 'unicorn', 'dinosaur'];
+    const pairs = Math.min(params.pairs || names.length, names.length);
+    const deck = [...names.slice(0, pairs), ...names.slice(0, pairs)].map((name, i) => ({ id: i, name }))
+      .sort((a, b) => ((a.id * 7) % (pairs * 2)) - ((b.id * 7) % (pairs * 2)));
     const open = [], matched = new Set();
     const grid = el(`<div style="display:flex;flex-wrap:wrap;justify-content:center;align-content:center;height:100%;gap:10px;padding:14px"></div>`);
     stage.append(grid);
     const cards = deck.map((card) => {
-      const c = el(`<button style="width:84px;height:84px;border:none;border-radius:16px;background:#FF8A65;font-size:38px;cursor:pointer" aria-label="Card"></button>`);
+      const c = el(`<button style="width:96px;height:96px;border:none;border-radius:16px;background:#FF8A65;cursor:pointer;display:grid;place-items:center" aria-label="Card"></button>`);
       c.onclick = () => flip(card, c);
       grid.append(c);
       return c;
@@ -961,7 +1444,7 @@ function renderGame(activity) {
     function show() {
       deck.forEach((card, i) => {
         const vis = faceUp || open.some((o) => o.card.id === card.id) || matched.has(card.id);
-        cards[i].textContent = vis ? card.e : '❓';
+        cards[i].innerHTML = vis ? itemHtml(card.name, 80) : '<span style="font-size:40px">❓</span>';
         cards[i].style.background = vis ? '#fff' : '#FF8A65';
         cards[i].style.opacity = matched.has(card.id) ? 0.55 : 1;
       });
@@ -971,61 +1454,73 @@ function renderGame(activity) {
       open.push({ card, node }); show();
       if (open.length === 2) {
         const [a, b] = open;
-        if (a.card.e === b.card.e) {
-          setTimeout(() => { matched.add(a.card.id); matched.add(b.card.id); open.length = 0; show(); say(LH.pickFeedback('completed')); if (matched.size === deck.length) finish(); }, 350);
+        if (a.card.name === b.card.name) {
+          setTimeout(() => {
+            matched.add(a.card.id); matched.add(b.card.id); open.length = 0; show();
+            say(LH.pickFeedback('completed'));
+            if (matched.size === deck.length) finish();
+          }, 350);
         } else {
-          attempts++;
-          say(LH.pickFeedback('try-again'));
+          miss();
           setTimeout(() => { open.length = 0; show(); }, 900);
         }
       }
     }
     show();
-  } else if (t === 'counting') {
-    const rounds = [2, 3, 4]; let round = 0;
-    const box = el(`<div class="center-col"></div>`);
-    stage.append(box);
-    function paint() {
-      const target = rounds[round];
-      const opts = [...new Set([target, target + 1, Math.max(1, target - 1)])].sort((a, b) => a - b);
-      box.innerHTML = `<h2>How many apples?</h2><div style="font-size:46px">${'🍎'.repeat(target)}</div>`;
-      const row = el(`<div style="display:flex;gap:12px"></div>`);
-      for (const n of opts) {
-        const b = el(`<button class="primary-btn" style="border-radius:50%;width:76px;height:76px;padding:0;font-size:28px" aria-label="${n}">${n}</button>`);
-        b.onclick = () => {
-          if (n === target) { if (++round >= rounds.length) finish(); else { say(LH.pickFeedback('completed')); paint(); } }
-          else { attempts++; say(LH.pickFeedback('try-again')); }
-        };
-        row.append(b);
-      }
-      box.append(row);
-    }
-    paint();
-  } else if (t === 'odd-one-out') {
-    const ROUNDS = [
-      { items: ['🐶', '🐶', '🚗', '🐶'], odd: 2 },
-      { items: ['🍌', '🍎', '🍌', '🍌'], odd: 1 },
-      { items: ['⭐', '⭐', '⭐', '🌙'], odd: 3 },
-    ];
+  }
+
+  function sequenceGame(asPattern) {
+    const names = Array.isArray(params.images) ? params.images : params.kind === 'directions' ? null : ['sun', 'moon'];
+    const rounds = params.rounds || params.length || 4;
     let round = 0;
     const box = el(`<div class="center-col"></div>`);
     stage.append(box);
     function paint() {
-      const cur = ROUNDS[round];
-      box.innerHTML = `<h2>Which one is different?</h2>`;
-      const row = el(`<div style="display:flex;gap:10px"></div>`);
-      cur.items.forEach((e2, i) => {
-        const b = el(`<button style="width:80px;height:80px;font-size:40px;border:none;border-radius:16px;background:#fff;cursor:pointer" aria-label="Choice ${i + 1}">${e2}</button>`);
-        b.onclick = () => {
-          if (i === cur.odd) { if (++round >= ROUNDS.length) finish(); else { say(LH.pickFeedback('completed')); paint(); } }
-          else { attempts++; say(LH.pickFeedback('almost')); }
-        };
-        row.append(b);
-      });
-      box.append(row);
+      box.innerHTML = `<h2>${asPattern ? 'Finish the pattern!' : 'What comes next?'}</h2>`;
+      const row = el(`<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:center"></div>`);
+      if (names) {
+        const a = names[round % names.length], b = names[(round + 1) % names.length];
+        const seq = [a, b, a, b, a];
+        const answer = b;
+        seq.forEach((n) => row.append(el(itemHtml(n, 60))));
+        row.append(el(`<span style="font-size:44px;font-weight:800;color:#4A3B32">?</span>`));
+        box.append(row);
+        const optRow = el(`<div style="display:flex;gap:12px;margin-top:12px"></div>`);
+        const opts = [...new Set([answer, a, names[(round + 2) % names.length] || a])];
+        for (const n of opts) {
+          const btn = el(`<button aria-label="${n}" style="border:none;background:#fff;border-radius:16px;padding:8px;cursor:pointer">${itemHtml(n, 72)}</button>`);
+          btn.onclick = () => {
+            if (n === answer) { if (++round >= rounds) finish(); else { say(LH.pickFeedback('completed')); paint(); } }
+            else miss('almost');
+          };
+          optRow.append(btn);
+        }
+        box.append(optRow);
+      } else {
+        // Robot steps: repeat the arrow sequence by tapping in order.
+        const arrows = ['⬆️', '➡️', '⬇️', '⬅️'];
+        const seq = Array.from({ length: 2 + round }, (_, i) => arrows[(i + round) % arrows.length]);
+        row.innerHTML = `<span style="font-size:38px">${seq.join(' ')}</span>`;
+        box.append(row, el(`<p>Tap the same steps for the robot! 🤖</p>`));
+        let pos = 0;
+        const optRow = el(`<div style="display:flex;gap:12px;margin-top:12px"></div>`);
+        for (const ar of arrows) {
+          const btn = el(`<button aria-label="${ar}" style="border:none;background:#fff;border-radius:16px;width:76px;height:76px;font-size:34px;cursor:pointer">${ar}</button>`);
+          btn.onclick = () => {
+            if (ar === seq[pos]) {
+              pos++;
+              if (pos >= seq.length) { if (++round >= rounds) finish(); else { say(LH.pickFeedback('completed')); paint(); } }
+            } else { pos = 0; miss('almost'); }
+          };
+          optRow.append(btn);
+        }
+        box.append(optRow);
+      }
     }
     paint();
   }
+
+  (T[activity.template] || T['pop-bubbles'])();
 }
 
 /* ---------- rewards ---------- */
@@ -1040,7 +1535,12 @@ function renderRewards() {
   body.append(el(`<h2 style="text-align:left">Sticker book</h2>`));
   const sg = el(`<div class="sticker-grid"></div>`);
   if (state.rewards.stickers.length === 0) sg.append(el(`<p style="font-size:16px">Play anything to earn your first sticker! 🌟</p>`));
-  for (const s of state.rewards.stickers) sg.append(el(`<div class="sticker">${STICKER_EMOJI[s.replace(/-\d+$/, '')] || '🏵️'}</div>`));
+  for (const s of state.rewards.stickers) {
+    const base = s.replace(/-\d+$/, '').replace('sticker-', '');
+    const mapped = { 'star-fish': 'fish', koala: 'bear', wombat: 'panda', dino: 'dinosaur', 'paint-pot': null, kite: null, frog: null, echidna: null, sailboat: null, flower: null }[base] ?? base;
+    const inner = mapped && IMAGES[mapped] ? imgHtml(mapped, 60) : (STICKER_EMOJI['sticker-' + base] || '🏵️');
+    sg.append(el(`<div class="sticker">${inner}</div>`));
+  }
   body.append(sg, el(`<h2 style="text-align:left">Badges</h2>`));
   const bg = el(`<div class="sticker-grid"></div>`);
   if (state.rewards.badges.length === 0) bg.append(el(`<p style="font-size:16px">Badges live here. 🏅</p>`));
@@ -1190,19 +1690,53 @@ function renderParent(section) {
       r.onclick = () => navigate({ name: 'parent', section: key });
       body.append(r);
     }
-  } else if (section === 'profile' && p) {
-    body.append(el(`<h2>Child profile</h2>`), el(`<p><strong>${p.nickname}</strong> · ${p.ageBand} years</p>`), el(`<label>Difficulty</label>`));
-    [[1, 'Beginner'], [2, 'Developing'], [3, 'Confident']].forEach(([lvl, name]) => {
-      const r = el(`<button class="choice-row"><span>${name}</span><span class="radio">${p.difficulty === lvl ? '●' : '○'}</span></button>`);
-      r.onclick = async () => { state.profile = { ...p, difficulty: lvl }; await repos.profiles.save(state.profile); persistSoon(); render(); };
-      body.append(r);
-    });
-    body.append(el(`<label>Sound</label>`));
-    ['music', 'effects', 'voice'].forEach((ch) => {
-      const row = el(`<div class="choice-row" style="cursor:default"><span>${ch === 'music' ? 'Background music' : ch === 'effects' ? 'Sound effects' : 'Voice instructions'}</span></div>`);
-      const t = el(`<input type="checkbox" class="toggle" aria-label="${ch}" ${p.sound[ch] ? 'checked' : ''}>`);
-      t.onchange = async () => { state.profile = { ...p, sound: { ...p.sound, [ch]: t.checked } }; await repos.profiles.save(state.profile); persistSoon(); };
-      row.append(t); body.append(row);
+  } else if (section === 'profile') {
+    body.append(el(`<h2>Children</h2>`));
+    repos.profiles.getAll().then((all) => {
+      for (const pr of all) {
+        const row = el(`<button class="choice-row"><span>${pr.nickname}<span class="sub">${pr.ageBand} years · ${pr.difficulty === 1 ? 'Beginner' : pr.difficulty === 2 ? 'Developing' : 'Confident'}</span></span><span class="radio">${state.profile?.id === pr.id ? '● playing' : '○ switch'}</span></button>`);
+        row.onclick = async () => { await activateProfile(pr.id); persistSoon(); render(); };
+        body.append(row);
+      }
+      const addWrap = el(`<div style="margin-top:14px"></div>`);
+      addWrap.append(el(`<label style="display:block;font-size:13px;font-weight:700;margin-bottom:4px">Add another child (nickname)</label>`));
+      const input = el(`<input type="text" maxlength="20" style="font-size:16px;padding:9px 12px;border:1px solid #C5CDD4;border-radius:10px;background:#fff" aria-label="New child's nickname">`);
+      const bandRow = el(`<div style="display:flex;gap:8px;margin:8px 0"></div>`);
+      let band = '3-5';
+      for (const b of LH.AGE_BANDS) {
+        const bb = el(`<button class="choice-row" style="width:auto;padding:8px 12px"><span>${b}</span></button>`);
+        bb.onclick = () => { band = b; [...bandRow.children].forEach((n) => (n.style.outline = '')); bb.style.outline = '3px solid #2F6F62'; };
+        if (b === band) bb.style.outline = '3px solid #2F6F62';
+        bandRow.append(bb);
+      }
+      const add = el(`<button class="primary-btn teal" style="margin:0">Add child</button>`);
+      add.onclick = async () => {
+        const problems = LH.validateProfileInput({ nickname: input.value, ageBand: band });
+        if (problems.length) { alert('Please use a simple nickname (no emails or phone numbers).'); return; }
+        const pr = LH.createProfile({ nickname: input.value, ageBand: band }, 'profile-' + Date.now(), Date.now());
+        await repos.profiles.save(pr);
+        await repos.rewards.save(pr.id, LH.emptyRewardsState(todayKey()));
+        await repos.screenTime.save(pr.id, LH.emptyScreenTime(pr.dailyScreenTimeMinutes));
+        persistSoon(); render();
+      };
+      addWrap.append(input, bandRow, add);
+      body.append(addWrap);
+
+      if (p) {
+        body.append(el(`<h2 style="margin-top:18px">Settings for ${p.nickname}</h2>`), el(`<label style="font-weight:700;font-size:13px">Difficulty</label>`));
+        [[1, 'Beginner'], [2, 'Developing'], [3, 'Confident']].forEach(([lvl, name]) => {
+          const r2 = el(`<button class="choice-row"><span>${name}</span><span class="radio">${p.difficulty === lvl ? '●' : '○'}</span></button>`);
+          r2.onclick = async () => { state.profile = { ...p, difficulty: lvl }; await repos.profiles.save(state.profile); persistSoon(); render(); };
+          body.append(r2);
+        });
+        body.append(el(`<label style="font-weight:700;font-size:13px">Sound</label>`));
+        ['music', 'effects', 'voice'].forEach((ch) => {
+          const row2 = el(`<div class="choice-row" style="cursor:default"><span>${ch === 'music' ? 'Background music' : ch === 'effects' ? 'Sound effects' : 'Voice instructions (soft female voice)'}</span></div>`);
+          const t = el(`<input type="checkbox" class="toggle" aria-label="${ch}" ${p.sound[ch] ? 'checked' : ''}>`);
+          t.onchange = async () => { state.profile = { ...p, sound: { ...p.sound, [ch]: t.checked } }; await repos.profiles.save(state.profile); persistSoon(); };
+          row2.append(t); body.append(row2);
+        });
+      }
     });
   } else if (section === 'progress' && p) {
     repos.progress.forProfile(p.id).then((records) => {
@@ -1310,7 +1844,7 @@ function renderParent(section) {
   } else if (section === 'help') {
     body.append(
       el(`<h2>Help & support</h2>`),
-      el(`<p>Questions, feedback or complaints: support@littlehands.example.au (placeholder).</p>`),
+      el(`<p>Questions, feedback or complaints: support@littlegrip.example.au (placeholder).</p>`),
       el(`<p>We aim to respond within 2 business days. You can also contact your state or territory consumer affairs body, the ACCC, or — for privacy concerns — the OAIC (oaic.gov.au).</p>`),
     );
   } else {
@@ -1345,18 +1879,26 @@ function replayDocument(canvas, doc) {
 }
 
 /* ---------- boot ---------- */
+// Test hook: lets the automated E2E suite (docs/13) drive every screen directly.
+window.__lgTest = { navigate, getState: () => state, activateProfile };
+
 (async function boot() {
   try {
     const raw = localStorage.getItem(LS_KEY);
     if (raw) {
       const snap = JSON.parse(raw);
-      if (snap.profile) {
-        await repos.profiles.save(snap.profile);
-        state.profile = snap.profile;
-        if (snap.rewards) { state.rewards = snap.rewards; await repos.rewards.save(snap.profile.id, snap.rewards); }
-        if (snap.screenTime) { state.screenTime = snap.screenTime; await repos.screenTime.save(snap.profile.id, snap.screenTime); }
-        for (const r of snap.progress || []) await repos.progress.save(r);
-        for (const a of snap.artwork || []) await repos.artwork.save(a);
+      for (const pr of snap.profiles || []) {
+        await repos.profiles.save(pr);
+        const d = (snap.byProfile || {})[pr.id] || {};
+        if (d.rewards) await repos.rewards.save(pr.id, d.rewards);
+        if (d.screenTime) await repos.screenTime.save(pr.id, d.screenTime);
+        for (const rec of d.progress || []) await repos.progress.save(rec);
+        for (const art of d.artwork || []) await repos.artwork.save(art);
+      }
+      const all = await repos.profiles.getAll();
+      const active = all.find((pr) => pr.id === snap.activeId) || all[0] || null;
+      if (active) {
+        await activateProfile(active.id);
         state.screen = { name: 'home' };
       }
     }

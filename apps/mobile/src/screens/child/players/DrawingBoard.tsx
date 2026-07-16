@@ -1,8 +1,8 @@
 import React, { useMemo, useRef, useState } from 'react';
 import { PanResponder, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Canvas, Path, Skia } from '@shopify/react-native-skia';
-import type { BrushKind, GuidedDrawingActivity, Stroke } from '@littlehands/core';
-import { DrawingSession, PALETTES } from '@littlehands/core';
+import type { BrushKind, GuidedDrawingActivity, Stroke } from '@littlegrip/core';
+import { DrawingSession, PALETTES } from '@littlegrip/core';
 import type { Theme } from '../../../ui/theme';
 import { useAppStore } from '../../../state/appStore';
 import { getRepositories } from '../../../storage/db';

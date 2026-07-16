@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
-import type { AgeBand } from '@littlehands/core';
-import { AGE_BANDS, createProfile, validateProfileInput } from '@littlehands/core';
+import type { AgeBand } from '@littlegrip/core';
+import { AGE_BANDS, createProfile, validateProfileInput } from '@littlegrip/core';
 import { useAppStore } from '../state/appStore';
 import { parentTheme } from '../ui/theme';
 import { ParentRow, PrimaryButton } from '../ui/components';
@@ -44,7 +44,7 @@ export function OnboardingScreen(): React.JSX.Element {
     <ScrollView style={[styles.root, { backgroundColor: theme.bg }]} contentContainerStyle={styles.content}>
       {step === 'welcome' && (
         <View>
-          <Text style={styles.h1}>Welcome to Little Hands 🖐️</Text>
+          <Text style={styles.h1}>Welcome to Little Grip 🖐️</Text>
           <Text style={styles.body}>
             Playful drawing, tracing, puzzles and games that help little hands grow strong -
             for children aged 2 to 7.

@@ -1,7 +1,7 @@
 import React, { useMemo, useRef, useState } from 'react';
 import { PanResponder, StyleSheet, Text, View } from 'react-native';
-import type { JigsawActivity } from '@littlehands/core';
-import { PuzzleSession, puzzleConfigFor } from '@littlehands/core';
+import type { JigsawActivity } from '@littlegrip/core';
+import { PuzzleSession, puzzleConfigFor } from '@littlegrip/core';
 import type { Theme } from '../../../ui/theme';
 import { useAppStore } from '../../../state/appStore';
 import { CompletionBanner } from '../ActivityPlayerScreen';

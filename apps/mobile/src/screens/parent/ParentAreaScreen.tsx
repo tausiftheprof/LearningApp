@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
-import type { ParentReport } from '@littlehands/core';
+import type { ParentReport } from '@littlegrip/core';
 import {
   buildParentReport,
   dayKeyFrom,
   grantExtraTime,
   secondsUsed,
-} from '@littlehands/core';
+} from '@littlegrip/core';
 import { useAppStore } from '../../state/appStore';
 import { getRepositories } from '../../storage/db';
 import { parentTheme } from '../../ui/theme';
@@ -248,7 +248,7 @@ function PrivacySection(): React.JSX.Element {
     <View>
       <Text style={styles.h1}>Privacy & data</Text>
       <Text style={styles.body}>
-        Everything your child makes and does in Little Hands stays on this device. We store the
+        Everything your child makes and does in Little Grip stays on this device. We store the
         nickname and age range you chose, play progress, rewards and saved artwork - nothing else.
         No ads, no chat, no location, no accounts. Uninstalling the app also removes everything.
       </Text>
@@ -294,13 +294,13 @@ function HelpSection(): React.JSX.Element {
   return (
     <View>
       <Text style={styles.h1}>Help & support</Text>
-      <Text style={styles.body}>Questions, feedback or complaints: support@littlehands.example.au (placeholder address).</Text>
+      <Text style={styles.body}>Questions, feedback or complaints: support@littlegrip.example.au (placeholder address).</Text>
       <Text style={styles.body}>
         We aim to respond within 2 business days. If you're not satisfied with our response, you can
         contact your state or territory consumer affairs body, the ACCC, or - for privacy concerns -
         the Office of the Australian Information Commissioner (oaic.gov.au).
       </Text>
-      <Text style={styles.body}>Little Hands never shows external links or web content in the child area.</Text>
+      <Text style={styles.body}>Little Grip never shows external links or web content in the child area.</Text>
     </View>
   );
 }

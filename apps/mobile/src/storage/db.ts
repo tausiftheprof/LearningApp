@@ -11,7 +11,7 @@ import type {
   RewardsState,
   ScreenTimeRepository,
   ScreenTimeState,
-} from '@littlehands/core';
+} from '@littlegrip/core';
 import { MIGRATIONS } from './migrations';
 
 /**
@@ -25,7 +25,7 @@ let dbPromise: Promise<SQLite.SQLiteDatabase> | null = null;
 async function getDb(): Promise<SQLite.SQLiteDatabase> {
   if (!dbPromise) {
     dbPromise = (async () => {
-      const db = await SQLite.openDatabaseAsync('littlehands.db');
+      const db = await SQLite.openDatabaseAsync('littlegrip.db');
       await db.execAsync('PRAGMA journal_mode = WAL;');
       await db.execAsync(
         'CREATE TABLE IF NOT EXISTS schema_version (version INTEGER NOT NULL);',

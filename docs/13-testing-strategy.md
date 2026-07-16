@@ -4,7 +4,7 @@ Quality gates run in CI (`.github/workflows/ci.yml`): typecheck (strict TS) → 
 
 | # | Layer | Scope & tooling | Key cases |
 |---|---|---|---|
-| 1 | Unit (`@littlehands/core`, Jest) — **in this repo, running now** | Tracing corridor engine, puzzle snap/hint, rewards caps, screen-time ledger, recommendation/difficulty, parental gate, daily plan, progress report (incl. no-diagnosis copy guard), content-pack schema, deletion, feedback registry tone | Deterministic, seeded; ≥ 90 % line coverage on core target |
+| 1 | Unit (`@littlegrip/core`, Jest) — **in this repo, running now** | Tracing corridor engine, puzzle snap/hint, rewards caps, screen-time ledger, recommendation/difficulty, parental gate, daily plan, progress report (incl. no-diagnosis copy guard), content-pack schema, deletion, feedback registry tone | Deterministic, seeded; ≥ 90 % line coverage on core target |
 | 2 | Integration | Repositories against real SQLite (better-sqlite3 in CI, expo-sqlite on device); migrations up/down; pack install/verify/revoke | Corruption/interrupt recovery (kill mid-transaction), hash mismatch refusal |
 | 3 | Mobile E2E (Maestro or Detox) | E2E-C1 onboarding→play→reward; E2E-C2 draw→save→gallery→replay; E2E-C3 colouring fill/undo; E2E-P1 gate (incl. 3-fail lockout, background relock); E2E-P2 delete-data wipes everything (assert DB+files empty); E2E-S1 purchase/restore sandbox | Runs on staging builds per PR label + nightly |
 | 4 | Drawing performance | On-device harness: scripted 60 s stroke storm on floor devices (2019 mid-tier Android tablet, iPad 9th gen) | ≥ 55 fps sustained, < 16.6 ms p95 stroke latency, memory < 350 MB |
@@ -18,5 +18,7 @@ Quality gates run in CI (`.github/workflows/ci.yml`): typecheck (strict TS) → 
 | 12 | Device/OS matrix | Android 8/10/13/15 phone+tablet (incl. 1 GB-class low end), iOS 15/17/26 iPhone+iPad; portrait/landscape; stylus (S-Pen passive, Apple Pencil) | Layout, input, perf pass |
 | 13 | CMS publishing (phase 2) | Workflow-state machine tests, role-permission matrix, revocation propagation E2E (< 15 min CDN, app hides content), rollback E2E, audit immutability | Server-enforced dual control proven |
 | 14 | Interruption/reliability | Kill app mid-draw/mid-puzzle → relaunch restores; low-storage simulation; OS-backup restore smoke | No lost artwork/progress |
+
+**Executed home-button verification (16 Jul 2026, web build):** 54/54 checks pass — hold-to-home from all 7 category pickers, 30 game activities (all 15 templates), tracing/colouring/jigsaw/drawing players, Rewards and Daily Adventure; "Bye!" from Time's-up; gate back-link; "Exit to child mode" from all 9 parent sections. Suite: web-demo test hook + Playwright (see repo history). Mobile-native repeat is part of the phase-3 device-lab run.
 
 **Release gate:** suites 1–2 green in CI; 3–6, 8–9, 11–12, 14 green on release candidate; 7 completed at least once pre-launch and after major child-UX changes; 10 pen test complete with criticals closed.

@@ -1,14 +1,14 @@
 {
-  "name": "littlehands-monorepo",
+  "name": "littlegrip-monorepo",
   "version": "0.1.0",
   "private": true,
-  "description": "Little Hands - children's fine-motor-skills learning app (Android/iOS). Local-first, ad-free, child-safe by design.",
+  "description": "Little Grip - children's fine-motor-skills learning app (Android/iOS). Local-first, ad-free, child-safe by design.",
   "workspaces": [
     "packages/*",
     "apps/*"
   ],
   "scripts": {
-    "test": "npm run test --workspace=@littlehands/core",
+    "test": "npm run test --workspace=@littlegrip/core",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "lint": "npm run lint --workspaces --if-present"
   },

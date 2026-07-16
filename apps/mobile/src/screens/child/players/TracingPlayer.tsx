@@ -1,13 +1,13 @@
 import React, { useMemo, useRef, useState } from 'react';
 import { PanResponder, StyleSheet, Text, View } from 'react-native';
 import { Canvas, Circle, Path, Skia } from '@shopify/react-native-skia';
-import type { TracingActivity } from '@littlehands/core';
+import type { TracingActivity } from '@littlegrip/core';
 import {
   defaultAccessibilitySettings,
   pickFeedback,
   TracingSession,
   tracingConfigFor,
-} from '@littlehands/core';
+} from '@littlegrip/core';
 import type { Theme } from '../../../ui/theme';
 import { useAppStore } from '../../../state/appStore';
 import { CompletionBanner } from '../ActivityPlayerScreen';
