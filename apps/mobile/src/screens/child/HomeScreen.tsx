@@ -48,7 +48,9 @@ export function HomeScreen(): React.JSX.Element {
       <View style={styles.topRow}>
         <View style={[styles.greetingCard, { backgroundColor: app.greeting.background, borderRadius: theme.radius }]}>
           <View style={styles.greetingText}>
-            <Text style={[styles.hello, { color: theme.text }]}>Hi, {profile?.nickname ?? 'friend'}!</Text>
+            <Text style={[styles.hello, { color: app.greeting.titleColor ?? theme.text }]}>
+              Hi, {profile?.nickname ?? 'friend'}!
+            </Text>
             <Text style={[styles.subtitle, { color: theme.text }]}>{app.greeting.subtitle}</Text>
           </View>
           <Text style={styles.mascot} accessibilityElementsHidden>

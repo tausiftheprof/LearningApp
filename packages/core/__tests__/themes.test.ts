@@ -40,9 +40,11 @@ describe('app themes (approved design)', () => {
     expect(HOME_TILE_SUBTITLES).toHaveLength(8);
   });
 
-  it('falls back to the default theme for unknown ids', () => {
+  it('defaults to Candy Clouds (owner selection) and falls back for unknown ids', () => {
+    expect(DEFAULT_THEME_ID).toBe('candy');
     expect(themeById('sparkle-mega').id).toBe(DEFAULT_THEME_ID);
     expect(themeById(null).id).toBe(DEFAULT_THEME_ID);
+    expect(themeById(undefined).id).toBe('candy');
     expect(themeById('aussie').id).toBe('aussie');
   });
 });

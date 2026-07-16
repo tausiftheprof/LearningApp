@@ -16,6 +16,10 @@ export interface ThemeGreeting {
   subtitle: string;
   /** Mascot shown beside the greeting (emoji stand-in for the illustration). */
   mascot: string;
+  /** Optional assets/images name for the mascot illustration (beats emoji). */
+  mascotImage?: string;
+  /** Optional accent colour for the "Hi, <name>!" title. */
+  titleColor?: string;
 }
 
 export interface AppTheme {
@@ -25,6 +29,8 @@ export interface AppTheme {
   blurb: string;
   /** App background. */
   background: string;
+  /** Optional CSS gradient laid over `background` on gradient-capable surfaces. */
+  backgroundGradient?: string;
   /** Main text colour. */
   text: string;
   /** Card / icon-medallion surface. */
@@ -41,8 +47,8 @@ export interface AppTheme {
   tileColours: string[];
   /** Tile icons in the same order (emoji stand-ins for illustrations). */
   tileIcons: string[];
-  /** "My Rewards" banner: colour + leading icon. */
-  rewards: { background: string; icon: string };
+  /** "My Rewards" banner: colour + leading icon (+ optional illustration/chevron). */
+  rewards: { background: string; icon: string; iconImage?: string; chevron?: string };
   /** Tile silhouette: rounded storybook cards, bubbly clouds, or nature cards. */
   tileStyle: 'rounded' | 'bubbly' | 'nature';
 }
@@ -75,19 +81,29 @@ const storybook: AppTheme = {
   tileStyle: 'rounded',
 };
 
+/* Candy Clouds tile order (owner's reference image, July 2026): Draw pink,
+   Colour peach, Puzzles purple, Tracing blue, Little Games mint, Big Kid
+   Games purple, Think & Solve yellow, Daily Adventure pale aqua. */
 const candy: AppTheme = {
   id: 'candy',
   name: 'Candy Clouds',
   blurb: 'Dreamy clouds, sparkles and sweet-shop colours.',
   background: '#F7F5FF',
+  backgroundGradient: 'linear-gradient(180deg, #F7F5FF 0%, #F1E7FB 45%, #FBE9F4 100%)',
   text: '#453D5B',
   surface: '#FFFFFF',
   accent: '#FF9F9F',
-  greeting: { background: '#FFFFFF', subtitle: 'What shall we play today?', mascot: '🌟' },
+  greeting: {
+    background: '#FFFFFF',
+    subtitle: 'What shall we play today?',
+    mascot: '🌟',
+    mascotImage: 'star-mascot',
+    titleColor: '#E2589B',
+  },
   starPill: '#FFFFFF',
-  tileColours: ['#FFCFE1', '#FFF1A8', '#DCCBFF', '#C7E9FF', '#C9F3DF', '#DCCBFF', '#FFF1A8', '#C7E9FF'],
+  tileColours: ['#FFD3E4', '#FFE3C4', '#E2D5FF', '#CDE9FF', '#CFF2DC', '#E2D5FF', '#FFF2B3', '#D7F1F2'],
   tileIcons: ['🖍️', '🎨', '🧩', '✏️', '🐣', '🦘', '💡', '🗺️'],
-  rewards: { background: '#FFF1A8', icon: '🎁' },
+  rewards: { background: '#F5DDB8', icon: '🎁', iconImage: 'treasure-chest', chevron: '#FF8FA3' },
   tileStyle: 'bubbly',
 };
 
@@ -109,9 +125,10 @@ const aussie: AppTheme = {
 
 export const APP_THEMES: readonly AppTheme[] = [storybook, candy, aussie];
 
-export const DEFAULT_THEME_ID: AppTheme['id'] = 'storybook';
+/** Owner picked Candy Clouds as the product's default look (July 2026). */
+export const DEFAULT_THEME_ID: AppTheme['id'] = 'candy';
 
 /** Look up a theme, falling back to the default for unknown/legacy ids. */
 export function themeById(id: string | null | undefined): AppTheme {
-  return APP_THEMES.find((t) => t.id === id) ?? storybook;
+  return APP_THEMES.find((t) => t.id === id) ?? candy;
 }

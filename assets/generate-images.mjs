@@ -235,6 +235,29 @@ const IMAGES = {
   <ellipse cx="100" cy="132" rx="28" ry="20" fill="#E8C39A"/>
   <ellipse cx="100" cy="122" rx="8" ry="6" fill="#2B2320"/>
   ${face(100, 100, 1, { smileW: 11 })}`),
+
+  'star-mascot': svg(`
+  <path d="M100 14 L124 70 L184 76 L139 116 L152 176 L100 145 L48 176 L61 116 L16 76 L76 70 Z"
+        fill="#FFD84D" stroke="#EBB93C" stroke-width="5" stroke-linejoin="round"/>
+  <path d="M100 30 L118 72 L163 77 L129 107 L138 152 L100 129 L62 152 L71 107 L37 77 L82 72 Z" fill="#FFE58A"/>
+  ${face(100, 96, 0.85, { eyeDx: 15, blushDx: 26, smileW: 11 })}
+  <circle cx="170" cy="34" r="5" fill="#FFE58A"/><circle cx="30" cy="40" r="4" fill="#FFE58A"/>`),
+
+  'treasure-chest': svg(`
+  <ellipse cx="100" cy="180" rx="64" ry="8" fill="#EBD9BC"/>
+  <path d="M34 92 Q34 58 100 58 Q166 58 166 92 L166 104 L34 104 Z" fill="#B07B4F" stroke="#8B5E3C" stroke-width="4"/>
+  <rect x="34" y="104" width="132" height="68" rx="10" fill="#9C6A42" stroke="#8B5E3C" stroke-width="4"/>
+  <path d="M34 104 L166 104" stroke="#8B5E3C" stroke-width="4"/>
+  <rect x="88" y="96" width="24" height="30" rx="6" fill="#FFD84D" stroke="#EBB93C" stroke-width="3"/>
+  <circle cx="100" cy="108" r="4" fill="#8B5E3C"/>
+  <path d="M52 58 L52 104 M148 58 L148 104 M52 118 L52 168 M148 118 L148 168" stroke="#8B5E3C" stroke-width="5" stroke-linecap="round"/>
+  <path d="M62 54 L74 30 M100 50 L100 24 M138 54 L126 30" stroke="#FFD84D" stroke-width="0" />
+  <path d="M70 46 L76 32 L84 44 L98 38 L96 52" fill="none"/>
+  <g>
+    <path d="M74 34 L79 44 L90 45 L82 52 L84 63 L74 57 L64 63 L66 52 L58 45 L69 44 Z" fill="#FFD84D" stroke="#EBB93C" stroke-width="2"/>
+    <path d="M124 26 L129 36 L140 37 L132 44 L134 55 L124 49 L114 55 L116 44 L108 37 L119 36 Z" fill="#FFD84D" stroke="#EBB93C" stroke-width="2"/>
+    <circle cx="100" cy="44" r="7" fill="#FFD84D" stroke="#EBB93C" stroke-width="2"/>
+  </g>`),
 };
 
 let count = 0;

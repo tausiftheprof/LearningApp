@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useState } from 'react';
 import { Pressable, StyleSheet, Text, View, type ViewStyle } from 'react-native';
 import type { Theme } from './theme';
 
@@ -69,36 +69,27 @@ export function InstructionBar(props: {
 }
 
 /**
- * Hold-to-go-home (C-09): prevents accidental exit while staying operable by
- * a child on purpose. 1.2s press-and-hold; progress announced to readers.
+ * Home button: a single tap goes home (owner direction, July 2026 — the
+ * original 1.2s press-and-hold read as broken in testing).
  */
 export function HoldToHomeButton(props: {
   theme: Theme;
-  holdMs?: number;
   onHome: () => void;
 }): React.JSX.Element {
-  const holdMs = props.holdMs ?? 1200;
-  const [holding, setHolding] = useState(false);
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [pressed, setPressed] = useState(false);
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel="Hold to go home"
-      accessibilityHint={`Keep pressing for ${Math.round(holdMs / 1000)} seconds to leave the activity`}
-      onPressIn={() => {
-        setHolding(true);
-        timer.current = setTimeout(props.onHome, holdMs);
-      }}
-      onPressOut={() => {
-        setHolding(false);
-        if (timer.current) clearTimeout(timer.current);
-      }}
+      accessibilityLabel="Go home"
+      onPress={props.onHome}
+      onPressIn={() => setPressed(true)}
+      onPressOut={() => setPressed(false)}
       style={[
         styles.homeButton,
         {
           minWidth: props.theme.childMinTargetDp,
           minHeight: props.theme.childMinTargetDp,
-          backgroundColor: holding ? props.theme.accent : props.theme.surface,
+          backgroundColor: pressed ? props.theme.accent : props.theme.surface,
         },
       ]}
     >

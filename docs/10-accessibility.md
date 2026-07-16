@@ -17,7 +17,7 @@ Target: WCAG 2.2 Level AA **where applicable** to a native mobile app (mapped be
 - [ ] 2.5.1 No path-based gesture required for navigation (pinch-zoom has button fallback; two-finger actions optional per §7 "bilateral optional")
 - [ ] 2.2.x No time limits by default; optional timers always disableable; "longer response time" setting multiplies windows ×2.5
 - [ ] 2.1.x Keyboard/switch: navigational UI focusable/operable; documented drawing limitation
-- [ ] 2.5.5 Accidental activation: hold-to-home; destructive actions two-step
+- [ ] 2.5.5 Accidental activation: home button placed outside the play surface (tap goes home per owner direction); destructive actions two-step
 
 **Understandable**
 - [ ] 3.1 Language set (en-AU); simple language reviewed (child copy ≤ 8 words/sentence)

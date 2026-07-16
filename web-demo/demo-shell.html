@@ -149,10 +149,29 @@
     font-size: clamp(24px, 3.6vw, 36px);
   }
   .big-tile .sublabel { font-size: clamp(10px, 1.4vw, 13px); color: var(--tile-ink, #fff); opacity: 0.75; font-weight: 600; }
-  /* Candy Clouds: bubbly, uneven cloud-tile corners */
-  #app[data-app-theme="candy"] .big-tile:nth-child(odd) { border-radius: 34px 26px 38px 24px; }
-  #app[data-app-theme="candy"] .big-tile:nth-child(even) { border-radius: 26px 38px 24px 34px; }
-  #app[data-app-theme="candy"] .greeting-card { border-radius: 32px 38px 34px 30px; }
+  .big-tile .tile-text { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+  /* Candy Clouds (approved design): bubbly cloud tiles, icon left + text right */
+  #app[data-app-theme="candy"] .big-tile:nth-child(odd) { border-radius: 40px 30px 44px 28px / 34px 40px 30px 44px; }
+  #app[data-app-theme="candy"] .big-tile:nth-child(even) { border-radius: 30px 44px 28px 40px / 40px 30px 44px 34px; }
+  #app[data-app-theme="candy"] .home-grid .big-tile {
+    flex-direction: row; justify-content: flex-start; gap: 12px; padding: 12px 18px;
+    box-shadow: 0 4px 10px rgba(69, 61, 91, 0.08);
+  }
+  #app[data-app-theme="candy"] .home-grid .tile-text { align-items: flex-start; text-align: left; }
+  #app[data-app-theme="candy"] .greeting-card {
+    border-radius: 44px 52px 48px 40px / 40px 44px 52px 46px;
+    box-shadow: 0 6px 14px rgba(69, 61, 91, 0.1);
+  }
+  #app[data-app-theme="candy"] .greeting-card .mascot-slot { order: -1; margin-left: 0; margin-right: 4px; }
+  #app[data-app-theme="candy"] .lock-btn { border-radius: 999px; padding: 8px 12px; }
+  .candy-deco { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+  .candy-deco span { position: absolute; opacity: 0.65; }
+  .greeting-card .mascot-slot { margin-left: auto; display: grid; place-items: center; }
+  .chev-circle {
+    width: clamp(30px, 3.6vw, 40px); height: clamp(30px, 3.6vw, 40px);
+    border-radius: 50%; display: grid; place-items: center; line-height: 1;
+    padding-bottom: 3px;
+  }
   .rewards-banner {
     grid-column: 1 / -1;
     display: flex; align-items: center; gap: 12px;
@@ -501,15 +520,16 @@ async function completeActivity(activity, { attempts = 1, hintCount = 0, accurac
 /* ---------- shared UI helpers ---------- */
 function el(html) { const t = document.createElement('template'); t.innerHTML = html.trim(); return t.content.firstElementChild; }
 
+/* Home button: a single tap goes home (owner direction, July 2026 — the old
+   1.2s press-and-hold read as broken). Also fires on pointerup so it works
+   even when a drawing surface has captured the pointer stream. */
 function holdToHomeButton(onHome) {
-  const btn = el(`<button class="icon-btn" aria-label="Hold to go home">🏠</button>`);
-  let timer = null;
-  const start = () => { btn.classList.add('holding'); timer = setTimeout(async () => { await stopActivityClock(); onHome(); }, 1200); };
-  const stop = () => { btn.classList.remove('holding'); clearTimeout(timer); };
-  btn.addEventListener('pointerdown', start);
-  btn.addEventListener('pointerup', stop);
-  btn.addEventListener('pointerleave', stop);
-  btn.addEventListener('keydown', (e) => { if (e.key === 'Enter') { stopActivityClock().then(onHome); } });
+  const btn = el(`<button class="icon-btn" aria-label="Go home">🏠</button>`);
+  let done = false;
+  const go = async () => { if (done) return; done = true; btn.classList.add('holding'); await stopActivityClock(); onHome(); };
+  btn.addEventListener('click', go);
+  btn.addEventListener('pointerup', go);
+  btn.addEventListener('keydown', (e) => { if (e.key === 'Enter') go(); });
   return btn;
 }
 
@@ -534,10 +554,11 @@ function render() {
   const t = theme();
   app.dataset.appTheme = t.id;
   if (parentish) {
-    app.style.background = ''; app.style.color = '';
+    app.style.background = ''; app.style.color = ''; app.style.backgroundImage = '';
     app.style.setProperty('--tile-ink', '#fff');
   } else {
     app.style.background = highContrast() ? '#FFFFFF' : t.background;
+    app.style.backgroundImage = highContrast() ? '' : (t.backgroundGradient || '');
     app.style.color = highContrast() ? '#000000' : t.text;
     app.style.setProperty('--tile-ink', highContrast() ? '#FFFFFF' : t.text);
   }
@@ -638,15 +659,34 @@ function renderHome() {
   const th = theme();
   const hc = highContrast();
   const surface = hc ? '#FFFFFF' : th.surface;
+  const candy = th.id === 'candy' && !hc;
+
+  if (candy) {
+    // Soft dreamscape details from the approved Candy Clouds design.
+    const deco = el(`<div class="candy-deco" aria-hidden="true">
+      <span style="top:1%;left:2%;font-size:34px">🌈</span>
+      <span style="top:6%;right:24%;font-size:15px">✨</span>
+      <span style="top:24%;left:1.5%;font-size:14px">💗</span>
+      <span style="top:38%;right:1.5%;font-size:16px">✨</span>
+      <span style="top:56%;left:1.5%;font-size:13px">⭐</span>
+      <span style="top:70%;right:1.5%;font-size:14px">💜</span>
+      <span style="bottom:4%;left:3%;font-size:26px">☁️</span>
+      <span style="bottom:6%;right:4%;font-size:22px">☁️</span>
+    </div>`);
+    app.append(deco);
+  }
 
   const top = el(`<div class="home-top"></div>`);
+  const mascotHtml = th.greeting.mascotImage && IMAGES[th.greeting.mascotImage]
+    ? imgHtml(th.greeting.mascotImage, 54)
+    : `<span class="mascot" aria-hidden="true">${th.greeting.mascot}</span>`;
   const greet = el(`<div class="greeting-card" style="background:${hc ? '#FFFFFF' : th.greeting.background};${hc ? 'border:2px solid #000' : ''}">
-    <div><div class="hi">Hi, ${state.profile?.nickname ?? 'friend'}!</div><div class="sub">${th.greeting.subtitle}</div></div>
-    <span class="mascot" aria-hidden="true">${th.greeting.mascot}</span>
+    <div><div class="hi" style="${!hc && th.greeting.titleColor ? `color:${th.greeting.titleColor}` : ''}">Hi, ${state.profile?.nickname ?? 'friend'}!</div><div class="sub">${th.greeting.subtitle}</div></div>
+    <span class="mascot-slot" aria-hidden="true">${mascotHtml}</span>
   </div>`);
   const right = el(`<div class="home-topright"></div>`);
   right.append(el(`<div class="star-pill" style="background:${hc ? '#FFFFFF' : th.starPill};${hc ? 'border:2px solid #000' : ''}" aria-label="${state.rewards.totalStars} stars earned">⭐ ${state.rewards.totalStars}</div>`));
-  const gate = el(`<button class="lock-btn" style="background:${surface}" aria-label="For grown-ups: open parent settings"><span class="ic" aria-hidden="true">🔒</span>Grown-ups</button>`);
+  const gate = el(`<button class="lock-btn" style="background:${candy ? '#F7CFE4' : surface}" aria-label="For grown-ups: open parent settings"><span class="ic" aria-hidden="true">🔒</span>Grown-ups</button>`);
   gate.onclick = () => navigate({ name: 'gate' });
   right.append(gate);
   top.append(greet, right);
@@ -654,9 +694,8 @@ function renderHome() {
   const grid = el(`<div class="tile-grid home-grid"></div>`);
   HOME_TILES.forEach((t, i) => {
     const tile = el(`<button class="big-tile" style="background:${tiles()[i % tiles().length]}">
-      <span class="medallion" style="background:${surface}" aria-hidden="true">${th.tileIcons[i]}</span>
-      <span class="label">${t.label}</span>
-      <span class="sublabel">${LH.HOME_TILE_SUBTITLES[i]}</span>
+      <span class="medallion" style="background:${candy ? 'rgba(255,255,255,0.55)' : surface}" aria-hidden="true">${th.tileIcons[i]}</span>
+      <span class="tile-text"><span class="label">${t.label}</span><span class="sublabel">${LH.HOME_TILE_SUBTITLES[i]}</span></span>
     </button>`);
     tile.onclick = () => {
       speak(t.label);
@@ -666,13 +705,15 @@ function renderHome() {
     };
     grid.append(tile);
   });
+  const chestHtml = th.rewards.iconImage && IMAGES[th.rewards.iconImage]
+    ? imgHtml(th.rewards.iconImage, 56)
+    : `<span class="ic">${th.rewards.icon}</span>`;
   const rewardsBanner = el(`<button class="rewards-banner" style="background:${hc ? HC_COLOURS[0] : th.rewards.background}">
-    <span class="ic" aria-hidden="true">${th.rewards.icon}</span>
+    <span aria-hidden="true">${chestHtml}</span>
     <span><span class="t" style="display:block">My Rewards</span><span class="s">Stickers, badges and stars!</span></span>
-    <span class="chev" aria-hidden="true">›</span>
+    <span class="chev ${th.rewards.chevron && !hc ? 'chev-circle' : ''}" style="${th.rewards.chevron && !hc ? `background:${th.rewards.chevron};color:#fff` : ''}" aria-hidden="true">›</span>
   </button>`);
   rewardsBanner.style.color = hc ? '#fff' : th.text;
-  rewardsBanner.querySelectorAll('.t,.s,.chev').forEach((n) => { n.style.color = 'inherit'; });
   rewardsBanner.onclick = () => { speak('My rewards'); navigate({ name: 'rewards' }); };
   grid.append(rewardsBanner);
 
