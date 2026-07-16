@@ -34,7 +34,9 @@ export function tracingConfigFor(
   const widen = options?.accessibilityWiderCorridor ? 1.5 : 1;
   return {
     corridorWidth: widths[level] * widen,
-    coverageToComplete: level === 1 ? 0.75 : level === 2 ? 0.85 : 0.9,
+    // Raised after owner feedback that completion fired too early: the child
+    // must now cover almost the whole path AND reach both ends (see addPoint).
+    coverageToComplete: level === 1 ? 0.85 : level === 2 ? 0.9 : 0.92,
     onPathTarget: 0.8,
     attemptsBeforeDemo: 3,
     directionAgnostic: level === 1,
@@ -108,6 +110,7 @@ export class TracingSession {
   private attemptNumber = 1;
   private lowAccuracyAttempts = 0;
   private completedFlag = false;
+  private lastBucket: number | null = null;
 
   constructor(path: Point[], config: TracingConfig) {
     if (path.length < 2) throw new Error('tracing path needs at least 2 points');
@@ -136,20 +139,29 @@ export class TracingSession {
     if (onPath) {
       this.onPathCount++;
       const bucket = Math.min(COVERAGE_BUCKETS - 1, Math.floor(best.position * COVERAGE_BUCKETS));
-      this.covered[bucket] = true;
-      // A finger seldom lands in every bucket; fill small gaps between the
-      // previous covered neighbour to avoid pinhole misses at high sample rates.
-      if (bucket > 0 && this.covered[bucket - 1] === false && this.coverage() > 0) {
-        const prevCovered = this.covered
-          .slice(Math.max(0, bucket - 3), bucket)
-          .some((c) => c);
-        if (prevCovered) {
-          for (let b = Math.max(0, bucket - 3); b < bucket; b++) this.covered[b] = true;
-        }
+      // Bridge only the gap the finger actually swept: between this sample's
+      // bucket and the previous on-path sample's bucket (fast strokes skip
+      // buckets). Unlike a blanket neighbour-fill, this cannot mark path the
+      // finger never went near - the fix for "good job before finishing".
+      if (this.lastBucket !== null && Math.abs(bucket - this.lastBucket) <= 12) {
+        const [lo, hi] = bucket > this.lastBucket ? [this.lastBucket, bucket] : [bucket, this.lastBucket];
+        for (let b = lo; b <= hi; b++) this.covered[b] = true;
+      } else {
+        this.covered[bucket] = true;
       }
+      this.lastBucket = bucket;
+    } else {
+      this.lastBucket = null; // leaving the corridor breaks the sweep bridge
     }
     const coverage = this.coverage();
-    if (coverage >= this.config.coverageToComplete) this.completedFlag = true;
+    // Completion needs near-full coverage AND both ends of the path reached -
+    // stopping halfway can never celebrate early again.
+    const startReached = this.covered[0] || this.covered[1] || this.covered[2];
+    const endReached =
+      this.covered[COVERAGE_BUCKETS - 1] || this.covered[COVERAGE_BUCKETS - 2] || this.covered[COVERAGE_BUCKETS - 3];
+    if (coverage >= this.config.coverageToComplete && startReached && endReached) {
+      this.completedFlag = true;
+    }
     return { onPath, pathPosition: best.position, coverage, completed: this.completedFlag };
   }
 
@@ -203,5 +215,6 @@ export class TracingSession {
     this.sampled = 0;
     this.onPathCount = 0;
     this.completedFlag = false;
+    this.lastBucket = null;
   }
 }

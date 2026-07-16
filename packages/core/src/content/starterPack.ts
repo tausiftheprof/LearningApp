@@ -1,4 +1,5 @@
 import type { Activity, ContentPack } from './schema';
+import { DIGIT_CHARS, digitStrokes, LETTERS, letterStrokes } from './glyphs';
 import { CONTENT_PACK_FORMAT_VERSION, gameTemplateIds, validateContentPack } from './schema';
 import type { Point } from '../types';
 
@@ -85,37 +86,23 @@ const tracingActivities: Activity[] = [
   },
 ];
 
-// Letters and numbers as simple polyline skeletons (illustrative geometry).
-const LETTER_PATHS: Record<string, Point[][]> = {
-  A: [[...line(300, 800, 500, 200, 6), ...line(500, 200, 700, 800, 6)], line(380, 560, 620, 560, 4)],
-  C: [arc(550, 500, 300, 60, 300)],
-  I: [line(500, 200, 500, 800, 6)],
-  L: [[...line(350, 200, 350, 800, 6), ...line(350, 800, 700, 800, 4)]],
-  O: [arc(500, 500, 280, -90, 270)],
-  T: [line(250, 200, 750, 200, 4), line(500, 200, 500, 800, 6)],
-};
-const NUMBER_PATHS: Record<string, Point[][]> = {
-  '1': [line(500, 200, 500, 800, 6)],
-  '2': [[...arc(500, 380, 180, 180, 380, 12), ...line(640, 480, 320, 800, 5), ...line(320, 800, 720, 800, 4)]],
-  '3': [[...arc(500, 350, 150, 150, 400, 12), ...arc(500, 650, 150, 320, 570, 12)]],
-  '7': [[...line(280, 220, 720, 220, 4), ...line(720, 220, 450, 800, 6)]],
-  '0': [arc(500, 500, 260, -90, 270)],
-};
-
-for (const [ch, paths] of Object.entries(LETTER_PATHS)) {
+// Letters A-Z (capital + small side by side) and numbers 0-9 from the glyph
+// library. The tracing player runs the strokes in order and auto-advances to
+// the next letter/number on completion (owner direction).
+for (const ch of LETTERS) {
   tracingActivities.push({
-    type: 'tracing', id: `trace-letter-${ch.toLowerCase()}`, title: `Letter ${ch}`, category: 'tracing',
+    type: 'tracing', id: `trace-letter-${ch.toLowerCase()}`, title: `Letter ${ch} · ${ch.toLowerCase()}`, category: 'tracing',
     ageBands: ['3-5', '5-7'], difficulty: 2, motorSkills: ['tracing', 'controlled-movement'],
     estimatedMinutes: 2, theme: 'letters-numbers', locale: 'en-AU',
-    instructionAudio: audio(`trace-letter-${ch.toLowerCase()}`), paths, closed: false,
+    instructionAudio: audio(`trace-letter-${ch.toLowerCase()}`), paths: letterStrokes(ch), closed: false,
   });
 }
-for (const [ch, paths] of Object.entries(NUMBER_PATHS)) {
+for (const ch of DIGIT_CHARS) {
   tracingActivities.push({
     type: 'tracing', id: `trace-number-${ch}`, title: `Number ${ch}`, category: 'tracing',
     ageBands: ['3-5', '5-7'], difficulty: 2, motorSkills: ['tracing', 'controlled-movement'],
     estimatedMinutes: 2, theme: 'letters-numbers', locale: 'en-AU',
-    instructionAudio: audio(`trace-number-${ch}`), paths, closed: false,
+    instructionAudio: audio(`trace-number-${ch}`), paths: digitStrokes(ch), closed: false,
   });
 }
 
@@ -249,6 +236,54 @@ const gameActivities: Activity[] = games.map((g) => ({
 /* ---------- Drawing board entry (free drawing is app-native; this catalogues it) ---------- */
 
 const drawingActivities: Activity[] = [
+  {
+    type: 'guided-drawing', id: 'sketch-dolphin', title: 'Draw over: a dolphin', category: 'drawing',
+    ageBands: ['3-5', '5-7'], difficulty: 2, motorSkills: ['holding-moving', 'controlled-movement'],
+    estimatedMinutes: 4, theme: 'underwater', locale: 'en-AU', instructionAudio: audio('draw-sketch'),
+    steps: [{ prompt: 'images/dolphin.svg', overlay: [{ x: 0, y: 0 }, { x: 1000, y: 1000 }] }],
+  },
+  {
+    type: 'guided-drawing', id: 'sketch-dinosaur', title: 'Draw over: a dinosaur', category: 'drawing',
+    ageBands: ['3-5', '5-7'], difficulty: 2, motorSkills: ['holding-moving', 'controlled-movement'],
+    estimatedMinutes: 4, theme: 'dinosaurs', locale: 'en-AU', instructionAudio: audio('draw-sketch'),
+    steps: [{ prompt: 'images/dinosaur.svg', overlay: [{ x: 0, y: 0 }, { x: 1000, y: 1000 }] }],
+  },
+  {
+    type: 'guided-drawing', id: 'sketch-unicorn', title: 'Draw over: a unicorn', category: 'drawing',
+    ageBands: ['3-5', '5-7'], difficulty: 2, motorSkills: ['holding-moving', 'controlled-movement'],
+    estimatedMinutes: 4, theme: 'fairy-tales', locale: 'en-AU', instructionAudio: audio('draw-sketch'),
+    steps: [{ prompt: 'images/unicorn.svg', overlay: [{ x: 0, y: 0 }, { x: 1000, y: 1000 }] }],
+  },
+  {
+    type: 'guided-drawing', id: 'sketch-whale', title: 'Draw over: a whale', category: 'drawing',
+    ageBands: ['3-5', '5-7'], difficulty: 2, motorSkills: ['holding-moving', 'controlled-movement'],
+    estimatedMinutes: 4, theme: 'underwater', locale: 'en-AU', instructionAudio: audio('draw-sketch'),
+    steps: [{ prompt: 'images/whale.svg', overlay: [{ x: 0, y: 0 }, { x: 1000, y: 1000 }] }],
+  },
+  {
+    type: 'guided-drawing', id: 'sketch-cat', title: 'Draw over: a cat', category: 'drawing',
+    ageBands: ['3-5', '5-7'], difficulty: 2, motorSkills: ['holding-moving', 'controlled-movement'],
+    estimatedMinutes: 4, theme: 'animals', locale: 'en-AU', instructionAudio: audio('draw-sketch'),
+    steps: [{ prompt: 'images/cat.svg', overlay: [{ x: 0, y: 0 }, { x: 1000, y: 1000 }] }],
+  },
+  {
+    type: 'guided-drawing', id: 'sketch-rocket', title: 'Draw over: a rocket', category: 'drawing',
+    ageBands: ['3-5', '5-7'], difficulty: 2, motorSkills: ['holding-moving', 'controlled-movement'],
+    estimatedMinutes: 4, theme: 'space', locale: 'en-AU', instructionAudio: audio('draw-sketch'),
+    steps: [{ prompt: 'images/rocket.svg', overlay: [{ x: 0, y: 0 }, { x: 1000, y: 1000 }] }],
+  },
+  {
+    type: 'guided-drawing', id: 'sketch-car', title: 'Draw over: a car', category: 'drawing',
+    ageBands: ['3-5', '5-7'], difficulty: 2, motorSkills: ['holding-moving', 'controlled-movement'],
+    estimatedMinutes: 4, theme: 'vehicles', locale: 'en-AU', instructionAudio: audio('draw-sketch'),
+    steps: [{ prompt: 'images/car.svg', overlay: [{ x: 0, y: 0 }, { x: 1000, y: 1000 }] }],
+  },
+  {
+    type: 'guided-drawing', id: 'sketch-treehouse', title: 'Draw over: a treehouse', category: 'drawing',
+    ageBands: ['3-5', '5-7'], difficulty: 2, motorSkills: ['holding-moving', 'controlled-movement'],
+    estimatedMinutes: 4, theme: 'nature', locale: 'en-AU', instructionAudio: audio('draw-sketch'),
+    steps: [{ prompt: 'images/treehouse.svg', overlay: [{ x: 0, y: 0 }, { x: 1000, y: 1000 }] }],
+  },
   {
     type: 'guided-drawing', id: 'draw-free-board', title: 'Free drawing', category: 'drawing',
     ageBands: ['2-3', '3-5', '5-7'], difficulty: 1,

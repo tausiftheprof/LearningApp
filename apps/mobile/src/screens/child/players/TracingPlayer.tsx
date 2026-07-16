@@ -34,9 +34,11 @@ export function TracingPlayer(props: {
       }),
     [profile, accessibility],
   );
-  // MVP scaffold traces the first path of the activity; multi-stroke letters
-  // chain sessions in the phase-1 build-out.
-  const session = useRef(new TracingSession(props.activity.paths[0]!, config)).current;
+  // Multi-stroke sequencing: letters trace the capital's strokes then the
+  // small letter's (side by side), matching the web demo's behaviour.
+  const [strokeIndex, setStrokeIndex] = useState(0);
+  const session = useRef(new TracingSession(props.activity.paths[0]!, config));
+  const scores = useRef<number[]>([]);
 
   const [size, setSize] = useState({ w: 1, h: 1 });
   const [childPoints, setChildPoints] = useState<{ x: number; y: number; onPath: boolean }[]>([]);
@@ -68,21 +70,28 @@ export function TracingPlayer(props: {
         onMoveShouldSetPanResponder: () => !done,
         onPanResponderMove: (e) => {
           const { locationX, locationY } = e.nativeEvent;
-          const result = session.addPoint(toDesign(locationX, locationY));
+          const result = session.current.addPoint(toDesign(locationX, locationY));
           setChildPoints((prev) => [...prev.slice(-400), { x: locationX, y: locationY, onPath: result.onPath }]);
           if (result.completed && !done) {
-            setDone(true);
-            const summary = session.endAttempt();
-            props.onComplete({
-              attempts: summary.attemptNumber,
-              hintCount: 0,
-              accuracyScore: summary.accuracyScore,
-            });
+            const summary = session.current.endAttempt();
+            scores.current.push(summary.accuracyScore);
+            const nextIndex = strokeIndex + 1;
+            if (nextIndex < props.activity.paths.length) {
+              // Next stroke of the same glyph (e.g. capital done, small next).
+              session.current = new TracingSession(props.activity.paths[nextIndex]!, config);
+              setStrokeIndex(nextIndex);
+              setChildPoints([]);
+              setEncouragement(pickFeedback('completed') + ' Now the next one!');
+            } else {
+              setDone(true);
+              const avg = Math.round(scores.current.reduce((a, b) => a + b, 0) / scores.current.length);
+              props.onComplete({ attempts: summary.attemptNumber, hintCount: 0, accuracyScore: avg });
+            }
           }
         },
         onPanResponderRelease: () => {
           if (done) return;
-          const summary = session.endAttempt();
+          const summary = session.current.endAttempt();
           if (!summary.completed) {
             setEncouragement(pickFeedback(summary.showDemo ? 'hint' : summary.coverage > 0.4 ? 'almost' : 'try-again'));
             setChildPoints([]);
@@ -90,10 +99,10 @@ export function TracingPlayer(props: {
         },
       }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [done, scale],
+    [done, scale, strokeIndex],
   );
 
-  const start = fromDesign(props.activity.paths[0]![0]!);
+  const start = fromDesign(props.activity.paths[Math.min(strokeIndex, props.activity.paths.length - 1)]![0]!);
 
   return (
     <View style={styles.root}>

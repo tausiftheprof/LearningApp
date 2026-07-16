@@ -60,6 +60,24 @@ describe('TracingSession', () => {
     expect(session.completed).toBe(false);
   });
 
+  it('never celebrates early: high coverage without reaching the end is incomplete', () => {
+    // Regression for "says good job before tracing is completed": trace 88%
+    // of the path but stop short of the end - must NOT complete even though
+    // coverage exceeds the threshold number alone.
+    const session = new TracingSession(horizontal, tracingConfigFor(1));
+    traceAlong(session, 0, 0, 880);
+    expect(session.coverage()).toBeGreaterThanOrEqual(0.85);
+    expect(session.completed).toBe(false);
+  });
+
+  it('skipping the middle of the path prevents completion (no blanket gap-fill)', () => {
+    const session = new TracingSession(horizontal, tracingConfigFor(1));
+    traceAlong(session, 0, 0, 350);      // first third
+    session.endAttempt();                 // lift; attempt 2
+    traceAlong(session, 0, 650, 1000);   // last third only
+    expect(session.completed).toBe(false);
+  });
+
   it('triggers the demonstration after three low-accuracy attempts (C-08/A-09)', () => {
     const config = tracingConfigFor(3);
     const session = new TracingSession(horizontal, config);
