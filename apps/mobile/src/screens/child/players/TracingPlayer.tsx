@@ -45,9 +45,13 @@ export function TracingPlayer(props: {
   const [done, setDone] = useState(false);
   const [encouragement, setEncouragement] = useState<string | null>(null);
 
-  const scale = Math.min(size.w, size.h) / DESIGN;
-  const toDesign = (x: number, y: number) => ({ x: x / scale, y: y / scale });
-  const fromDesign = (p: { x: number; y: number }) => ({ x: p.x * scale, y: p.y * scale });
+  const side = Math.min(size.w, size.h);
+  const scale = side / DESIGN;
+  // Centre the square design space in the stage (letters were left-aligned).
+  const ox = (size.w - side) / 2;
+  const oy = (size.h - side) / 2;
+  const toDesign = (x: number, y: number) => ({ x: (x - ox) / scale, y: (y - oy) / scale });
+  const fromDesign = (p: { x: number; y: number }) => ({ x: p.x * scale + ox, y: p.y * scale + oy });
 
   const guidePath = useMemo(() => {
     const path = Skia.Path.Make();

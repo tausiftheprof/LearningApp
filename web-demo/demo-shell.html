@@ -684,7 +684,7 @@ function renderTracing(firstActivity) {
   let strokeIndex = 0;
   let session = new LH.TracingSession(strokes[0], config);
   let scores = [];
-  let scale = 1, dots = [], done = false, tracing = false;
+  let scale = 1, ox = 0, oy = 0, dots = [], done = false, tracing = false;
 
   function loadActivity(next) {
     activity = next;
@@ -706,13 +706,17 @@ function renderTracing(firstActivity) {
     const r = stage.getBoundingClientRect();
     canvas.width = r.width * devicePixelRatio; canvas.height = r.height * devicePixelRatio;
     ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
-    scale = Math.min(r.width, r.height) / 1000;
+    const side = Math.min(r.width, r.height);
+    scale = side / 1000;
+    // Centre the square design space in the stage (letters were left-aligned).
+    ox = (r.width - side) / 2;
+    oy = (r.height - side) / 2;
     draw();
   }
 
   function strokePath(path) {
     ctx.beginPath();
-    path.forEach((p, i) => (i ? ctx.lineTo(p.x * scale, p.y * scale) : ctx.moveTo(p.x * scale, p.y * scale)));
+    path.forEach((p, i) => (i ? ctx.lineTo(p.x * scale + ox, p.y * scale + oy) : ctx.moveTo(p.x * scale + ox, p.y * scale + oy)));
   }
 
   function draw() {
@@ -735,7 +739,7 @@ function renderTracing(firstActivity) {
     });
     if (!done) {
       const start = strokes[strokeIndex][0];
-      ctx.beginPath(); ctx.arc(start.x * scale, start.y * scale, 13, 0, Math.PI * 2);
+      ctx.beginPath(); ctx.arc(start.x * scale + ox, start.y * scale + oy, 13, 0, Math.PI * 2);
       ctx.fillStyle = '#FF8A65'; ctx.fill();
     }
     for (const d of dots) {
@@ -785,7 +789,7 @@ function renderTracing(firstActivity) {
   function feed(e) {
     const r = canvas.getBoundingClientRect();
     const x = e.clientX - r.left, y = e.clientY - r.top;
-    const result = session.addPoint({ x: x / scale, y: y / scale });
+    const result = session.addPoint({ x: (x - ox) / scale, y: (y - oy) / scale });
     dots.push({ x, y, on: result.onPath });
     if (dots.length > 500) dots.shift();
     draw();
@@ -1481,22 +1485,25 @@ function renderGame(activity) {
       const goalEl = el(`<div style="position:absolute;width:76px;height:76px;pointer-events:none">${itemHtml(goal, 76)}</div>`);
       stage.append(canvas, moverEl, goalEl);
       const ctx = canvas.getContext('2d');
-      let scale = 1, doneMaze = false;
+      let scale = 1, mox = 0, moy = 0, doneMaze = false;
       function fit() {
         const r = stage.getBoundingClientRect();
         canvas.width = r.width * devicePixelRatio; canvas.height = r.height * devicePixelRatio;
         ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
-        scale = Math.min(r.width, r.height) / 1000;
+        const side = Math.min(r.width, r.height);
+        scale = side / 1000;
+        mox = (r.width - side) / 2;
+        moy = (r.height - side) / 2;
         const start = path[0], endP = path[path.length - 1];
-        moverEl.style.left = start.x * scale - 32 + 'px'; moverEl.style.top = start.y * scale - 32 + 'px';
-        goalEl.style.left = endP.x * scale - 38 + 'px'; goalEl.style.top = endP.y * scale - 38 + 'px';
+        moverEl.style.left = start.x * scale + mox - 32 + 'px'; moverEl.style.top = start.y * scale + moy - 32 + 'px';
+        goalEl.style.left = endP.x * scale + mox - 38 + 'px'; goalEl.style.top = endP.y * scale + moy - 38 + 'px';
         draw();
       }
       function draw() {
         const r = stage.getBoundingClientRect();
         ctx.clearRect(0, 0, r.width, r.height);
         ctx.beginPath();
-        path.forEach((pt, i) => (i ? ctx.lineTo(pt.x * scale, pt.y * scale) : ctx.moveTo(pt.x * scale, pt.y * scale)));
+        path.forEach((pt, i) => (i ? ctx.lineTo(pt.x * scale + mox, pt.y * scale + moy) : ctx.moveTo(pt.x * scale + mox, pt.y * scale + moy)));
         ctx.lineCap = ctx.lineJoin = 'round';
         ctx.strokeStyle = '#EAD9C4'; ctx.lineWidth = config.corridorWidth * 2 * scale; ctx.stroke();
         ctx.strokeStyle = '#D8C2A6'; ctx.lineWidth = 5; ctx.setLineDash([14, 12]); ctx.stroke(); ctx.setLineDash([]);
@@ -1507,7 +1514,7 @@ function renderGame(activity) {
         if (!tracking || doneMaze) return;
         const r = canvas.getBoundingClientRect();
         const x = e.clientX - r.left, y = e.clientY - r.top;
-        const result = session.addPoint({ x: x / scale, y: y / scale });
+        const result = session.addPoint({ x: (x - mox) / scale, y: (y - moy) / scale });
         if (result.onPath) { moverEl.style.left = x - 32 + 'px'; moverEl.style.top = y - 32 + 'px'; }
         if (result.completed) {
           doneMaze = true; tracking = false;

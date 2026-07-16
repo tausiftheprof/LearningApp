@@ -456,21 +456,21 @@ xt=we.extend({type:g.literal("jigsaw"),image:Ee,rows:g.number().int().min(1).max
 ck-blocks","shadow-match","feed-animal","reveal-wipe","pattern-complete"],wt=we.extend({type:g.literal("game"),template:g.enum(kt),params:g.record(g.unknown())}),St=we.extend({type:g.literal("guided-drawing"),steps:g.array(g.object({prompt:Ee,overlay:g.array(Ge).min(2)})).min(1)}),At=g.discriminatedUnion(
 "type",[_t,bt,xt,wt,St]),Tt=g.object({formatVersion:g.literal(Me),packId:g.string().min(1),version:g.string().regex(/^\d+\.\d+\.\d+$/),minAppVersion:g.string().regex(/^\d+\.\d+\.\d+$/),locales:g.array(g.string()).min(1),entitlement:g.enum(["free","full_library"]),activities:g.array(At).min(1)});function qe(t){
 let e=Tt.safeParse(t);if(!e.success)return{ok:!1,errors:e.error.issues.map(a=>`${a.path.join(".")}: ${a.message}`)};let r=[],n=new Set;for(let a of e.data.activities)n.has(a.id)&&r.push(`duplicate activity id: ${a.id}`),n.add(a.id);return r.length>0?{ok:!1,errors:r}:{ok:!0,pack:e.data,errors:[]}}function c(t,e,r,n,a=6){let s=[];for(let i=0;i<=a;i++)s.push({x:t+(r-t)*i/a,y:e+(n-e)*i/a});return s}function b(t,e,r,n,a,s=20){let i=[];for(let o=0;o<=s;o++){let d=(n+(a-n)*o/s)*Math.PI/180;i.push({x:t+r*Math.cos(d),y:e+r*Math.sin(d)})}return i}var w=(...t)=>t.flat(),Ct={A:[w(c(260,820,500,180),c(500,
-180,740,820)),c(360,580,640,580,4)],B:[c(320,180,320,820),w(c(320,200,520,200,2),b(520,345,145,-90,90),c(520,490,320,490,2)),w(c(320,490,545,490,2),b(545,650,160,-90,90),c(545,810,320,810,2))],C:[b(560,500,310,55,305)],D:[c(330,180,330,820),w(c(330,200,450,200,2),b(450,500,300,-76,76),c(450,800,330,
-800,2))],E:[c(330,180,330,820),c(330,200,700,200,4),c(330,500,650,500,4),c(330,800,700,800,4)],F:[c(330,180,330,820),c(330,200,700,200,4),c(330,500,640,500,4)],G:[b(540,500,310,50,310),c(700,560,540,560,3)],H:[c(320,180,320,820),c(680,180,680,820),c(320,500,680,500,4)],I:[c(500,180,500,820)],J:[w(c(
-640,180,640,630,4),b(495,630,145,0,180,12))],K:[c(320,180,320,820),w(c(690,180,330,510,4),c(330,510,690,820,4))],L:[w(c(350,180,350,800,6),c(350,800,700,800,4))],M:[w(c(290,820,290,200,4),c(290,200,500,560,3),c(500,560,710,200,3),c(710,200,710,820,4))],N:[w(c(320,820,320,200,4),c(320,200,680,800,4),
-c(680,800,680,180,4))],O:[b(500,500,300,-90,270,26)],P:[c(330,180,330,820),w(c(330,200,520,200,2),b(520,360,160,-90,90),c(520,520,330,520,2))],Q:[b(500,500,290,-90,270,26),c(600,630,770,820,3)],R:[c(330,180,330,820),w(c(330,200,520,200,2),b(520,360,160,-90,90),c(520,520,330,520,2)),c(440,520,710,820,
-4)],S:[w(b(535,355,165,-55,165,14),b(465,660,175,-175,55,14))],T:[c(260,200,740,200,4),c(500,200,500,820,6)],U:[w(c(310,180,310,590,3),b(500,590,190,180,0,14),c(690,590,690,180,3))],V:[w(c(300,180,500,820,4),c(500,820,700,180,4))],W:[w(c(270,180,395,820,3),c(395,820,500,420,2),c(500,420,605,820,2),c(
-605,820,730,180,3))],X:[c(310,200,690,800,5),c(690,200,310,800,5)],Y:[c(310,180,500,480,3),w(c(690,180,500,480,3),c(500,480,500,820,3))],Z:[w(c(300,220,700,220,4),c(700,220,300,780,5),c(300,780,700,780,4))]},hn={a:[b(455,625,195,-90,270,20),c(650,430,650,820,4)],b:[c(350,180,350,820),b(515,640,175,-90,
-270,20)],c:[b(520,625,200,50,310,18)],d:[c(650,180,650,820),b(485,640,175,-90,270,20)],e:[w(c(310,590,680,590,4),b(495,625,195,-10,305,18))],f:[w(b(610,330,150,270,180,8),c(460,330,460,820,5)),c(330,490,620,490,4)],g:[b(480,610,180,-90,270,20),w(c(660,430,660,870,4),b(505,870,155,0,140,10))],h:[c(350,
-180,350,820),w(b(500,620,150,180,360,10),c(650,620,650,820,2))],i:[c(500,430,500,820,4),c(500,290,500,320,1)],j:[w(c(560,430,560,870,4),b(420,870,140,0,140,10)),c(560,290,560,320,1)],k:[c(350,180,350,820),w(c(650,430,360,640,3),c(360,640,660,820,3))],l:[c(500,180,500,820)],m:[c(300,430,300,820,3),w(
-b(400,590,100,180,360,8),c(500,590,500,820,2)),w(b(600,590,100,180,360,8),c(700,590,700,820,2))],n:[c(350,430,350,820,3),w(b(500,615,150,180,360,10),c(650,615,650,820,2))],o:[b(500,625,195,-90,270,20)],p:[c(350,430,350,980,4),b(520,620,170,-90,270,20)],q:[b(480,620,170,-90,270,20),c(650,430,650,980,
-4)],r:[c(400,430,400,820,3),b(545,595,145,180,305,8)],s:[w(b(520,530,115,-50,160,10),b(480,725,120,-170,55,10))],t:[c(480,260,480,820,5),c(340,470,660,470,4)],u:[w(c(350,430,350,650,2),b(500,650,150,180,0,12),c(650,650,650,820,2))],v:[w(c(350,430,500,820,3),c(500,820,650,430,3))],w:[w(c(320,430,415,
-820,2),c(415,820,500,560,2),c(500,560,585,820,2),c(585,820,680,430,2))],x:[c(360,450,640,810,4),c(640,450,360,810,4)],y:[c(350,430,500,720,3),c(650,430,455,980,4)],z:[w(c(360,450,640,450,3),c(640,450,360,800,4),c(360,800,640,800,3))]},Rt={0:[b(500,500,280,-90,270,24)],1:[c(500,200,500,800)],2:[w(b(500,
-380,180,180,380,12),c(640,490,320,800,5),c(320,800,720,800,4))],3:[w(b(500,350,155,-150,90,12),b(500,655,160,-90,145,12))],4:[w(c(620,200,300,610,4),c(300,610,750,610,4)),c(620,330,620,820,4)],5:[w(c(700,220,350,220,3),c(350,220,350,470,3),b(495,615,175,-125,125,14))],6:[w(c(615,210,435,505,3),b(510,
-640,170,-140,220,18))],7:[w(c(280,220,720,220,4),c(720,220,450,800,5))],8:[b(500,370,150,-90,270,18),b(500,665,165,-90,270,18)],9:[b(490,405,170,-90,270,18),c(655,435,640,820,4)]},We=(t,e,r,n,a)=>t.map(s=>s.map(i=>({x:r+i.x*e,y:a+i.y*n}))),Pt=Object.keys(Ct),Et=Object.keys(Rt),Ke=(t,e)=>t.map(r=>r.map(
-n=>({x:(n.x-500)*e+500,y:n.y})));function Mt(t){let e=Ct[t.toUpperCase()],r=hn[t.toLowerCase()];if(!e||!r)throw new Error(`no glyph for letter ${t}`);let n=.5,a=(1e3-1e3*n)/2;return[...We(Ke(e,1.35),n,0,n,a),...We(Ke(r,1.35),n,500,n,a)]}function Ot(t){let e=Rt[t];if(!e)throw new Error(`no glyph for \
-digit ${t}`);let r=.66;return We(Ke(e,1.2),r,(1e3-1e3*r)/2,r,(1e3-1e3*r)/2)}var A=t=>`audio/en-AU/${t}.mp3`;function K(t,e,r,n,a=8){let s=[];for(let i=0;i<=a;i++)s.push({x:t+(r-t)*i/a,y:e+(n-e)*i/a});return s}function Oe(t,e,r,n,a,s=24){let i=[];for(let o=0;o<=s;o++){let d=(n+(a-n)*o/s)*Math.PI/180;i.push({x:t+r*Math.cos(d),y:e+r*Math.sin(d)})}return i}function gn(){let t=[];
+180,740,820)),c(360,580,640,580,4)],B:[c(320,180,320,820),w(c(320,200,520,200,2),b(520,345,145,-90,90),c(520,490,320,490,2)),w(c(320,490,545,490,2),b(545,650,160,-90,90),c(545,810,320,810,2))],C:[b(560,500,310,-55,-305)],D:[c(330,180,330,820),w(c(330,200,450,200,2),b(450,500,300,-76,76),c(450,800,330,
+800,2))],E:[c(330,180,330,820),c(330,200,700,200,4),c(330,500,650,500,4),c(330,800,700,800,4)],F:[c(330,180,330,820),c(330,200,700,200,4),c(330,500,640,500,4)],G:[b(540,500,310,-50,-310,22),c(740,560,520,560,3)],H:[c(320,180,320,820),c(680,180,680,820),c(320,500,680,500,4)],I:[c(500,180,500,820)],J:[
+w(c(640,180,640,630,4),b(495,630,145,0,180,12))],K:[c(320,180,320,820),w(c(690,180,330,510,4),c(330,510,690,820,4))],L:[w(c(350,180,350,800,6),c(350,800,700,800,4))],M:[w(c(290,820,290,200,4),c(290,200,500,560,3),c(500,560,710,200,3),c(710,200,710,820,4))],N:[w(c(320,820,320,200,4),c(320,200,680,800,
+4),c(680,800,680,180,4))],O:[b(500,500,300,-90,270,26)],P:[c(330,180,330,820),w(c(330,200,520,200,2),b(520,360,160,-90,90),c(520,520,330,520,2))],Q:[b(500,500,290,-90,270,26),c(600,630,770,820,3)],R:[c(330,180,330,820),w(c(330,200,520,200,2),b(520,360,160,-90,90),c(520,520,330,520,2)),c(440,520,710,
+820,4)],S:[w(b(500,360,150,-50,-267,16),b(500,660,150,-93,130,16))],T:[c(500,200,500,820,6),c(260,200,740,200,4)],U:[w(c(310,180,310,590,3),b(500,590,190,180,0,14),c(690,590,690,180,3))],V:[w(c(300,180,500,820,4),c(500,820,700,180,4))],W:[w(c(270,180,395,820,3),c(395,820,500,420,2),c(500,420,605,820,
+2),c(605,820,730,180,3))],X:[c(310,200,690,800,5),c(690,200,310,800,5)],Y:[c(310,180,500,480,3),w(c(690,180,500,480,3),c(500,480,500,820,3))],Z:[w(c(300,220,700,220,4),c(700,220,300,780,5),c(300,780,700,780,4))]},hn={a:[b(455,625,195,-90,270,20),c(650,430,650,820,4)],b:[c(350,180,350,820),b(515,640,
+175,-90,270,20)],c:[b(520,625,200,-50,-310,18)],d:[c(650,180,650,820),b(485,640,175,-90,270,20)],e:[b(495,625,195,-90,-335,18),c(310,590,680,590,4)],f:[w(b(610,330,150,270,180,8),c(460,330,460,820,5)),c(330,490,620,490,4)],g:[b(480,610,180,-90,270,20),w(c(660,430,660,870,4),b(505,870,155,0,140,10))],
+h:[c(350,180,350,820),w(b(500,620,150,180,360,10),c(650,620,650,820,2))],i:[c(500,430,500,820,4),c(500,290,500,320,1)],j:[w(c(560,430,560,870,4),b(420,870,140,0,140,10)),c(560,290,560,320,1)],k:[c(350,180,350,820),w(c(650,430,360,640,3),c(360,640,660,820,3))],l:[c(500,180,500,820)],m:[c(300,430,300,
+820,3),w(b(400,590,100,180,360,8),c(500,590,500,820,2)),w(b(600,590,100,180,360,8),c(700,590,700,820,2))],n:[c(350,430,350,820,3),w(b(500,615,150,180,360,10),c(650,615,650,820,2))],o:[b(500,625,195,-90,270,20)],p:[c(350,430,350,980,4),b(520,620,170,-90,270,20)],q:[b(480,620,170,-90,270,20),c(650,430,
+650,980,4)],r:[c(400,430,400,820,3),b(545,595,145,180,305,8)],s:[w(b(500,530,100,-50,-267,12),b(500,727,100,-93,130,12))],t:[c(480,260,480,820,5),c(340,470,660,470,4)],u:[w(c(350,430,350,650,2),b(500,650,150,180,0,12),c(650,650,650,430,2))],v:[w(c(350,430,500,820,3),c(500,820,650,430,3))],w:[w(c(320,
+430,415,820,2),c(415,820,500,560,2),c(500,560,585,820,2),c(585,820,680,430,2))],x:[c(360,450,640,810,4),c(640,450,360,810,4)],y:[c(350,430,500,720,3),c(650,430,455,980,4)],z:[w(c(360,450,640,450,3),c(640,450,360,800,4),c(360,800,640,800,3))]},Rt={0:[b(500,500,280,-90,270,24)],1:[c(500,200,500,800)],
+2:[w(b(500,380,180,180,380,12),c(640,490,320,800,5),c(320,800,720,800,4))],3:[w(b(500,350,155,-150,90,12),b(500,655,160,-90,145,12))],4:[w(c(620,200,300,610,4),c(300,610,750,610,4)),c(620,330,620,820,4)],5:[w(c(700,220,350,220,3),c(350,220,350,470,3),b(495,615,175,-125,125,14))],6:[w(c(615,210,435,505,
+3),b(510,640,170,-140,220,18))],7:[w(c(280,220,720,220,4),c(720,220,450,800,5))],8:[b(500,370,150,-90,270,18),b(500,665,165,-90,270,18)],9:[b(490,405,170,-90,270,18),c(655,435,640,820,4)]},We=(t,e,r,n,a)=>t.map(s=>s.map(i=>({x:r+i.x*e,y:a+i.y*n}))),Pt=Object.keys(Ct),Et=Object.keys(Rt),Ke=(t,e)=>t.map(
+r=>r.map(n=>({x:(n.x-500)*e+500,y:n.y})));function Mt(t){let e=Ct[t.toUpperCase()],r=hn[t.toLowerCase()];if(!e||!r)throw new Error(`no glyph for letter ${t}`);let n=.5,a=(1e3-1e3*n)/2;return[...We(Ke(e,1.35),n,0,n,a),...We(Ke(r,1.35),n,500,n,a)]}function Ot(t){let e=Rt[t];if(!e)throw new Error(`no g\
+lyph for digit ${t}`);let r=.66;return We(Ke(e,1.2),r,(1e3-1e3*r)/2,r,(1e3-1e3*r)/2)}var A=t=>`audio/en-AU/${t}.mp3`;function K(t,e,r,n,a=8){let s=[];for(let i=0;i<=a;i++)s.push({x:t+(r-t)*i/a,y:e+(n-e)*i/a});return s}function Oe(t,e,r,n,a,s=24){let i=[];for(let o=0;o<=s;o++){let d=(n+(a-n)*o/s)*Math.PI/180;i.push({x:t+r*Math.cos(d),y:e+r*Math.sin(d)})}return i}function gn(){let t=[];
 for(let e=0;e<=6;e++)t.push({x:100+e*130,y:e%2===0?300:650});return t}var He=[{type:"tracing",id:"trace-line-straight",title:"Straight line",category:"tracing",ageBands:["2-3","3-5"],difficulty:1,motorSkills:["tracing","controlled-movement"],estimatedMinutes:1,theme:"shapes-patterns",locale:"en-AU",
 instructionAudio:A("trace-line"),demoAnimation:"demo/trace-line.json",paths:[K(150,500,850,500)],closed:!1},{type:"tracing",id:"trace-curve",title:"Big curve",category:"tracing",ageBands:["2-3","3-5"],difficulty:1,motorSkills:["tracing","controlled-movement"],estimatedMinutes:1,theme:"shapes-pattern\
 s",locale:"en-AU",instructionAudio:A("trace-curve"),paths:[Oe(500,700,350,200,340)],closed:!1},{type:"tracing",id:"trace-zigzag",title:"Zigzag",category:"tracing",ageBands:["3-5","5-7"],difficulty:2,motorSkills:["tracing","controlled-movement"],estimatedMinutes:1,theme:"shapes-patterns",locale:"en-A\
@@ -1005,7 +1005,7 @@ function renderTracing(firstActivity) {
   let strokeIndex = 0;
   let session = new LH.TracingSession(strokes[0], config);
   let scores = [];
-  let scale = 1, dots = [], done = false, tracing = false;
+  let scale = 1, ox = 0, oy = 0, dots = [], done = false, tracing = false;
 
   function loadActivity(next) {
     activity = next;
@@ -1027,13 +1027,17 @@ function renderTracing(firstActivity) {
     const r = stage.getBoundingClientRect();
     canvas.width = r.width * devicePixelRatio; canvas.height = r.height * devicePixelRatio;
     ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
-    scale = Math.min(r.width, r.height) / 1000;
+    const side = Math.min(r.width, r.height);
+    scale = side / 1000;
+    // Centre the square design space in the stage (letters were left-aligned).
+    ox = (r.width - side) / 2;
+    oy = (r.height - side) / 2;
     draw();
   }
 
   function strokePath(path) {
     ctx.beginPath();
-    path.forEach((p, i) => (i ? ctx.lineTo(p.x * scale, p.y * scale) : ctx.moveTo(p.x * scale, p.y * scale)));
+    path.forEach((p, i) => (i ? ctx.lineTo(p.x * scale + ox, p.y * scale + oy) : ctx.moveTo(p.x * scale + ox, p.y * scale + oy)));
   }
 
   function draw() {
@@ -1056,7 +1060,7 @@ function renderTracing(firstActivity) {
     });
     if (!done) {
       const start = strokes[strokeIndex][0];
-      ctx.beginPath(); ctx.arc(start.x * scale, start.y * scale, 13, 0, Math.PI * 2);
+      ctx.beginPath(); ctx.arc(start.x * scale + ox, start.y * scale + oy, 13, 0, Math.PI * 2);
       ctx.fillStyle = '#FF8A65'; ctx.fill();
     }
     for (const d of dots) {
@@ -1106,7 +1110,7 @@ function renderTracing(firstActivity) {
   function feed(e) {
     const r = canvas.getBoundingClientRect();
     const x = e.clientX - r.left, y = e.clientY - r.top;
-    const result = session.addPoint({ x: x / scale, y: y / scale });
+    const result = session.addPoint({ x: (x - ox) / scale, y: (y - oy) / scale });
     dots.push({ x, y, on: result.onPath });
     if (dots.length > 500) dots.shift();
     draw();
@@ -1802,22 +1806,25 @@ function renderGame(activity) {
       const goalEl = el(`<div style="position:absolute;width:76px;height:76px;pointer-events:none">${itemHtml(goal, 76)}</div>`);
       stage.append(canvas, moverEl, goalEl);
       const ctx = canvas.getContext('2d');
-      let scale = 1, doneMaze = false;
+      let scale = 1, mox = 0, moy = 0, doneMaze = false;
       function fit() {
         const r = stage.getBoundingClientRect();
         canvas.width = r.width * devicePixelRatio; canvas.height = r.height * devicePixelRatio;
         ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
-        scale = Math.min(r.width, r.height) / 1000;
+        const side = Math.min(r.width, r.height);
+        scale = side / 1000;
+        mox = (r.width - side) / 2;
+        moy = (r.height - side) / 2;
         const start = path[0], endP = path[path.length - 1];
-        moverEl.style.left = start.x * scale - 32 + 'px'; moverEl.style.top = start.y * scale - 32 + 'px';
-        goalEl.style.left = endP.x * scale - 38 + 'px'; goalEl.style.top = endP.y * scale - 38 + 'px';
+        moverEl.style.left = start.x * scale + mox - 32 + 'px'; moverEl.style.top = start.y * scale + moy - 32 + 'px';
+        goalEl.style.left = endP.x * scale + mox - 38 + 'px'; goalEl.style.top = endP.y * scale + moy - 38 + 'px';
         draw();
       }
       function draw() {
         const r = stage.getBoundingClientRect();
         ctx.clearRect(0, 0, r.width, r.height);
         ctx.beginPath();
-        path.forEach((pt, i) => (i ? ctx.lineTo(pt.x * scale, pt.y * scale) : ctx.moveTo(pt.x * scale, pt.y * scale)));
+        path.forEach((pt, i) => (i ? ctx.lineTo(pt.x * scale + mox, pt.y * scale + moy) : ctx.moveTo(pt.x * scale + mox, pt.y * scale + moy)));
         ctx.lineCap = ctx.lineJoin = 'round';
         ctx.strokeStyle = '#EAD9C4'; ctx.lineWidth = config.corridorWidth * 2 * scale; ctx.stroke();
         ctx.strokeStyle = '#D8C2A6'; ctx.lineWidth = 5; ctx.setLineDash([14, 12]); ctx.stroke(); ctx.setLineDash([]);
@@ -1828,7 +1835,7 @@ function renderGame(activity) {
         if (!tracking || doneMaze) return;
         const r = canvas.getBoundingClientRect();
         const x = e.clientX - r.left, y = e.clientY - r.top;
-        const result = session.addPoint({ x: x / scale, y: y / scale });
+        const result = session.addPoint({ x: (x - mox) / scale, y: (y - moy) / scale });
         if (result.onPath) { moverEl.style.left = x - 32 + 'px'; moverEl.style.top = y - 32 + 'px'; }
         if (result.completed) {
           doneMaze = true; tracking = false;
