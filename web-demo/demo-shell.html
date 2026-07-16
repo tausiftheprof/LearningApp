@@ -117,17 +117,23 @@
   .big-tile:active { transform: scale(0.96); }
   .big-tile .emoji { font-size: clamp(28px, 4.6vw, 44px); }
   .big-tile .label { font-size: clamp(12px, 1.8vw, 17px); font-weight: 800; color: var(--tile-ink, #fff); }
+  /* Home tiles (approved design): big title + two-line subtitle fill the box */
+  .home-grid .big-tile { min-height: clamp(84px, 11vw, 106px); padding: 10px 12px; }
+  .home-grid .label { font-size: clamp(17px, 2.5vw, 25px); line-height: 1.1; }
+  .home-grid .sublabel { font-size: clamp(12px, 1.8vw, 17px); line-height: 1.25; white-space: normal; max-width: 22ch; }
+  .tile-illo { display: grid; place-items: center; flex-shrink: 0; }
+  .tile-illo .lg-img, .tile-illo svg { width: clamp(50px, 7vw, 72px) !important; height: clamp(50px, 7vw, 72px) !important; }
 
   .starbar { text-align: center; font-size: 17px; font-weight: 800; padding: 6px; }
 
   /* ---- approved home design: greeting card, star pill, lock, subtitles ---- */
-  .home-top { display: flex; gap: 10px; padding: 12px 14px 4px; align-items: stretch; }
+  .home-top { display: flex; gap: 10px; padding: 10px 14px 2px; align-items: stretch; }
   .greeting-card {
     flex: 1; display: flex; align-items: center; gap: 10px;
     border-radius: 22px; padding: 10px 16px;
   }
-  .greeting-card .hi { font-size: clamp(19px, 2.8vw, 28px); font-weight: 800; }
-  .greeting-card .sub { font-size: clamp(12px, 1.7vw, 15px); opacity: 0.8; margin-top: 2px; }
+  .greeting-card .hi { font-size: clamp(22px, 3.4vw, 34px); font-weight: 800; }
+  .greeting-card .sub { font-size: clamp(13px, 2vw, 18px); opacity: 0.8; margin-top: 2px; }
   .greeting-card .mascot { font-size: clamp(30px, 4.4vw, 46px); margin-left: auto; }
   .home-topright { display: flex; flex-direction: column; gap: 6px; align-items: center; justify-content: space-between; }
   .star-pill {
@@ -153,11 +159,13 @@
   /* Candy Clouds (approved design): bubbly cloud tiles, icon left + text right */
   #app[data-app-theme="candy"] .big-tile:nth-child(odd) { border-radius: 40px 30px 44px 28px / 34px 40px 30px 44px; }
   #app[data-app-theme="candy"] .big-tile:nth-child(even) { border-radius: 30px 44px 28px 40px / 40px 30px 44px 34px; }
-  #app[data-app-theme="candy"] .home-grid .big-tile {
-    flex-direction: row; justify-content: flex-start; gap: 12px; padding: 12px 18px;
+  #app[data-app-theme="candy"] .home-grid .big-tile,
+  #app[data-app-theme="storybook"] .home-grid .big-tile {
+    flex-direction: row; justify-content: flex-start; gap: 14px; padding: 12px 18px;
     box-shadow: 0 4px 10px rgba(69, 61, 91, 0.08);
   }
-  #app[data-app-theme="candy"] .home-grid .tile-text { align-items: flex-start; text-align: left; }
+  #app[data-app-theme="candy"] .home-grid .tile-text,
+  #app[data-app-theme="storybook"] .home-grid .tile-text { align-items: flex-start; text-align: left; }
   #app[data-app-theme="candy"] .greeting-card {
     border-radius: 44px 52px 48px 40px / 40px 44px 52px 46px;
     box-shadow: 0 6px 14px rgba(69, 61, 91, 0.1);
@@ -176,14 +184,14 @@
     grid-column: 1 / -1;
     display: flex; align-items: center; gap: 12px;
     border: none; border-radius: 22px; cursor: pointer;
-    padding: 12px 18px; font-family: inherit; text-align: left;
-    min-height: var(--target, 96px);
+    padding: 10px 18px; font-family: inherit; text-align: left;
+    min-height: clamp(64px, 8.5vw, 84px);
     transition: transform 0.12s ease-out;
   }
   .rewards-banner:active { transform: scale(0.98); }
   .rewards-banner .ic { font-size: clamp(28px, 4vw, 40px); }
-  .rewards-banner .t { font-size: clamp(16px, 2.3vw, 22px); font-weight: 800; }
-  .rewards-banner .s { font-size: clamp(11px, 1.6vw, 14px); opacity: 0.75; font-weight: 600; }
+  .rewards-banner .t { font-size: clamp(19px, 2.9vw, 28px); font-weight: 800; }
+  .rewards-banner .s { font-size: clamp(13px, 1.9vw, 17px); opacity: 0.75; font-weight: 600; }
   .rewards-banner .chev { margin-left: auto; font-size: clamp(22px, 3vw, 30px); font-weight: 800; }
   .theme-swatches { display: inline-flex; gap: 4px; margin-right: 8px; vertical-align: middle; }
   .theme-swatches span { width: 16px; height: 16px; border-radius: 50%; display: inline-block; border: 1px solid rgba(0,0,0,0.12); }
@@ -693,8 +701,12 @@ function renderHome() {
 
   const grid = el(`<div class="tile-grid home-grid"></div>`);
   HOME_TILES.forEach((t, i) => {
+    const imgName = th.tileImages?.[i];
+    const iconHtml = imgName && IMAGES[imgName] && !hc
+      ? `<span class="tile-illo" aria-hidden="true">${imgHtml(imgName, 64)}</span>`
+      : `<span class="medallion" style="background:${surface}" aria-hidden="true">${th.tileIcons[i]}</span>`;
     const tile = el(`<button class="big-tile" style="background:${tiles()[i % tiles().length]}">
-      <span class="medallion" style="background:${candy ? 'rgba(255,255,255,0.55)' : surface}" aria-hidden="true">${th.tileIcons[i]}</span>
+      ${iconHtml}
       <span class="tile-text"><span class="label">${t.label}</span><span class="sublabel">${LH.HOME_TILE_SUBTITLES[i]}</span></span>
     </button>`);
     tile.onclick = () => {

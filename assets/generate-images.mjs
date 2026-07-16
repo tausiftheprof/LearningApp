@@ -236,6 +236,84 @@ const IMAGES = {
   <ellipse cx="100" cy="122" rx="8" ry="6" fill="#2B2320"/>
   ${face(100, 100, 1, { smileW: 11 })}`),
 
+  crayon: svg(`
+  <path d="M30 158 Q60 176 96 166 Q140 154 128 138 Q116 124 84 134" fill="none"
+        stroke="#F48FB1" stroke-width="7" stroke-linecap="round" stroke-dasharray="1 16"/>
+  <g transform="rotate(-38 112 92)">
+    <rect x="96" y="44" width="34" height="102" rx="10" fill="#EF5350"/>
+    <rect x="96" y="60" width="34" height="14" fill="#D64541"/>
+    <rect x="96" y="118" width="34" height="14" fill="#D64541"/>
+    <path d="M100 46 L113 16 L126 46 Z" fill="#F98B82"/>
+    <path d="M108 30 L113 19 L118 30 Z" fill="#FBB4AE"/>
+  </g>`),
+
+  palette: svg(`
+  <path d="M100 34 Q170 34 176 96 Q180 138 140 142 Q120 143 118 128 Q116 110 96 112 Q60 116 40 96 Q22 76 44 54 Q66 34 100 34 Z"
+        fill="#C89A6B" stroke="#A87844" stroke-width="5"/>
+  <circle cx="76" cy="62" r="11" fill="#EF5350"/>
+  <circle cx="116" cy="56" r="11" fill="#5C8FD6"/>
+  <circle cx="146" cy="80" r="11" fill="#66BB8A"/>
+  <circle cx="60" cy="90" r="11" fill="#FFD84D"/>
+  <g transform="rotate(34 130 120)">
+    <rect x="124" y="86" width="11" height="74" rx="5" fill="#B07B4F"/>
+    <rect x="122" y="152" width="15" height="10" rx="3" fill="#9AA0A6"/>
+    <path d="M122 162 Q129 184 137 162 Z" fill="#5C8FD6"/>
+  </g>`),
+
+  'puzzle-pieces': svg(`
+  <g transform="rotate(-8 78 92)">
+    <path d="M40 62 h34 a14 14 0 1 1 28 0 h34 v34 a14 14 0 1 0 0 28 v34 h-96 Z" fill="#6FA8DC" stroke="#4E7FB8" stroke-width="5" stroke-linejoin="round"/>
+  </g>
+  <g transform="rotate(10 132 128)">
+    <path d="M96 98 h30 a13 13 0 1 1 26 0 h30 v88 h-86 v-30 a13 13 0 1 1 0 -26 Z" fill="#7BC898" stroke="#57A97A" stroke-width="5" stroke-linejoin="round" transform="translate(0,-6)"/>
+  </g>`),
+
+  'pencil-trace': svg(`
+  <path d="M26 160 Q56 130 92 150 Q128 170 162 140" fill="none"
+        stroke="#8FBDE8" stroke-width="7" stroke-linecap="round" stroke-dasharray="1 16"/>
+  <g transform="rotate(42 108 84)">
+    <rect x="92" y="24" width="32" height="96" rx="4" fill="#FFD84D" stroke="#EBB93C" stroke-width="4"/>
+    <rect x="92" y="18" width="32" height="16" rx="6" fill="#F48FB1"/>
+    <path d="M92 120 L108 152 L124 120 Z" fill="#EFD3A1" stroke="#D9B679" stroke-width="3"/>
+    <path d="M103 141 L108 152 L113 141 Z" fill="#4A3B32"/>
+  </g>`),
+
+  kangaroo: svg(`
+  <ellipse cx="104" cy="178" rx="58" ry="8" fill="#F0E4D4"/>
+  <path d="M160 172 Q196 168 190 146 Q180 156 158 156 Z" fill="#B07B4F"/>
+  <ellipse cx="112" cy="128" rx="46" ry="50" fill="#C68B59"/>
+  <ellipse cx="112" cy="142" rx="26" ry="30" fill="#E8C39A"/>
+  <circle cx="86" cy="64" r="30" fill="#C68B59"/>
+  <path d="M64 42 Q54 8 74 12 Q84 16 82 40 Z" fill="#C68B59" stroke="#A87844" stroke-width="3"/>
+  <path d="M96 40 Q100 6 116 14 Q122 20 110 44 Z" fill="#C68B59" stroke="#A87844" stroke-width="3"/>
+  <ellipse cx="86" cy="72" rx="7" ry="5" fill="#8B5E3C"/>
+  ${face(86, 62, 0.72, { eyeDx: 13, blushDx: 22, smileW: 9 })}
+  <path d="M74 168 Q70 178 82 178 L96 178 Q102 172 94 164" fill="#A87844"/>
+  <path d="M126 168 Q122 178 134 178 L148 178 Q154 172 146 164" fill="#A87844"/>
+  <path d="M70 118 Q56 122 58 134" fill="none" stroke="#A87844" stroke-width="6" stroke-linecap="round"/>`),
+
+  lightbulb: svg(`
+  <path d="M100 8 L100 24 M40 34 L52 46 M160 34 L148 46 M22 96 L38 96 M162 96 L178 96"
+        stroke="#FFD84D" stroke-width="7" stroke-linecap="round"/>
+  <circle cx="100" cy="96" r="52" fill="#FFE58A" stroke="#EBB93C" stroke-width="5"/>
+  <circle cx="84" cy="80" r="12" fill="#FFF6C9"/>
+  <path d="M86 128 Q100 114 114 128" fill="none" stroke="#EBB93C" stroke-width="5" stroke-linecap="round"/>
+  <rect x="82" y="146" width="36" height="10" rx="5" fill="#9AA0A6"/>
+  <rect x="84" y="158" width="32" height="9" rx="4.5" fill="#B7BCC2"/>
+  <rect x="88" y="169" width="24" height="9" rx="4.5" fill="#9AA0A6"/>`),
+
+  'treasure-map': svg(`
+  <g transform="rotate(-6 100 100)">
+    <path d="M36 40 L74 32 L112 42 L164 32 L168 156 L126 166 L88 156 L38 166 Z"
+          fill="#F5E6C8" stroke="#D9B679" stroke-width="5" stroke-linejoin="round"/>
+    <path d="M74 32 L74 148 M126 44 L126 166" stroke="#EAD8B4" stroke-width="4"/>
+    <path d="M56 120 Q76 96 100 108 Q128 122 138 84" fill="none"
+          stroke="#C0392B" stroke-width="5" stroke-linecap="round" stroke-dasharray="2 12"/>
+    <path d="M132 70 L148 86 M148 70 L132 86" stroke="#C0392B" stroke-width="7" stroke-linecap="round"/>
+    <circle cx="58" cy="124" r="7" fill="#66BB8A"/>
+    <path d="M96 62 L100 70 L109 71 L102 77 L104 86 L96 81 L88 86 L90 77 L83 71 L92 70 Z" fill="#FFD84D" stroke="#EBB93C" stroke-width="2"/>
+  </g>`),
+
   'star-mascot': svg(`
   <path d="M100 14 L124 70 L184 76 L139 116 L152 176 L100 145 L48 176 L61 116 L16 76 L76 70 Z"
         fill="#FFD84D" stroke="#EBB93C" stroke-width="5" stroke-linejoin="round"/>

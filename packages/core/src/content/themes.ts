@@ -47,6 +47,8 @@ export interface AppTheme {
   tileColours: string[];
   /** Tile icons in the same order (emoji stand-ins for illustrations). */
   tileIcons: string[];
+  /** Optional assets/images names for illustrated tile icons (beat emoji). */
+  tileImages?: string[];
   /** "My Rewards" banner: colour + leading icon (+ optional illustration/chevron). */
   rewards: { background: string; icon: string; iconImage?: string; chevron?: string };
   /** Tile silhouette: rounded storybook cards, bubbly clouds, or nature cards. */
@@ -77,6 +79,7 @@ const storybook: AppTheme = {
   starPill: '#FFFFFF',
   tileColours: ['#FFDCC8', '#FFF0B8', '#CDEEDC', '#DDD5F7', '#CFE8FA', '#FFDCC8', '#DDD5F7', '#CFE8FA'],
   tileIcons: ['🖍️', '🎨', '🧩', '✏️', '🐣', '🦘', '💡', '🗺️'],
+  tileImages: ['crayon', 'palette', 'puzzle-pieces', 'pencil-trace', 'chick', 'kangaroo', 'lightbulb', 'treasure-map'],
   rewards: { background: '#FFF0B8', icon: '⭐' },
   tileStyle: 'rounded',
 };
@@ -103,6 +106,7 @@ const candy: AppTheme = {
   starPill: '#FFFFFF',
   tileColours: ['#FFD3E4', '#FFE3C4', '#E2D5FF', '#CDE9FF', '#CFF2DC', '#E2D5FF', '#FFF2B3', '#D7F1F2'],
   tileIcons: ['🖍️', '🎨', '🧩', '✏️', '🐣', '🦘', '💡', '🗺️'],
+  tileImages: ['crayon', 'palette', 'puzzle-pieces', 'pencil-trace', 'chick', 'kangaroo', 'lightbulb', 'treasure-map'],
   rewards: { background: '#F5DDB8', icon: '🎁', iconImage: 'treasure-chest', chevron: '#FF8FA3' },
   tileStyle: 'bubbly',
 };
