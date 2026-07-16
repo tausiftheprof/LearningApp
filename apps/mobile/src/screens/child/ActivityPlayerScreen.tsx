@@ -21,7 +21,7 @@ import { GamePlayer } from './players/GamePlayer';
 export function ActivityPlayerScreen(props: { activity: Activity }): React.JSX.Element {
   const { activity } = props;
   const { profile, navigate, recordPlaySeconds, applyReward } = useAppStore();
-  const theme = childTheme(profile?.accessibility ?? defaultAccessibilitySettings());
+  const theme = childTheme(profile?.accessibility ?? defaultAccessibilitySettings(), profile?.themeId);
   const startedAt = useRef(Date.now());
   const finished = useRef(false);
 

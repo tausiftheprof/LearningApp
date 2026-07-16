@@ -14,7 +14,7 @@ import { IMPLEMENTED_GAME_TEMPLATES } from './games/registry';
  */
 export function ActivityPickerScreen(props: { category: ActivityCategory }): React.JSX.Element {
   const { profile, catalogue, navigate } = useAppStore();
-  const theme = childTheme(profile?.accessibility ?? defaultAccessibilitySettings());
+  const theme = childTheme(profile?.accessibility ?? defaultAccessibilitySettings(), profile?.themeId);
 
   const playable = catalogue.filter(
     (a) => a.type !== 'game' || IMPLEMENTED_GAME_TEMPLATES.includes(a.template),

@@ -31,6 +31,8 @@ export interface ChildProfile {
   accessibility: AccessibilitySettings;
   /** Minutes; null = no limit. Default 15 (docs/03 onboarding). */
   dailyScreenTimeMinutes: number | null;
+  /** Visual theme id (content/themes.ts); absent on legacy profiles = default. */
+  themeId?: string;
   createdAt: number;
 }
 

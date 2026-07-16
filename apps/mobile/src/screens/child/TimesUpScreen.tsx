@@ -11,7 +11,7 @@ import { PrimaryButton } from '../../ui/components';
  */
 export function TimesUpScreen(): React.JSX.Element {
   const { profile, navigate } = useAppStore();
-  const theme = childTheme(profile?.accessibility ?? defaultAccessibilitySettings());
+  const theme = childTheme(profile?.accessibility ?? defaultAccessibilitySettings(), profile?.themeId);
   return (
     <View style={[styles.root, { backgroundColor: theme.bg }]}>
       <Text style={styles.wave}>👋</Text>

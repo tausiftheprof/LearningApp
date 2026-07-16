@@ -1,6 +1,7 @@
 export * from './types';
 export * from './content/schema';
 export * from './content/starterPack';
+export * from './content/themes';
 export * from './tracing/tracingEngine';
 export * from './puzzles/puzzleEngine';
 export * from './rewards/rewardsEngine';

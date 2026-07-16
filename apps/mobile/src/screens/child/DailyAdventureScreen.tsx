@@ -13,7 +13,7 @@ import { IMPLEMENTED_GAME_TEMPLATES } from './games/registry';
  */
 export function DailyAdventureScreen(): React.JSX.Element {
   const { profile, catalogue, navigate } = useAppStore();
-  const theme = childTheme(profile?.accessibility ?? defaultAccessibilitySettings());
+  const theme = childTheme(profile?.accessibility ?? defaultAccessibilitySettings(), profile?.themeId);
   const [step, setStep] = useState(0);
 
   const plan = useMemo(

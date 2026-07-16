@@ -116,9 +116,58 @@
   }
   .big-tile:active { transform: scale(0.96); }
   .big-tile .emoji { font-size: clamp(28px, 4.6vw, 44px); }
-  .big-tile .label { font-size: clamp(12px, 1.8vw, 17px); font-weight: 800; color: #fff; }
+  .big-tile .label { font-size: clamp(12px, 1.8vw, 17px); font-weight: 800; color: var(--tile-ink, #fff); }
 
   .starbar { text-align: center; font-size: 17px; font-weight: 800; padding: 6px; }
+
+  /* ---- approved home design: greeting card, star pill, lock, subtitles ---- */
+  .home-top { display: flex; gap: 10px; padding: 12px 14px 4px; align-items: stretch; }
+  .greeting-card {
+    flex: 1; display: flex; align-items: center; gap: 10px;
+    border-radius: 22px; padding: 10px 16px;
+  }
+  .greeting-card .hi { font-size: clamp(19px, 2.8vw, 28px); font-weight: 800; }
+  .greeting-card .sub { font-size: clamp(12px, 1.7vw, 15px); opacity: 0.8; margin-top: 2px; }
+  .greeting-card .mascot { font-size: clamp(30px, 4.4vw, 46px); margin-left: auto; }
+  .home-topright { display: flex; flex-direction: column; gap: 6px; align-items: center; justify-content: space-between; }
+  .star-pill {
+    border-radius: 999px; padding: 5px 14px; font-weight: 800;
+    font-size: clamp(13px, 1.9vw, 17px);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.08);
+  }
+  .lock-btn {
+    display: flex; flex-direction: column; align-items: center; gap: 1px;
+    border: none; border-radius: 14px; padding: 5px 10px; cursor: pointer;
+    font-family: inherit; font-size: 11px; color: inherit;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.08);
+  }
+  .lock-btn .ic { font-size: 16px; }
+  .home-grid { grid-template-columns: repeat(2, 1fr); }
+  .big-tile .medallion {
+    width: clamp(44px, 6.4vw, 62px); height: clamp(44px, 6.4vw, 62px);
+    border-radius: 50%; display: grid; place-items: center;
+    font-size: clamp(24px, 3.6vw, 36px);
+  }
+  .big-tile .sublabel { font-size: clamp(10px, 1.4vw, 13px); color: var(--tile-ink, #fff); opacity: 0.75; font-weight: 600; }
+  /* Candy Clouds: bubbly, uneven cloud-tile corners */
+  #app[data-app-theme="candy"] .big-tile:nth-child(odd) { border-radius: 34px 26px 38px 24px; }
+  #app[data-app-theme="candy"] .big-tile:nth-child(even) { border-radius: 26px 38px 24px 34px; }
+  #app[data-app-theme="candy"] .greeting-card { border-radius: 32px 38px 34px 30px; }
+  .rewards-banner {
+    grid-column: 1 / -1;
+    display: flex; align-items: center; gap: 12px;
+    border: none; border-radius: 22px; cursor: pointer;
+    padding: 12px 18px; font-family: inherit; text-align: left;
+    min-height: var(--target, 96px);
+    transition: transform 0.12s ease-out;
+  }
+  .rewards-banner:active { transform: scale(0.98); }
+  .rewards-banner .ic { font-size: clamp(28px, 4vw, 40px); }
+  .rewards-banner .t { font-size: clamp(16px, 2.3vw, 22px); font-weight: 800; }
+  .rewards-banner .s { font-size: clamp(11px, 1.6vw, 14px); opacity: 0.75; font-weight: 600; }
+  .rewards-banner .chev { margin-left: auto; font-size: clamp(22px, 3vw, 30px); font-weight: 800; }
+  .theme-swatches { display: inline-flex; gap: 4px; margin-right: 8px; vertical-align: middle; }
+  .theme-swatches span { width: 16px; height: 16px; border-radius: 50%; display: inline-block; border: 1px solid rgba(0,0,0,0.12); }
 
   .instruction-bar {
     flex: 1; display: flex; align-items: center; gap: 8px;
@@ -307,9 +356,12 @@ const IMPLEMENTED_TEMPLATES = [
 ];
 const playable = (a) => a.type !== 'game' || IMPLEMENTED_TEMPLATES.includes(a.template);
 
-const TILE_COLOURS = ['#F48FB1', '#81C784', '#64B5F6', '#FFB74D', '#BA68C8', '#4DB6AC', '#FF8A65', '#9575CD'];
 const HC_COLOURS = ['#0000CC', '#CC0000', '#006600', '#663300', '#330066', '#004466', '#660033', '#333300'];
-const tiles = () => (state.profile?.accessibility.highContrast ? HC_COLOURS : TILE_COLOURS);
+/* Owner-approved themes (core themes.ts): Soft Storybook / Candy Clouds /
+   Little Aussie Adventure. High contrast always beats the decorative theme. */
+const theme = () => LH.themeById(state.profile?.themeId);
+const highContrast = () => Boolean(state.profile?.accessibility.highContrast);
+const tiles = () => (highContrast() ? HC_COLOURS : theme().tileColours);
 
 /* ---------- images: every picture comes from assets/images/ (see its README) ---------- */
 const IMAGES = window.LG_IMAGES || {};
@@ -475,9 +527,20 @@ function targetPx() { return state.profile?.accessibility.largerTouchTargets ? '
 
 function render() {
   app.innerHTML = '';
-  app.classList.toggle('parent-mode', state.screen.name === 'gate' || state.screen.name === 'parent' || state.screen.name === 'onboarding');
+  const parentish = state.screen.name === 'gate' || state.screen.name === 'parent' || state.screen.name === 'onboarding';
+  app.classList.toggle('parent-mode', parentish);
   app.classList.toggle('reduced-motion', Boolean(state.profile?.accessibility.reducedMotion));
   app.style.setProperty('--target', targetPx());
+  const t = theme();
+  app.dataset.appTheme = t.id;
+  if (parentish) {
+    app.style.background = ''; app.style.color = '';
+    app.style.setProperty('--tile-ink', '#fff');
+  } else {
+    app.style.background = highContrast() ? '#FFFFFF' : t.background;
+    app.style.color = highContrast() ? '#000000' : t.text;
+    app.style.setProperty('--tile-ink', highContrast() ? '#FFFFFF' : t.text);
+  }
   const s = state.screen;
   if (s.name === 'onboarding') renderOnboarding();
   else if (s.name === 'home') renderHome();
@@ -558,29 +621,43 @@ function renderOnboarding(step = 'welcome', draft = { nickname: '', ageBand: '3-
   function renderInto(node, fn) { app.innerHTML = ''; fn(); }
 }
 
-/* ---------- child home ---------- */
+/* ---------- child home (owner-approved design, July 2026) ---------- */
 const HOME_TILES = [
-  { label: 'Draw', emoji: '🖍️', category: 'drawing' },
-  { label: 'Colour', emoji: '🎨', category: 'colouring' },
-  { label: 'Puzzles', emoji: '🧩', category: 'puzzles' },
-  { label: 'Tracing', emoji: '✏️', category: 'tracing' },
-  { label: 'Little Games', emoji: '🐣', category: 'toddler' },
-  { label: 'Big Kid Games', emoji: '🦘', category: 'preschool' },
-  { label: 'Think & Solve', emoji: '💡', category: 'logic' },
-  { label: 'Daily Adventure', emoji: '🗺️', special: 'daily' },
+  { label: 'Draw', category: 'drawing' },
+  { label: 'Colour', category: 'colouring' },
+  { label: 'Puzzles', category: 'puzzles' },
+  { label: 'Tracing', category: 'tracing' },
+  { label: 'Little Games', category: 'toddler' },
+  { label: 'Big Kid Games', category: 'preschool' },
+  { label: 'Think & Solve', category: 'logic' },
+  { label: 'Daily Adventure', special: 'daily' },
 ];
 
 function renderHome() {
-  setStatus('Child Home', ['screenTime.canStartNewActivity', 'rewards state']);
-  const top = el(`<div class="topbar"></div>`);
-  top.append(el(`<div class="hello">Hi ${state.profile?.nickname ?? 'friend'}! 👋</div>`));
-  const gate = el(`<button class="grownups-btn" aria-label="For grown-ups: open parent settings">Grown-ups</button>`);
-  gate.onclick = () => navigate({ name: 'gate' });
-  top.append(gate);
+  setStatus('Child Home', ['themes (core)', 'screenTime.canStartNewActivity', 'rewards state']);
+  const th = theme();
+  const hc = highContrast();
+  const surface = hc ? '#FFFFFF' : th.surface;
 
-  const grid = el(`<div class="tile-grid"></div>`);
+  const top = el(`<div class="home-top"></div>`);
+  const greet = el(`<div class="greeting-card" style="background:${hc ? '#FFFFFF' : th.greeting.background};${hc ? 'border:2px solid #000' : ''}">
+    <div><div class="hi">Hi, ${state.profile?.nickname ?? 'friend'}!</div><div class="sub">${th.greeting.subtitle}</div></div>
+    <span class="mascot" aria-hidden="true">${th.greeting.mascot}</span>
+  </div>`);
+  const right = el(`<div class="home-topright"></div>`);
+  right.append(el(`<div class="star-pill" style="background:${hc ? '#FFFFFF' : th.starPill};${hc ? 'border:2px solid #000' : ''}" aria-label="${state.rewards.totalStars} stars earned">⭐ ${state.rewards.totalStars}</div>`));
+  const gate = el(`<button class="lock-btn" style="background:${surface}" aria-label="For grown-ups: open parent settings"><span class="ic" aria-hidden="true">🔒</span>Grown-ups</button>`);
+  gate.onclick = () => navigate({ name: 'gate' });
+  right.append(gate);
+  top.append(greet, right);
+
+  const grid = el(`<div class="tile-grid home-grid"></div>`);
   HOME_TILES.forEach((t, i) => {
-    const tile = el(`<button class="big-tile" style="background:${tiles()[i % tiles().length]}"><span class="emoji">${t.emoji}</span><span class="label">${t.label}</span></button>`);
+    const tile = el(`<button class="big-tile" style="background:${tiles()[i % tiles().length]}">
+      <span class="medallion" style="background:${surface}" aria-hidden="true">${th.tileIcons[i]}</span>
+      <span class="label">${t.label}</span>
+      <span class="sublabel">${LH.HOME_TILE_SUBTITLES[i]}</span>
+    </button>`);
     tile.onclick = () => {
       speak(t.label);
       if (!guardScreenTime()) return;
@@ -589,11 +666,17 @@ function renderHome() {
     };
     grid.append(tile);
   });
-  const rewardsTile = el(`<button class="big-tile" style="background:${tiles()[0]}"><span class="emoji">⭐</span><span class="label">My Rewards</span></button>`);
-  rewardsTile.onclick = () => { speak('My rewards'); navigate({ name: 'rewards' }); };
-  grid.append(rewardsTile);
+  const rewardsBanner = el(`<button class="rewards-banner" style="background:${hc ? HC_COLOURS[0] : th.rewards.background}">
+    <span class="ic" aria-hidden="true">${th.rewards.icon}</span>
+    <span><span class="t" style="display:block">My Rewards</span><span class="s">Stickers, badges and stars!</span></span>
+    <span class="chev" aria-hidden="true">›</span>
+  </button>`);
+  rewardsBanner.style.color = hc ? '#fff' : th.text;
+  rewardsBanner.querySelectorAll('.t,.s,.chev').forEach((n) => { n.style.color = 'inherit'; });
+  rewardsBanner.onclick = () => { speak('My rewards'); navigate({ name: 'rewards' }); };
+  grid.append(rewardsBanner);
 
-  app.append(top, grid, el(`<div class="starbar" aria-label="${state.rewards.totalStars} stars earned">⭐ ${state.rewards.totalStars}</div>`));
+  app.append(top, grid);
 }
 
 /* ---------- picker ---------- */
@@ -1637,8 +1720,9 @@ function renderRewards() {
   setStatus('My Rewards', ['rewards.applyRewardEvent (daily-capped)']);
   const top = el(`<div class="topbar"></div>`);
   top.append(holdToHomeButton(() => navigate({ name: 'home' })), el(`<div class="hello">My Rewards</div>`));
+  const th = theme();
   const body = el(`<div class="form-scroll" style="text-align:center"></div>`);
-  body.append(el(`<div style="font-size:38px;font-weight:800">⭐ × ${state.rewards.totalStars}</div>`));
+  body.append(el(`<div style="font-size:38px;font-weight:800;background:${highContrast() ? '#fff;border:2px solid #000' : th.rewards.background};border-radius:22px;padding:10px 16px">${th.rewards.icon} ⭐ × ${state.rewards.totalStars}</div>`));
   body.append(el(`<h2 style="text-align:left">Sticker book</h2>`));
   const sg = el(`<div class="sticker-grid"></div>`);
   if (state.rewards.stickers.length === 0) sg.append(el(`<p style="font-size:16px">Play anything to earn your first sticker! 🌟</p>`));
@@ -1674,15 +1758,16 @@ function renderDaily() {
     state.daily = { plan, step: 0, date: todayKey() };
   }
   const { plan, step } = state.daily;
+  const th = theme();
   const top = el(`<div class="topbar"></div>`);
   top.append(holdToHomeButton(() => navigate({ name: 'home' })), el(`<div class="hello">Daily Adventure 🗺️</div>`));
-  const feet = el(`<div class="footsteps"></div>`);
-  plan.slots.forEach((slot, i) => feet.append(el(`<span class="${i > step ? 'dim' : ''}">${i < step ? '✅' : i === step ? '👣' : '⬜'}</span>`)));
+  const feet = el(`<div class="footsteps" style="background:${highContrast() ? '#fff;border:2px solid #000' : th.greeting.background};border-radius:999px;margin:0 14px;padding:8px 14px"></div>`);
+  plan.slots.forEach((slot, i) => feet.append(el(`<span class="${i > step ? 'dim' : ''}">${i < step ? '✅' : i === step ? th.greeting.mascot : '·'}</span>`)));
   const box = el(`<div class="center-col"></div>`);
   const current = plan.slots[step];
   if (current) {
-    box.append(el(`<p>Next up:</p>`), el(`<h2>${current.activity.title}</h2>`));
-    const go = el(`<button class="primary-btn">Play! ▶</button>`);
+    box.append(el(`<p>Next up on today's path:</p>`), el(`<h2>${current.activity.title}</h2>`));
+    const go = el(`<button class="primary-btn" style="background:${highContrast() ? '#0000CC' : th.accent}">Let's Play! ▶</button>`);
     go.onclick = () => { state.daily.step++; if (guardScreenTime()) navigate({ name: 'activity', activity: current.activity }); };
     box.append(go);
   } else {
@@ -1754,6 +1839,7 @@ function renderParent(section) {
   const engines = {
     dashboard: ['screenTime.secondsUsed'], profile: ['profiles + settings'],
     progress: ['progress.buildParentReport'], 'screen-time': ['screenTime.grantExtraTime'],
+    appearance: ['themes (core APP_THEMES)'],
     accessibility: ['settings.accessibility'], privacy: ['deletion.deleteAllChildData'],
     artwork: ['drawing replay'], subscription: ['(phase 2 placeholder)'], help: ['—'],
   };
@@ -1786,6 +1872,7 @@ function renderParent(section) {
       ['profile', 'Child profile', 'Difficulty, handedness, sound'],
       ['progress', 'Progress', 'Skills, favourites and suggestions'],
       ['screen-time', 'Screen time', 'Daily target and extra time'],
+      ['appearance', 'Theme', 'Soft Storybook, Candy Clouds or Little Aussie Adventure'],
       ['accessibility', 'Accessibility', 'See, hear, touch and pace settings'],
       ['artwork', 'Saved artwork', 'View and replay drawings'],
       ['privacy', 'Privacy & data', 'Notice, delete everything'],
@@ -1881,6 +1968,18 @@ function renderParent(section) {
     const extra = el(`<button class="primary-btn teal" style="margin-top:10px">Add 10 minutes today</button>`);
     extra.onclick = async () => { state.screenTime = LH.grantExtraTime(state.screenTime, todayKey(), 10); await repos.screenTime.save(p.id, state.screenTime); persistSoon(); extra.textContent = 'Added ✓'; };
     body.append(extra);
+  } else if (section === 'appearance' && p) {
+    body.append(el(`<h2>Theme</h2>`), el(`<p>How the app looks for ${p.nickname}. Colours only — nothing about play or data changes, and high-contrast accessibility always wins.</p>`));
+    for (const t of LH.APP_THEMES) {
+      const active = LH.themeById(p.themeId).id === t.id;
+      const row = el(`<button class="choice-row"><span><span class="theme-swatches" aria-hidden="true">${[t.greeting.background, ...t.tileColours.slice(0, 4)].map((c) => `<span style="background:${c}"></span>`).join('')}</span>${t.name}<span class="sub">${t.blurb}</span></span><span class="radio">${active ? '●' : '○'}</span></button>`);
+      row.onclick = async () => {
+        state.profile = { ...p, themeId: t.id };
+        await repos.profiles.save(state.profile);
+        persistSoon(); render();
+      };
+      body.append(row);
+    }
   } else if (section === 'accessibility' && p) {
     body.append(el(`<h2>Accessibility</h2>`));
     const toggles = [

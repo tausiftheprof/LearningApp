@@ -14,12 +14,14 @@ export function BigTile(props: {
   colour: string;
   theme: Theme;
   onPress: () => void;
+  /** Approved home design: small line under the label, e.g. "Trace and learn". */
+  subtitle?: string;
 }): React.JSX.Element {
-  const { label, emoji, colour, theme, onPress } = props;
+  const { label, emoji, colour, theme, onPress, subtitle } = props;
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={label}
+      accessibilityLabel={subtitle ? `${label}. ${subtitle}` : label}
       onPress={onPress}
       style={({ pressed }) => [
         styles.tile,
@@ -32,10 +34,13 @@ export function BigTile(props: {
         },
       ]}
     >
-      <Text style={styles.tileEmoji} accessibilityElementsHidden>
-        {emoji}
-      </Text>
+      <View style={[styles.tileMedallion, { backgroundColor: theme.surface }]} accessibilityElementsHidden>
+        <Text style={styles.tileEmoji}>{emoji}</Text>
+      </View>
       <Text style={[styles.tileLabel, { color: theme.textOnTile }]}>{label}</Text>
+      {subtitle ? (
+        <Text style={[styles.tileSubtitle, { color: theme.textOnTile }]}>{subtitle}</Text>
+      ) : null}
     </Pressable>
   );
 }
@@ -156,8 +161,16 @@ export function PrimaryButton(props: {
 
 const styles = StyleSheet.create({
   tile: { alignItems: 'center', justifyContent: 'center', padding: 16, margin: 8, flex: 1 },
-  tileEmoji: { fontSize: 44 },
+  tileMedallion: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  tileEmoji: { fontSize: 38 },
   tileLabel: { fontSize: 20, fontWeight: '700', marginTop: 6 },
+  tileSubtitle: { fontSize: 12, opacity: 0.75, marginTop: 2, textAlign: 'center' },
   instructionBar: {
     flexDirection: 'row',
     alignItems: 'center',

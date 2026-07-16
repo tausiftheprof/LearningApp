@@ -29,7 +29,7 @@ export function AppRoot(): React.JSX.Element {
     return () => sub.remove();
   }, [gateEnforceRelock]);
 
-  const theme = childTheme(profile?.accessibility ?? defaultAccessibilitySettings());
+  const theme = childTheme(profile?.accessibility ?? defaultAccessibilitySettings(), profile?.themeId);
 
   if (!ready) {
     return (

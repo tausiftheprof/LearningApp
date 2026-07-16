@@ -11,7 +11,7 @@ import { HoldToHomeButton } from '../../ui/components';
  */
 export function RewardsScreen(): React.JSX.Element {
   const { profile, rewards, navigate } = useAppStore();
-  const theme = childTheme(profile?.accessibility ?? defaultAccessibilitySettings());
+  const theme = childTheme(profile?.accessibility ?? defaultAccessibilitySettings(), profile?.themeId);
 
   const stickerEmoji: Record<string, string> = {
     'sticker-sun': '☀️', 'sticker-koala': '🐨', 'sticker-rainbow': '🌈', 'sticker-rocket': '🚀',

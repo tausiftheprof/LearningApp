@@ -2,10 +2,12 @@ import React, { useEffect, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import type { ParentReport } from '@littlegrip/core';
 import {
+  APP_THEMES,
   buildParentReport,
   dayKeyFrom,
   grantExtraTime,
   secondsUsed,
+  themeById,
 } from '@littlegrip/core';
 import { useAppStore } from '../../state/appStore';
 import { getRepositories } from '../../storage/db';
@@ -112,6 +114,17 @@ function ProfileSection(): React.JSX.Element {
           theme={theme}
           onPress={() => void saveProfile({ ...profile, handedness: hand })}
           right={<Text style={styles.radio}>{profile.handedness === hand ? '●' : '○'}</Text>}
+        />
+      ))}
+      <Text style={styles.h2}>Theme (how the app looks)</Text>
+      {APP_THEMES.map((t) => (
+        <ParentRow
+          key={t.id}
+          title={t.name}
+          subtitle={t.blurb}
+          theme={theme}
+          onPress={() => void saveProfile({ ...profile, themeId: t.id })}
+          right={<Text style={styles.radio}>{themeById(profile.themeId).id === t.id ? '●' : '○'}</Text>}
         />
       ))}
       <Text style={styles.h2}>Sound</Text>
