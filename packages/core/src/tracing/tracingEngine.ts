@@ -99,11 +99,20 @@ export interface AttemptSummary {
   showDemo: boolean;
 }
 
-const COVERAGE_BUCKETS = 100;
+const MAX_COVERAGE_BUCKETS = 100;
+const MIN_COVERAGE_BUCKETS = 6;
+const DESIGN_UNITS_PER_BUCKET = 25;
 
 export class TracingSession {
   private readonly geometry: PathGeometry;
   private readonly config: TracingConfig;
+  /**
+   * Coverage resolution scales with stroke length: a long letter stroke gets
+   * up to 100 buckets, a short one (a lowercase bowl, the dot on an "i")
+   * proportionally fewer. Fixed 100-bucket resolution made short strokes
+   * impossible to complete - the "small letters not working" defect.
+   */
+  private readonly bucketCount: number;
   private covered: boolean[] = [];
   private sampled = 0;
   private onPathCount = 0;
@@ -111,12 +120,17 @@ export class TracingSession {
   private lowAccuracyAttempts = 0;
   private completedFlag = false;
   private lastBucket: number | null = null;
+  private lastTouch: Point | null = null;
 
   constructor(path: Point[], config: TracingConfig) {
     if (path.length < 2) throw new Error('tracing path needs at least 2 points');
     this.geometry = buildGeometry(path);
     this.config = config;
-    this.covered = new Array<boolean>(COVERAGE_BUCKETS).fill(false);
+    this.bucketCount = Math.max(
+      MIN_COVERAGE_BUCKETS,
+      Math.min(MAX_COVERAGE_BUCKETS, Math.round(this.geometry.totalLength / DESIGN_UNITS_PER_BUCKET)),
+    );
+    this.covered = new Array<boolean>(this.bucketCount).fill(false);
   }
 
   get attempt(): number {
@@ -138,27 +152,35 @@ export class TracingSession {
     this.sampled++;
     if (onPath) {
       this.onPathCount++;
-      const bucket = Math.min(COVERAGE_BUCKETS - 1, Math.floor(best.position * COVERAGE_BUCKETS));
-      // Bridge only the gap the finger actually swept: between this sample's
-      // bucket and the previous on-path sample's bucket (fast strokes skip
-      // buckets). Unlike a blanket neighbour-fill, this cannot mark path the
-      // finger never went near - the fix for "good job before finishing".
-      if (this.lastBucket !== null && Math.abs(bucket - this.lastBucket) <= 12) {
+      const n = this.bucketCount;
+      const bucket = Math.min(n - 1, Math.floor(best.position * n));
+      // Bridge only the gap the finger PHYSICALLY swept: the allowed bucket
+      // jump is bounded by how far the touch point actually moved. This keeps
+      // fast strokes credited while rejecting nearest-point flips across a
+      // narrow shape (tight lowercase bowls project ambiguously - crediting
+      // those flips is what made "good job" fire early; refusing all wide
+      // jumps is what made small letters uncompletable).
+      const bucketLen = this.geometry.totalLength / n;
+      const moved = this.lastTouch === null ? 0 : Math.sqrt(distSq(p, this.lastTouch));
+      const allowedJump = Math.ceil(moved / bucketLen) + 2;
+      if (this.lastBucket !== null && Math.abs(bucket - this.lastBucket) <= allowedJump) {
         const [lo, hi] = bucket > this.lastBucket ? [this.lastBucket, bucket] : [bucket, this.lastBucket];
         for (let b = lo; b <= hi; b++) this.covered[b] = true;
       } else {
         this.covered[bucket] = true;
       }
       this.lastBucket = bucket;
+      this.lastTouch = p;
     } else {
       this.lastBucket = null; // leaving the corridor breaks the sweep bridge
+      this.lastTouch = p;
     }
     const coverage = this.coverage();
     // Completion needs near-full coverage AND both ends of the path reached -
     // stopping halfway can never celebrate early again.
-    const startReached = this.covered[0] || this.covered[1] || this.covered[2];
-    const endReached =
-      this.covered[COVERAGE_BUCKETS - 1] || this.covered[COVERAGE_BUCKETS - 2] || this.covered[COVERAGE_BUCKETS - 3];
+    const w = this.bucketCount >= 50 ? 3 : 2;
+    const startReached = this.covered.slice(0, w).some(Boolean);
+    const endReached = this.covered.slice(this.bucketCount - w).some(Boolean);
     if (coverage >= this.config.coverageToComplete && startReached && endReached) {
       this.completedFlag = true;
     }
@@ -166,7 +188,7 @@ export class TracingSession {
   }
 
   coverage(): number {
-    return this.covered.filter(Boolean).length / COVERAGE_BUCKETS;
+    return this.covered.filter(Boolean).length / this.bucketCount;
   }
 
   onPathRatio(): number {
@@ -211,10 +233,11 @@ export class TracingSession {
   }
 
   private resetProgress(): void {
-    this.covered = new Array<boolean>(COVERAGE_BUCKETS).fill(false);
+    this.covered = new Array<boolean>(this.bucketCount).fill(false);
     this.sampled = 0;
     this.onPathCount = 0;
     this.completedFlag = false;
     this.lastBucket = null;
+    this.lastTouch = null;
   }
 }

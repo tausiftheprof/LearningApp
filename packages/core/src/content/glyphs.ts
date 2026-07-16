@@ -128,13 +128,22 @@ export const DIGIT_CHARS: readonly string[] = Object.keys(DIGITS);
  * Strokes for one letter activity: the capital on the left, the small letter
  * on the right, traced in that order.
  */
+/** Widen glyphs around their own centre (owner: "letters are very narrow"). */
+const widen = (strokes: Point[][], f: number): Point[][] =>
+  strokes.map((stroke) => stroke.map((p) => ({ x: (p.x - 500) * f + 500, y: p.y })));
+
 export function letterStrokes(letter: string): Point[][] {
   const upper = UPPER[letter.toUpperCase()];
   const lower = LOWER[letter.toLowerCase()];
   if (!upper || !lower) throw new Error(`no glyph for letter ${letter}`);
+  // Wide, generously spaced pair: each glyph is broadened around its centre,
+  // then uniformly scaled into its half of the board (capital left, small
+  // right) with a clear gap between them.
+  const k = 0.5;
+  const oy = (1000 - 1000 * k) / 2;
   return [
-    ...mapStrokes(upper, 0.42, 30, 0.78, 90),
-    ...mapStrokes(lower, 0.42, 510, 0.78, 90),
+    ...mapStrokes(widen(upper, 1.35), k, 0, k, oy),
+    ...mapStrokes(widen(lower, 1.35), k, 500, k, oy),
   ];
 }
 
@@ -142,5 +151,6 @@ export function letterStrokes(letter: string): Point[][] {
 export function digitStrokes(digit: string): Point[][] {
   const glyph = DIGITS[digit];
   if (!glyph) throw new Error(`no glyph for digit ${digit}`);
-  return mapStrokes(glyph, 0.52, 240, 0.78, 90);
+  const k = 0.66;
+  return mapStrokes(widen(glyph, 1.2), k, (1000 - 1000 * k) / 2, k, (1000 - 1000 * k) / 2);
 }

@@ -770,9 +770,17 @@ function renderTracing(firstActivity) {
     }
   }
 
-  canvas.addEventListener('pointerdown', (e) => { if (!done) { tracing = true; feed(e); } });
-  canvas.addEventListener('pointermove', (e) => { if (tracing && !done) feed(e); });
-  window.addEventListener('pointerup', lift);
+  // Stylus + palm rejection: follow exactly one pointer (pen or finger);
+  // extra touches (a resting palm) are ignored while it is down.
+  let activePointer = null;
+  canvas.addEventListener('pointerdown', (e) => {
+    if (done || activePointer !== null) return;
+    activePointer = e.pointerId;
+    canvas.setPointerCapture(e.pointerId);
+    tracing = true; feed(e);
+  });
+  canvas.addEventListener('pointermove', (e) => { if (tracing && !done && e.pointerId === activePointer) feed(e); });
+  window.addEventListener('pointerup', (e) => { if (e.pointerId === activePointer) { activePointer = null; lift(); } });
 
   function feed(e) {
     const r = canvas.getBoundingClientRect();
@@ -871,7 +879,7 @@ function renderDrawing(activity) {
     ctx.lineCap = ctx.lineJoin = 'round';
     ctx.strokeStyle = strokeStyle(stroke, i);
     ctx.globalAlpha = stroke.brush.kind === 'pencil' ? 0.75 : 1;
-    ctx.lineWidth = widths[stroke.brush.size] * (stroke.brush.kind === 'marker' ? 1.6 : 1);
+    ctx.lineWidth = widths[stroke.brush.size] * (stroke.brush.kind === 'marker' ? 1.6 : 1) * (live && stroke.points === live ? penPressure : 1);
     ctx.stroke();
     ctx.globalAlpha = 1;
     if (stroke.brush.kind === 'glitter') {
@@ -896,11 +904,25 @@ function renderDrawing(activity) {
     ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
     paint();
   }
-  canvas.addEventListener('pointerdown', (e) => { live = [pt(e)]; paint(); });
-  canvas.addEventListener('pointermove', (e) => { if (live) { live.push(pt(e)); paint(); } });
-  window.addEventListener('pointerup', () => {
+  let drawPointer = null, penPressure = 1;
+  canvas.addEventListener('pointerdown', (e) => {
+    if (drawPointer !== null) return; // palm rejection while pen/finger is down
+    drawPointer = e.pointerId;
+    canvas.setPointerCapture(e.pointerId);
+    penPressure = e.pointerType === 'pen' && e.pressure > 0 ? e.pressure : 1;
+    live = [pt(e)]; paint();
+  });
+  canvas.addEventListener('pointermove', (e) => {
+    if (live && e.pointerId === drawPointer) {
+      if (e.pointerType === 'pen' && e.pressure > 0) penPressure = 0.5 + e.pressure; // stylus pressure shapes the line
+      live.push(pt(e)); paint();
+    }
+  });
+  window.addEventListener('pointerup', (e) => {
+    if (e.pointerId !== drawPointer) return;
+    drawPointer = null;
     if (live && live.length > 1) session.apply({ kind: 'stroke', stroke: { brush: { kind: brush, colour, size }, points: live } });
-    live = null; paint();
+    live = null; penPressure = 1; paint();
   });
   function pt(e) { const r = canvas.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; }
 

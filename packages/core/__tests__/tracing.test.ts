@@ -112,3 +112,44 @@ describe('TracingSession', () => {
     expect(() => new TracingSession([{ x: 0, y: 0 }], tracingConfigFor(1))).toThrow();
   });
 });
+
+describe('every glyph is completable (small-letters regression)', () => {
+  const { LETTERS, DIGIT_CHARS, letterStrokes, digitStrokes } =
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    require('../src/content/glyphs') as typeof import('../src/content/glyphs');
+
+  /** Simulate a child's finger following a stroke: dense samples along it. */
+  function traceStroke(stroke: Point[], config = tracingConfigFor(2)): boolean {
+    const session = new TracingSession(stroke, config);
+    for (let i = 0; i < stroke.length - 1; i++) {
+      const a = stroke[i]!, b = stroke[i + 1]!;
+      const segLen = Math.hypot(b.x - a.x, b.y - a.y);
+      const steps = Math.max(1, Math.ceil(segLen / 6));
+      for (let s = 0; s <= steps; s++) {
+        session.addPoint({ x: a.x + ((b.x - a.x) * s) / steps, y: a.y + ((b.y - a.y) * s) / steps });
+      }
+    }
+    return session.completed;
+  }
+
+  it.each([...LETTERS])('letter %s: capital AND small strokes all complete', (ch) => {
+    const strokes = letterStrokes(ch);
+    strokes.forEach((stroke, i) => {
+      expect({ letter: ch, stroke: i, completed: traceStroke(stroke) }).toEqual({
+        letter: ch, stroke: i, completed: true,
+      });
+    });
+  });
+
+  it.each([...DIGIT_CHARS])('digit %s: all strokes complete', (d) => {
+    for (const stroke of digitStrokes(d)) expect(traceStroke(stroke)).toBe(true);
+  });
+
+  it('half of a small letter bowl does NOT complete (no premature good job)', () => {
+    const bowl = letterStrokes('o')[1]!; // lowercase o
+    const session = new TracingSession(bowl, tracingConfigFor(2));
+    const half = bowl.slice(0, Math.floor(bowl.length / 2));
+    for (const p of half) session.addPoint(p);
+    expect(session.completed).toBe(false);
+  });
+});
