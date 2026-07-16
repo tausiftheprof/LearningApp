@@ -57,7 +57,9 @@ export function ColouringPlayer(props: {
   function tap(x: number, y: number): void {
     if (done) return;
     const dx = x / scale, dy = y / scale;
-    const hit = activity.regions.find((r) => pointInPolygon(dx, dy, r.polygon));
+    // Topmost (last-drawn) region wins, so layered shapes (window, eye, nose)
+    // stay colourable inside the bigger shape behind them.
+    const hit = [...activity.regions].reverse().find((r) => pointInPolygon(dx, dy, r.polygon));
     if (!hit) return;
     const expected = expectedColour(hit.number);
     if (byNumber && expected !== null && colour !== expected) {

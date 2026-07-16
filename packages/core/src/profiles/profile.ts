@@ -17,6 +17,8 @@ export interface SoundPreferences {
   effects: boolean;
   voice: boolean;
   volume: number; // 0..1
+  /** Preferred synthesised voice (demo/web: speechSynthesis voice name). */
+  voiceName?: string;
 }
 
 export interface ChildProfile {

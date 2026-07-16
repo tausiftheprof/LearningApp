@@ -116,34 +116,82 @@ function rectRegion(id: string, x: number, y: number, w: number, h: number, numb
   };
 }
 
+/** Closed polygon region from explicit points (owner: colouring pages must be real picture sketches). */
+function polyRegion(id: string, polygon: Point[], number?: number) {
+  return { id, polygon, ...(number !== undefined ? { number } : {}) };
+}
+
+/** Ellipse outline as a polygon (design space 0..1000). */
+function ellipse(cx: number, cy: number, rx: number, ry: number, steps = 28): Point[] {
+  const pts: Point[] = [];
+  for (let i = 0; i < steps; i++) {
+    const a = (i / steps) * Math.PI * 2;
+    pts.push({ x: cx + rx * Math.cos(a), y: cy + ry * Math.sin(a) });
+  }
+  return pts;
+}
+
 const colouringActivities: Activity[] = [
   {
     type: 'colouring', id: 'colour-balloon', title: 'Balloons', category: 'colouring',
     ageBands: ['2-3', '3-5'], difficulty: 1, motorSkills: ['tapping', 'holding-moving', 'pinching'],
     estimatedMinutes: 3, theme: 'celebrations', locale: 'en-AU', instructionAudio: audio('colour-free'),
     mode: 'free',
-    regions: [rectRegion('b1', 100, 100, 350, 450), rectRegion('b2', 550, 100, 350, 450), rectRegion('sky', 100, 620, 800, 280)],
+    // Real picture sketch (owner direction): sun, two balloons with knots, grass.
+    regions: [
+      polyRegion('sun', ellipse(150, 150, 90, 90)),
+      polyRegion('balloon-1', ellipse(330, 330, 170, 210)),
+      polyRegion('knot-1', [{ x: 330, y: 540 }, { x: 300, y: 592 }, { x: 360, y: 592 }]),
+      polyRegion('balloon-2', ellipse(690, 290, 140, 175)),
+      polyRegion('knot-2', [{ x: 690, y: 465 }, { x: 662, y: 512 }, { x: 718, y: 512 }]),
+      polyRegion('grass', [{ x: 60, y: 845 }, { x: 940, y: 845 }, { x: 940, y: 960 }, { x: 60, y: 960 }]),
+    ],
   },
   {
     type: 'colouring', id: 'colour-fish-by-number', title: 'Fish by numbers', category: 'colouring',
     ageBands: ['3-5', '5-7'], difficulty: 2, motorSkills: ['tapping', 'precision-placement'],
     estimatedMinutes: 4, theme: 'underwater', locale: 'en-AU', instructionAudio: audio('colour-by-number'),
     mode: 'by-number',
-    regions: [rectRegion('body', 200, 300, 400, 300, 1), rectRegion('tail', 650, 350, 180, 200, 2), rectRegion('fin', 320, 180, 160, 100, 3), rectRegion('sea', 100, 680, 800, 220, 4)],
+    // Fish-shaped sketch: sea floor, oval body, tail, top fin, eye (any colour).
+    regions: [
+      polyRegion('sea', [{ x: 60, y: 820 }, { x: 940, y: 820 }, { x: 940, y: 950 }, { x: 60, y: 950 }], 4),
+      polyRegion('body', ellipse(430, 500, 240, 170), 1),
+      polyRegion('tail', [{ x: 655, y: 500 }, { x: 830, y: 375 }, { x: 830, y: 625 }], 2),
+      polyRegion('fin', [{ x: 360, y: 305 }, { x: 495, y: 235 }, { x: 525, y: 330 }], 3),
+      polyRegion('eye', ellipse(350, 450, 32, 32, 16)),
+    ],
   },
   {
     type: 'colouring', id: 'colour-rocket', title: 'Rocket', category: 'colouring',
     ageBands: ['3-5', '5-7'], difficulty: 2, motorSkills: ['holding-moving', 'pinching'],
     estimatedMinutes: 4, theme: 'space', locale: 'en-AU', instructionAudio: audio('colour-free'),
     mode: 'free',
-    regions: [rectRegion('nose', 400, 100, 200, 180), rectRegion('body', 380, 300, 240, 380), rectRegion('finL', 280, 560, 110, 180), rectRegion('finR', 610, 560, 110, 180), rectRegion('flame', 430, 720, 140, 160)],
+    // Rocket-shaped sketch: body, nose cone, fins, flame, round window on top.
+    regions: [
+      polyRegion('body', [{ x: 400, y: 300 }, { x: 600, y: 300 }, { x: 600, y: 700 }, { x: 400, y: 700 }]),
+      polyRegion('nose', [{ x: 380, y: 300 }, { x: 500, y: 120 }, { x: 620, y: 300 }]),
+      polyRegion('fin-left', [{ x: 400, y: 540 }, { x: 280, y: 740 }, { x: 400, y: 700 }]),
+      polyRegion('fin-right', [{ x: 600, y: 540 }, { x: 720, y: 740 }, { x: 600, y: 700 }]),
+      polyRegion('flame', [{ x: 445, y: 700 }, { x: 555, y: 700 }, { x: 500, y: 875 }]),
+      polyRegion('window', ellipse(500, 430, 62, 62, 20)),
+    ],
   },
   {
     type: 'colouring', id: 'colour-wombat', title: 'Wombat friend', category: 'colouring',
     ageBands: ['2-3', '3-5', '5-7'], difficulty: 1, motorSkills: ['holding-moving', 'tapping'],
     estimatedMinutes: 3, theme: 'animals', locale: 'en-AU', instructionAudio: audio('colour-free'),
     mode: 'free',
-    regions: [rectRegion('head', 300, 150, 400, 300), rectRegion('body', 220, 480, 560, 340), rectRegion('grass', 100, 840, 800, 100)],
+    // Wombat-shaped sketch: grass, round body, head with ears and nose, legs.
+    regions: [
+      polyRegion('grass', [{ x: 60, y: 850 }, { x: 940, y: 850 }, { x: 940, y: 960 }, { x: 60, y: 960 }]),
+      polyRegion('body', ellipse(540, 610, 270, 190)),
+      polyRegion('leg-left', [{ x: 430, y: 780 }, { x: 520, y: 780 }, { x: 520, y: 878 }, { x: 430, y: 878 }]),
+      polyRegion('leg-right', [{ x: 640, y: 780 }, { x: 730, y: 780 }, { x: 730, y: 878 }, { x: 640, y: 878 }]),
+      polyRegion('head', ellipse(310, 400, 150, 132)),
+      polyRegion('ear-left', [{ x: 240, y: 298 }, { x: 205, y: 205 }, { x: 300, y: 258 }]),
+      polyRegion('ear-right', [{ x: 380, y: 292 }, { x: 415, y: 200 }, { x: 320, y: 252 }]),
+      polyRegion('nose', ellipse(255, 440, 42, 34, 16)),
+    ],
   },
 ];
 

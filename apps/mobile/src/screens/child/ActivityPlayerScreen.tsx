@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { Activity } from '@littlegrip/core';
 import { defaultAccessibilitySettings, pickFeedback } from '@littlegrip/core';
 import { useAppStore } from '../../state/appStore';
@@ -70,10 +70,22 @@ export function ActivityPlayerScreen(props: { activity: Activity }): React.JSX.E
   );
 
   const goHome = useCallback(() => navigate({ name: 'home' }), [navigate]);
+  const goBack = useCallback(
+    () => navigate({ name: 'picker', category: activity.category }),
+    [navigate, activity.category],
+  );
 
   return (
     <View style={styles.root}>
       <View style={styles.topBar}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Back"
+          onPress={goBack}
+          style={[styles.backButton, { backgroundColor: theme.surface, minWidth: theme.childMinTargetDp, minHeight: theme.childMinTargetDp }]}
+        >
+          <Text style={styles.backIcon}>←</Text>
+        </Pressable>
         <HoldToHomeButton theme={theme} onHome={goHome} />
         <View style={styles.instruction}>
           <InstructionBar
@@ -118,6 +130,8 @@ export function CompletionBanner(props: { visible: boolean; onDone: () => void; 
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
+  backButton: { alignItems: 'center', justifyContent: 'center', borderRadius: 999, margin: 8, elevation: 2 },
+  backIcon: { fontSize: 26, fontWeight: '700' },
   topBar: { flexDirection: 'row', alignItems: 'center' },
   instruction: { flex: 1 },
   banner: {

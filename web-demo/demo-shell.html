@@ -196,6 +196,17 @@
   .theme-swatches { display: inline-flex; gap: 4px; margin-right: 8px; vertical-align: middle; }
   .theme-swatches span { width: 16px; height: 16px; border-radius: 50%; display: inline-block; border: 1px solid rgba(0,0,0,0.12); }
 
+  /* ---- inner screens carry the theme too (owner request) ---- */
+  .picker-grid .big-tile { min-height: clamp(84px, 10vw, 108px); gap: 6px; padding: 10px 8px; }
+  .picker-label { font-size: clamp(13px, 1.9vw, 18px); white-space: normal; line-height: 1.15; max-width: 20ch; }
+  .picker-grid .tile-illo .lg-img, .picker-grid .tile-illo svg { width: clamp(38px, 5.4vw, 58px) !important; height: clamp(38px, 5.4vw, 58px) !important; }
+  #app:not(.parent-mode) .instruction-bar { box-shadow: 0 3px 8px rgba(69, 61, 91, 0.08); }
+  #app:not(.parent-mode) .play-stage { border-radius: 22px; box-shadow: 0 6px 14px rgba(69, 61, 91, 0.08); }
+  #app:not(.parent-mode) .icon-btn { box-shadow: 0 3px 8px rgba(69, 61, 91, 0.12); }
+  #app[data-app-theme="candy"] .instruction-bar { border-radius: 26px 32px 28px 34px; }
+  #app[data-app-theme="candy"] .play-stage { border-radius: 30px 38px 32px 40px / 34px 30px 40px 32px; }
+  #app[data-app-theme="candy"] .picker-grid .big-tile:nth-child(3n) { border-radius: 36px 26px 40px 24px / 30px 36px 26px 40px; }
+
   .instruction-bar {
     flex: 1; display: flex; align-items: center; gap: 8px;
     background: #FFFFFF; border-radius: 16px; padding: 6px 12px; margin-right: 8px;
@@ -431,17 +442,43 @@ if ('speechSynthesis' in window) {
   speechSynthesis.onvoiceschanged = () => { chosenVoice = pickFemaleVoice(); };
   chosenVoice = pickFemaleVoice();
 }
+/** English voices on this device, softest-sounding candidates first. */
+function englishVoices() {
+  try {
+    const voices = speechSynthesis.getVoices().filter((v) => /^en(-|_|$)/i.test(v.lang));
+    const score = (v) =>
+      (/female|woman|samantha|karen|catherine|zira|jenny|aria|natasha|moira|tessa|serena|martha|libby|olivia|salli|nicole|emma|amy|joanna/i.test(v.name) ? 2 : 0) +
+      (/en-AU/i.test(v.lang) ? 1 : 0);
+    return voices.sort((a, b) => score(b) - score(a));
+  } catch (e) { return []; }
+}
+function voiceByName(name) {
+  return englishVoices().find((v) => v.name === name) || null;
+}
+function utter(text, voice) {
+  const u = new SpeechSynthesisUtterance(text);
+  if (voice) u.voice = voice;
+  u.rate = 0.88;  // unhurried
+  u.pitch = 1.05; // warm, not squeaky
+  u.volume = 0.9; // slightly gentler than full blast
+  return u;
+}
+/** Preview a specific voice (parent area), regardless of the voice toggle. */
+function previewVoice(voice) {
+  try {
+    if (!('speechSynthesis' in window)) return;
+    speechSynthesis.cancel();
+    speechSynthesis.speak(utter("Hi! Let's play together. Well done, little star!", voice));
+  } catch (e) { /* stand-in only */ }
+}
 function speak(text) {
   if (!state.profile || state.profile.sound.voice === false) return;
   try {
     if (!('speechSynthesis' in window)) return;
     speechSynthesis.cancel();
-    const u = new SpeechSynthesisUtterance(text);
+    const preferred = state.profile.sound.voiceName ? voiceByName(state.profile.sound.voiceName) : null;
     if (!chosenVoice) chosenVoice = pickFemaleVoice();
-    if (chosenVoice) u.voice = chosenVoice;
-    u.rate = 0.92;  // unhurried
-    u.pitch = 1.12; // soft, warm
-    speechSynthesis.speak(u);
+    speechSynthesis.speak(utter(text, preferred || chosenVoice));
   } catch (e) { /* stand-in only */ }
 }
 
@@ -746,13 +783,26 @@ function renderPicker(category) {
     },
     24,
   );
+  const th = theme();
   const top = el(`<div class="topbar"></div>`);
   top.append(holdToHomeButton(() => navigate({ name: 'home' })), el(`<div class="hello">Pick one!</div>`));
-  const grid = el(`<div class="tile-grid"></div>`);
+  const grid = el(`<div class="tile-grid picker-grid"></div>`);
+  // Category order matches home tiles, so each category reuses its illustration.
+  const catIndex = { drawing: 0, colouring: 1, puzzles: 2, tracing: 3, toddler: 4, preschool: 5, logic: 6 };
   const emojiFor = { drawing: '🖍️', colouring: '🎨', puzzles: '🧩', tracing: '✏️', toddler: '🐣', preschool: '🦘', logic: '💡' };
   ranked.forEach((a, i) => {
-    const tile = el(`<button class="big-tile" style="background:${tiles()[i % tiles().length]}"><span class="emoji">${emojiFor[a.category]}</span><span class="label">${a.title}</span></button>`);
-    tile.onclick = () => { speak(a.title); if (guardScreenTime()) navigate({ name: 'activity', activity: a }); };
+    // Prefer the activity's own picture (jigsaw image, sketch to draw over);
+    // otherwise use the category illustration from the theme.
+    let imgName = null;
+    if (a.type === 'jigsaw') imgName = imageNameFromRef(a.image);
+    else if (/^sketch-/.test(a.id)) imgName = imageNameFromRef(a.steps?.[0]?.prompt || '');
+    else if (a.type === 'colouring') imgName = (/^colour-([a-z]+)/.exec(a.id) || [])[1] || null;
+    if (!imgName || !IMAGES[imgName]) imgName = th.tileImages?.[catIndex[a.category] ?? 0] ?? null;
+    const iconHtml = imgName && IMAGES[imgName] && !highContrast()
+      ? `<span class="tile-illo" aria-hidden="true">${imgHtml(imgName, 52)}</span>`
+      : `<span class="emoji">${emojiFor[a.category]}</span>`;
+    const tile = el(`<button class="big-tile" style="background:${tiles()[i % tiles().length]}">${iconHtml}<span class="label picker-label">${a.title}</span></button>`);
+    tile.onclick = () => { speak(a.title); if (guardScreenTime()) navigate({ name: 'activity', activity: a, from: 'picker' }); };
     grid.append(tile);
   });
   if (ranked.length === 0) {
@@ -762,10 +812,22 @@ function renderPicker(category) {
 }
 
 /* ---------- activity shell ---------- */
+function backButton(activity) {
+  // "Back one screen" (owner request): to the picker this activity came from,
+  // or back to the Daily Adventure path when it was launched from there.
+  const btn = el(`<button class="icon-btn" aria-label="Back">←</button>`);
+  btn.onclick = async () => {
+    await stopActivityClock();
+    if (state.screen.from === 'daily') navigate({ name: 'daily' });
+    else navigate({ name: 'picker', category: activity.category });
+  };
+  return btn;
+}
+
 function renderActivity(activity) {
   startActivityClock();
   const top = el(`<div class="topbar"></div>`);
-  top.append(holdToHomeButton(() => navigate({ name: 'home' })));
+  top.append(backButton(activity), holdToHomeButton(() => navigate({ name: 'home' })));
   const bar = el(`<div class="instruction-bar"><span class="txt">${activity.title}</span><button class="icon-btn" aria-label="Hear the instructions again">🔊</button></div>`);
   bar.querySelector('button').onclick = () => speak(instructionFor(activity));
   top.append(bar);
@@ -1093,7 +1155,7 @@ function renderColouring(activity) {
   const bar = el(`<div class="toolbar" role="toolbar" aria-label="Colours"></div>`);
   app.append(stage, bar);
   const ctx = canvas.getContext('2d');
-  let scale = 1;
+  let scale = 1, ox = 0, oy = 0;
 
   LH.PALETTES.standard.forEach((c, i) => {
     const sw = el(`<button class="swatch ${colour === c ? 'active' : ''}" style="background:${c}" aria-label="${byNumber ? 'Colour number ' + (i + 1) : 'Colour ' + c}">${byNumber ? `<span class="num">${i + 1}</span>` : ''}</button>`);
@@ -1104,16 +1166,18 @@ function renderColouring(activity) {
   function draw() {
     const r = stage.getBoundingClientRect();
     ctx.clearRect(0, 0, r.width, r.height);
+    // Regions render background-to-foreground so layered shapes (window, eye,
+    // nose) sit on top of the shapes behind them - a real colouring sketch.
     for (const region of activity.regions) {
       ctx.beginPath();
-      region.polygon.forEach((p, i) => (i ? ctx.lineTo(p.x * scale, p.y * scale) : ctx.moveTo(p.x * scale, p.y * scale)));
+      region.polygon.forEach((p, i) => (i ? ctx.lineTo(ox + p.x * scale, oy + p.y * scale) : ctx.moveTo(ox + p.x * scale, oy + p.y * scale)));
       ctx.closePath();
       ctx.fillStyle = fills[region.id] || '#FFFFFF';
       ctx.fill();
-      ctx.strokeStyle = '#4A3B32'; ctx.lineWidth = 3; ctx.stroke();
+      ctx.strokeStyle = '#4A3B32'; ctx.lineWidth = 4; ctx.lineJoin = 'round'; ctx.stroke();
       if (byNumber && region.number != null && !fills[region.id]) {
-        const cx = region.polygon.reduce((s, p) => s + p.x, 0) / region.polygon.length * scale;
-        const cy = region.polygon.reduce((s, p) => s + p.y, 0) / region.polygon.length * scale;
+        const cx = ox + region.polygon.reduce((s, p) => s + p.x, 0) / region.polygon.length * scale;
+        const cy = oy + region.polygon.reduce((s, p) => s + p.y, 0) / region.polygon.length * scale;
         ctx.beginPath(); ctx.arc(cx, cy, 15, 0, Math.PI * 2); ctx.fillStyle = '#4A3B32'; ctx.fill();
         ctx.fillStyle = '#fff'; ctx.font = '800 15px system-ui'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
         ctx.fillText(String(region.number), cx, cy);
@@ -1131,8 +1195,10 @@ function renderColouring(activity) {
   canvas.addEventListener('pointerdown', (e) => {
     if (done) return;
     const r = canvas.getBoundingClientRect();
-    const dx = (e.clientX - r.left) / scale, dy = (e.clientY - r.top) / scale;
-    const hit = activity.regions.find((reg) => inPoly(dx, dy, reg.polygon));
+    const dx = (e.clientX - r.left - ox) / scale, dy = (e.clientY - r.top - oy) / scale;
+    // Topmost (last-drawn) region wins the tap, so a window or an eye is
+    // colourable even though it sits inside a bigger shape.
+    const hit = [...activity.regions].reverse().find((reg) => inPoly(dx, dy, reg.polygon));
     if (!hit) return;
     const exp = expected(hit.number);
     if (byNumber && exp && colour !== exp) { attempts++; speak(LH.pickFeedback('almost')); return; }
@@ -1150,6 +1216,8 @@ function renderColouring(activity) {
     canvas.width = r.width * devicePixelRatio; canvas.height = r.height * devicePixelRatio;
     ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
     scale = Math.min(r.width, r.height) / 1000;
+    ox = (r.width - 1000 * scale) / 2;
+    oy = (r.height - 1000 * scale) / 2;
     draw();
   }
   requestAnimationFrame(fit);
@@ -1821,7 +1889,7 @@ function renderDaily() {
   if (current) {
     box.append(el(`<p>Next up on today's path:</p>`), el(`<h2>${current.activity.title}</h2>`));
     const go = el(`<button class="primary-btn" style="background:${highContrast() ? '#0000CC' : th.accent}">Let's Play! ▶</button>`);
-    go.onclick = () => { state.daily.step++; if (guardScreenTime()) navigate({ name: 'activity', activity: current.activity }); };
+    go.onclick = () => { state.daily.step++; if (guardScreenTime()) navigate({ name: 'activity', activity: current.activity, from: 'daily' }); };
     box.append(go);
   } else {
     box.append(el(`<div class="giant">🎉🏆🎉</div>`), el(`<h2>Adventure complete!</h2>`));
@@ -1983,6 +2051,26 @@ function renderParent(section) {
           t.onchange = async () => { state.profile = { ...p, sound: { ...p.sound, [ch]: t.checked } }; await repos.profiles.save(state.profile); persistSoon(); };
           row2.append(t); body.append(row2);
         });
+
+        body.append(
+          el(`<label style="font-weight:700;font-size:13px;margin-top:14px;display:block">Voice — pick the one that sounds nicest</label>`),
+          el(`<p style="font-size:13px;color:#52606D;margin:4px 0 8px">Voices come from this device, so the list differs between phones, tablets and computers. Tap ▶ to hear a sample. On Android, installing "Speech Services by Google" adds much softer voices. The released app will use professionally recorded audio instead.</p>`),
+        );
+        const voices = englishVoices().slice(0, 10);
+        if (!voices.length) body.append(el(`<p style="font-size:13px">This browser has no speech voices available.</p>`));
+        for (const v of voices) {
+          const active = p.sound.voiceName ? p.sound.voiceName === v.name : false;
+          const row3 = el(`<button class="choice-row"><span>${v.name}<span class="sub">${v.lang}${v.name === pickFemaleVoice()?.name && !p.sound.voiceName ? ' · current default' : ''}</span></span><span class="radio">${active ? '●' : '○'}</span></button>`);
+          const hear = el(`<button class="primary-btn teal" style="min-height:34px;padding:4px 12px;font-size:13px;margin:0 10px 0 0" aria-label="Preview ${v.name}">▶</button>`);
+          hear.onclick = (e) => { e.stopPropagation(); previewVoice(v); };
+          row3.insertBefore(hear, row3.lastElementChild);
+          row3.onclick = async () => {
+            state.profile = { ...p, sound: { ...p.sound, voiceName: v.name } };
+            await repos.profiles.save(state.profile);
+            persistSoon(); previewVoice(v); render();
+          };
+          body.append(row3);
+        }
       }
     });
   } else if (section === 'progress' && p) {
