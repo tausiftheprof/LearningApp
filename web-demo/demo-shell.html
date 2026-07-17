@@ -2804,7 +2804,11 @@ function renderTimesUp() {
   box.append(el(`<div class="giant">⏰</div>`), el(`<h2>${message}</h2>`), el(`<p>Come back tomorrow for more fun.</p>`));
   const bye = el(`<button class="primary-btn">Bye! 🏠</button>`);
   bye.onclick = () => navigate({ name: 'home' });
-  box.append(bye);
+  // A grown-up standing right here can jump straight into the gated area to
+  // grant extra time (Screen Time section), instead of via Home first.
+  const grownUps = el(`<button class="grownups-btn" aria-label="For grown-ups: extend screen time">🔒 More time? For grown-ups</button>`);
+  grownUps.onclick = () => navigate({ name: 'gate' });
+  box.append(bye, grownUps);
   app.append(box);
   speak(message + '. Come back tomorrow for more fun.');
 }
