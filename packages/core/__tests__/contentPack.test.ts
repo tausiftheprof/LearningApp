@@ -23,11 +23,26 @@ describe('starter content pack', () => {
     }
   });
 
-  it('ships 10 toddler, 10 preschool and 10 logic games (PRD section 25)', () => {
+  it('ships at least 10 toddler, preschool and logic games (PRD section 25 + maze set)', () => {
     const count = (c: string) => pack.activities.filter((a) => a.category === c).length;
-    expect(count('toddler')).toBe(10);
-    expect(count('preschool')).toBe(10);
-    expect(count('logic')).toBe(10);
+    expect(count('toddler')).toBeGreaterThanOrEqual(10);
+    expect(count('preschool')).toBeGreaterThanOrEqual(10);
+    expect(count('logic')).toBeGreaterThanOrEqual(10);
+  });
+
+  it('ships graded mazes: easy for 2-3, harder for 5-7 (owner direction)', () => {
+    const mazes = pack.activities.filter((a) => a.type === 'game' && a.template === 'path-maze');
+    expect(mazes.length).toBeGreaterThanOrEqual(6);
+    expect(mazes.some((m) => m.ageBands.includes('2-3') && m.difficulty === 1)).toBe(true);
+    expect(mazes.some((m) => m.ageBands.includes('5-7') && m.difficulty === 3)).toBe(true);
+  });
+
+  it('traces numbers up to 10 and the new shapes (owner direction)', () => {
+    const ids = pack.activities.map((a) => a.id);
+    expect(ids).toContain('trace-number-10');
+    for (const shape of ['square', 'rectangle', 'circle', 'oval', 'hexagon', 'pentagon']) {
+      expect(ids).toContain(`trace-${shape}`);
+    }
   });
 
   it('gives every activity spoken instructions for non-readers (FR-014)', () => {

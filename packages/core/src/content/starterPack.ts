@@ -40,6 +40,21 @@ function zigzag(): Point[] {
   return pts;
 }
 
+/** Regular polygon (pentagon, hexagon) as a traceable closed path, flat start at top. */
+function polygonPath(sides: number, radius: number): Point[] {
+  const pts: Point[] = [];
+  for (let i = 0; i <= sides; i++) {
+    const a = -Math.PI / 2 + (i / sides) * Math.PI * 2;
+    const corner = { x: 500 + radius * Math.cos(a), y: 500 + radius * Math.sin(a) };
+    if (i === 0) { pts.push(corner); continue; }
+    const prev = pts[pts.length - 1]!;
+    for (let s = 1; s <= 4; s++) {
+      pts.push({ x: prev.x + ((corner.x - prev.x) * s) / 4, y: prev.y + ((corner.y - prev.y) * s) / 4 });
+    }
+  }
+  return pts;
+}
+
 /* ---------- Tracing (FR-005): lines, curves, shapes, letters, numbers ---------- */
 
 const tracingActivities: Activity[] = [
@@ -84,6 +99,38 @@ const tracingActivities: Activity[] = [
     paths: [[...line(500, 200, 800, 750, 4), ...line(800, 750, 200, 750, 4), ...line(200, 750, 500, 200, 4)]],
     closed: true,
   },
+  {
+    type: 'tracing', id: 'trace-rectangle', title: 'Rectangle', category: 'tracing',
+    ageBands: ['3-5', '5-7'], difficulty: 2, motorSkills: ['tracing'],
+    estimatedMinutes: 1, theme: 'shapes-patterns', locale: 'en-AU',
+    instructionAudio: audio('trace-rectangle'),
+    paths: [[...line(180, 340, 820, 340, 5), ...line(820, 340, 820, 660, 3), ...line(820, 660, 180, 660, 5), ...line(180, 660, 180, 340, 3)]],
+    closed: true,
+  },
+  {
+    type: 'tracing', id: 'trace-oval', title: 'Oval', category: 'tracing',
+    ageBands: ['3-5', '5-7'], difficulty: 2, motorSkills: ['tracing'],
+    estimatedMinutes: 1, theme: 'shapes-patterns', locale: 'en-AU',
+    instructionAudio: audio('trace-oval'),
+    paths: [arc(500, 500, 340, -90, 270, 28).map((p) => ({ x: p.x, y: 500 + (p.y - 500) * 0.68 }))],
+    closed: true,
+  },
+  {
+    type: 'tracing', id: 'trace-pentagon', title: 'Pentagon', category: 'tracing',
+    ageBands: ['5-7'], difficulty: 3, motorSkills: ['tracing'],
+    estimatedMinutes: 1, theme: 'shapes-patterns', locale: 'en-AU',
+    instructionAudio: audio('trace-pentagon'),
+    paths: [polygonPath(5, 350)],
+    closed: true,
+  },
+  {
+    type: 'tracing', id: 'trace-hexagon', title: 'Hexagon', category: 'tracing',
+    ageBands: ['5-7'], difficulty: 3, motorSkills: ['tracing'],
+    estimatedMinutes: 1, theme: 'shapes-patterns', locale: 'en-AU',
+    instructionAudio: audio('trace-hexagon'),
+    paths: [polygonPath(6, 350)],
+    closed: true,
+  },
 ];
 
 // Letters A-Z (capital + small side by side) and numbers 0-9 from the glyph
@@ -97,7 +144,8 @@ for (const ch of LETTERS) {
     instructionAudio: audio(`trace-letter-${ch.toLowerCase()}`), paths: letterStrokes(ch), closed: false,
   });
 }
-for (const ch of DIGIT_CHARS) {
+// Numbers 0 to 10 (owner direction: counting numbers through ten).
+for (const ch of [...DIGIT_CHARS, '10']) {
   tracingActivities.push({
     type: 'tracing', id: `trace-number-${ch}`, title: `Number ${ch}`, category: 'tracing',
     ageBands: ['3-5', '5-7'], difficulty: 2, motorSkills: ['tracing', 'controlled-movement'],
@@ -133,18 +181,20 @@ function ellipse(cx: number, cy: number, rx: number, ry: number, steps = 28): Po
 
 const colouringActivities: Activity[] = [
   {
-    type: 'colouring', id: 'colour-balloon', title: 'Balloons', category: 'colouring',
+    type: 'colouring', id: 'colour-balloon', title: 'Pack of balloons', category: 'colouring',
     ageBands: ['2-3', '3-5'], difficulty: 1, motorSkills: ['tapping', 'holding-moving', 'pinching'],
     estimatedMinutes: 3, theme: 'celebrations', locale: 'en-AU', instructionAudio: audio('colour-free'),
     mode: 'free',
-    // Real picture sketch (owner direction): sun, two balloons with knots, grass.
+    // A bunch of three balloons whose strings gather at a bow (owner direction).
     regions: [
-      polyRegion('sun', ellipse(150, 150, 90, 90)),
-      polyRegion('balloon-1', ellipse(330, 330, 170, 210)),
-      polyRegion('knot-1', [{ x: 330, y: 540 }, { x: 300, y: 592 }, { x: 360, y: 592 }]),
-      polyRegion('balloon-2', ellipse(690, 290, 140, 175)),
-      polyRegion('knot-2', [{ x: 690, y: 465 }, { x: 662, y: 512 }, { x: 718, y: 512 }]),
-      polyRegion('grass', [{ x: 60, y: 845 }, { x: 940, y: 845 }, { x: 940, y: 960 }, { x: 60, y: 960 }]),
+      polyRegion('sun', ellipse(140, 140, 80, 80)),
+      polyRegion('string-1', [{ x: 300, y: 470 }, { x: 340, y: 470 }, { x: 512, y: 764 }, { x: 478, y: 776 }]),
+      polyRegion('string-2', [{ x: 528, y: 402 }, { x: 566, y: 402 }, { x: 522, y: 760 }, { x: 488, y: 758 }]),
+      polyRegion('string-3', [{ x: 748, y: 496 }, { x: 786, y: 490 }, { x: 540, y: 762 }, { x: 516, y: 738 }]),
+      polyRegion('balloon-1', ellipse(310, 310, 140, 168)),
+      polyRegion('balloon-2', ellipse(548, 238, 128, 158)),
+      polyRegion('balloon-3', ellipse(772, 340, 118, 148)),
+      polyRegion('bow', ellipse(508, 792, 56, 44, 16)),
     ],
   },
   {
@@ -152,13 +202,16 @@ const colouringActivities: Activity[] = [
     ageBands: ['3-5', '5-7'], difficulty: 2, motorSkills: ['tapping', 'precision-placement'],
     estimatedMinutes: 4, theme: 'underwater', locale: 'en-AU', instructionAudio: audio('colour-by-number'),
     mode: 'by-number',
-    // Fish-shaped sketch: sea floor, oval body, tail, top fin, eye (any colour).
+    // A proper fish: oval body, forked tail, top and bottom fins, eye, bubbles.
     regions: [
-      polyRegion('sea', [{ x: 60, y: 820 }, { x: 940, y: 820 }, { x: 940, y: 950 }, { x: 60, y: 950 }], 4),
-      polyRegion('body', ellipse(430, 500, 240, 170), 1),
-      polyRegion('tail', [{ x: 655, y: 500 }, { x: 830, y: 375 }, { x: 830, y: 625 }], 2),
-      polyRegion('fin', [{ x: 360, y: 305 }, { x: 495, y: 235 }, { x: 525, y: 330 }], 3),
-      polyRegion('eye', ellipse(350, 450, 32, 32, 16)),
+      polyRegion('sea', [{ x: 60, y: 830 }, { x: 940, y: 830 }, { x: 940, y: 950 }, { x: 60, y: 950 }], 4),
+      polyRegion('body', ellipse(420, 510, 250, 160), 1),
+      polyRegion('tail', [{ x: 645, y: 510 }, { x: 850, y: 365 }, { x: 805, y: 510 }, { x: 850, y: 655 }], 2),
+      polyRegion('fin-top', [{ x: 330, y: 372 }, { x: 452, y: 268 }, { x: 508, y: 372 }], 3),
+      polyRegion('fin-bottom', [{ x: 360, y: 648 }, { x: 432, y: 742 }, { x: 508, y: 645 }], 3),
+      polyRegion('eye', ellipse(300, 470, 30, 30, 16)),
+      polyRegion('bubble-1', ellipse(720, 240, 34, 34, 14)),
+      polyRegion('bubble-2', ellipse(790, 160, 24, 24, 12)),
     ],
   },
   {
@@ -177,20 +230,58 @@ const colouringActivities: Activity[] = [
     ],
   },
   {
-    type: 'colouring', id: 'colour-wombat', title: 'Wombat friend', category: 'colouring',
+    type: 'colouring', id: 'colour-whale', title: 'Whale', category: 'colouring',
     ageBands: ['2-3', '3-5', '5-7'], difficulty: 1, motorSkills: ['holding-moving', 'tapping'],
-    estimatedMinutes: 3, theme: 'animals', locale: 'en-AU', instructionAudio: audio('colour-free'),
+    estimatedMinutes: 3, theme: 'underwater', locale: 'en-AU', instructionAudio: audio('colour-free'),
     mode: 'free',
-    // Wombat-shaped sketch: grass, round body, head with ears and nose, legs.
     regions: [
-      polyRegion('grass', [{ x: 60, y: 850 }, { x: 940, y: 850 }, { x: 940, y: 960 }, { x: 60, y: 960 }]),
-      polyRegion('body', ellipse(540, 610, 270, 190)),
-      polyRegion('leg-left', [{ x: 430, y: 780 }, { x: 520, y: 780 }, { x: 520, y: 878 }, { x: 430, y: 878 }]),
-      polyRegion('leg-right', [{ x: 640, y: 780 }, { x: 730, y: 780 }, { x: 730, y: 878 }, { x: 640, y: 878 }]),
-      polyRegion('head', ellipse(310, 400, 150, 132)),
-      polyRegion('ear-left', [{ x: 240, y: 298 }, { x: 205, y: 205 }, { x: 300, y: 258 }]),
-      polyRegion('ear-right', [{ x: 380, y: 292 }, { x: 415, y: 200 }, { x: 320, y: 252 }]),
-      polyRegion('nose', ellipse(255, 440, 42, 34, 16)),
+      polyRegion('sea', [{ x: 60, y: 840 }, { x: 940, y: 840 }, { x: 940, y: 955 }, { x: 60, y: 955 }]),
+      polyRegion('body', ellipse(450, 570, 310, 205)),
+      polyRegion('tail', [{ x: 730, y: 500 }, { x: 920, y: 380 }, { x: 875, y: 520 }, { x: 930, y: 650 }]),
+      polyRegion('spout', [{ x: 400, y: 350 }, { x: 355, y: 205 }, { x: 435, y: 300 }, { x: 465, y: 210 }, { x: 480, y: 352 }]),
+      polyRegion('eye', ellipse(300, 505, 28, 28, 14)),
+    ],
+  },
+  {
+    type: 'colouring', id: 'colour-book', title: 'Book', category: 'colouring',
+    ageBands: ['3-5', '5-7'], difficulty: 1, motorSkills: ['tapping', 'holding-moving'],
+    estimatedMinutes: 3, theme: 'letters-numbers', locale: 'en-AU', instructionAudio: audio('colour-free'),
+    mode: 'free',
+    // An open storybook: two pages, spine and a bookmark ribbon.
+    regions: [
+      polyRegion('page-left', [{ x: 140, y: 320 }, { x: 478, y: 262 }, { x: 478, y: 700 }, { x: 140, y: 758 }]),
+      polyRegion('page-right', [{ x: 522, y: 262 }, { x: 860, y: 320 }, { x: 860, y: 758 }, { x: 522, y: 700 }]),
+      polyRegion('spine', [{ x: 478, y: 262 }, { x: 522, y: 262 }, { x: 522, y: 700 }, { x: 478, y: 700 }]),
+      polyRegion('bookmark', [{ x: 680, y: 290 }, { x: 742, y: 300 }, { x: 736, y: 452 }, { x: 708, y: 420 }, { x: 682, y: 446 }]),
+    ],
+  },
+  {
+    type: 'colouring', id: 'colour-house', title: 'House', category: 'colouring',
+    ageBands: ['2-3', '3-5', '5-7'], difficulty: 1, motorSkills: ['tapping', 'holding-moving'],
+    estimatedMinutes: 3, theme: 'family', locale: 'en-AU', instructionAudio: audio('colour-free'),
+    regions: [
+      polyRegion('grass', [{ x: 60, y: 850 }, { x: 940, y: 850 }, { x: 940, y: 955 }, { x: 60, y: 955 }]),
+      polyRegion('sun', ellipse(150, 160, 78, 78)),
+      polyRegion('wall', [{ x: 280, y: 480 }, { x: 720, y: 480 }, { x: 720, y: 850 }, { x: 280, y: 850 }]),
+      polyRegion('roof', [{ x: 235, y: 480 }, { x: 500, y: 235 }, { x: 765, y: 480 }]),
+      polyRegion('door', [{ x: 445, y: 655 }, { x: 558, y: 655 }, { x: 558, y: 850 }, { x: 445, y: 850 }]),
+      polyRegion('window', [{ x: 330, y: 545 }, { x: 415, y: 545 }, { x: 415, y: 628 }, { x: 330, y: 628 }]),
+      polyRegion('window-2', [{ x: 588, y: 545 }, { x: 672, y: 545 }, { x: 672, y: 628 }, { x: 588, y: 628 }]),
+    ],
+    mode: 'free',
+  },
+  {
+    type: 'colouring', id: 'colour-tree', title: 'Tree', category: 'colouring',
+    ageBands: ['2-3', '3-5', '5-7'], difficulty: 1, motorSkills: ['tapping', 'holding-moving'],
+    estimatedMinutes: 3, theme: 'nature', locale: 'en-AU', instructionAudio: audio('colour-free'),
+    mode: 'free',
+    regions: [
+      polyRegion('grass', [{ x: 60, y: 855 }, { x: 940, y: 855 }, { x: 940, y: 955 }, { x: 60, y: 955 }]),
+      polyRegion('trunk', [{ x: 455, y: 585 }, { x: 545, y: 585 }, { x: 545, y: 855 }, { x: 455, y: 855 }]),
+      polyRegion('leaves', ellipse(500, 400, 265, 225)),
+      polyRegion('apple-1', ellipse(390, 350, 36, 36, 14)),
+      polyRegion('apple-2', ellipse(585, 300, 36, 36, 14)),
+      polyRegion('apple-3', ellipse(520, 480, 36, 36, 14)),
     ],
   },
 ];
@@ -259,6 +350,12 @@ const games: GameSpec[] = [
   { id: 'logic-memory-6', title: 'Memory master', template: 'memory-cards', category: 'logic', ageBands: ['5-7'], difficulty: 3, motorSkills: ['tapping'], minutes: 4, theme: 'space', params: { pairs: 6, images: ['dolphin', 'unicorn', 'dinosaur', 'whale', 'rocket', 'star'] } },
   { id: 'logic-maze-easy', title: 'Garden maze', template: 'path-maze', category: 'logic', ageBands: ['3-5'], difficulty: 2, motorSkills: ['controlled-movement', 'holding-moving'], minutes: 3, theme: 'nature', params: { pathComplexity: 2, mover: 'fish', goal: 'treehouse' } },
   { id: 'logic-maze-hard', title: 'Rocket maze', template: 'path-maze', category: 'logic', ageBands: ['5-7'], difficulty: 3, motorSkills: ['controlled-movement'], minutes: 4, theme: 'space', params: { pathComplexity: 3, mover: 'rocket', goal: 'moon' } },
+  // Maze section (owner direction): easy mazes for little ones, harder for big kids.
+  { id: 'maze-sunny-meadow', title: 'Sunny meadow', template: 'path-maze', category: 'toddler', ageBands: ['2-3', '3-5'], difficulty: 1, motorSkills: ['controlled-movement', 'holding-moving'], minutes: 2, theme: 'nature', params: { pathComplexity: 1, mover: 'duck', goal: 'sun' } },
+  { id: 'maze-pond', title: 'Across the pond', template: 'path-maze', category: 'toddler', ageBands: ['2-3', '3-5'], difficulty: 1, motorSkills: ['controlled-movement', 'holding-moving'], minutes: 2, theme: 'nature', params: { pathComplexity: 2, mover: 'fish', goal: 'treehouse' } },
+  { id: 'maze-reef', title: 'Reef wiggle', template: 'path-maze', category: 'logic', ageBands: ['3-5', '5-7'], difficulty: 2, motorSkills: ['controlled-movement'], minutes: 3, theme: 'underwater', params: { pathComplexity: 3, mover: 'dolphin', goal: 'star' } },
+  { id: 'maze-space-twist', title: 'Space twist', template: 'path-maze', category: 'logic', ageBands: ['5-7'], difficulty: 3, motorSkills: ['controlled-movement'], minutes: 4, theme: 'space', params: { pathComplexity: 4, mover: 'rocket', goal: 'moon' } },
+  { id: 'maze-unicorn-castle', title: 'Unicorn castle', template: 'path-maze', category: 'logic', ageBands: ['5-7'], difficulty: 3, motorSkills: ['controlled-movement'], minutes: 4, theme: 'fantasy', params: { pathComplexity: 5, mover: 'unicorn', goal: 'star' } },
   { id: 'logic-size-order', title: 'Small to big', template: 'drag-sort', category: 'logic', ageBands: ['3-5', '5-7'], difficulty: 2, motorSkills: ['dragging', 'precision-placement'], minutes: 2, theme: 'everyday', params: { bins: ['1', '2', '3', '4'], items: 4, ordered: true, item: 'dinosaur' } },
   { id: 'logic-belongs', title: 'What belongs together?', template: 'match-pairs', category: 'logic', ageBands: ['3-5', '5-7'], difficulty: 2, motorSkills: ['dragging'], minutes: 3, theme: 'everyday', params: { pairs: 4, kind: 'belongs' } },
   { id: 'logic-rotate-shape', title: 'Turn it to fit', template: 'sequence', category: 'logic', ageBands: ['5-7'], difficulty: 3, motorSkills: ['rotating', 'precision-placement'], minutes: 3, theme: 'shapes-patterns', params: { length: 3, rotation: true } },
@@ -285,49 +382,49 @@ const gameActivities: Activity[] = games.map((g) => ({
 
 const drawingActivities: Activity[] = [
   {
-    type: 'guided-drawing', id: 'sketch-dolphin', title: 'Draw over: a dolphin', category: 'drawing',
+    type: 'guided-drawing', id: 'sketch-dolphin', title: 'Dolphin', category: 'drawing',
     ageBands: ['3-5', '5-7'], difficulty: 2, motorSkills: ['holding-moving', 'controlled-movement'],
     estimatedMinutes: 4, theme: 'underwater', locale: 'en-AU', instructionAudio: audio('draw-sketch'),
     steps: [{ prompt: 'images/dolphin.svg', overlay: [{ x: 0, y: 0 }, { x: 1000, y: 1000 }] }],
   },
   {
-    type: 'guided-drawing', id: 'sketch-dinosaur', title: 'Draw over: a dinosaur', category: 'drawing',
+    type: 'guided-drawing', id: 'sketch-dinosaur', title: 'Dinosaur', category: 'drawing',
     ageBands: ['3-5', '5-7'], difficulty: 2, motorSkills: ['holding-moving', 'controlled-movement'],
     estimatedMinutes: 4, theme: 'dinosaurs', locale: 'en-AU', instructionAudio: audio('draw-sketch'),
     steps: [{ prompt: 'images/dinosaur.svg', overlay: [{ x: 0, y: 0 }, { x: 1000, y: 1000 }] }],
   },
   {
-    type: 'guided-drawing', id: 'sketch-unicorn', title: 'Draw over: a unicorn', category: 'drawing',
+    type: 'guided-drawing', id: 'sketch-unicorn', title: 'Unicorn', category: 'drawing',
     ageBands: ['3-5', '5-7'], difficulty: 2, motorSkills: ['holding-moving', 'controlled-movement'],
     estimatedMinutes: 4, theme: 'fairy-tales', locale: 'en-AU', instructionAudio: audio('draw-sketch'),
     steps: [{ prompt: 'images/unicorn.svg', overlay: [{ x: 0, y: 0 }, { x: 1000, y: 1000 }] }],
   },
   {
-    type: 'guided-drawing', id: 'sketch-whale', title: 'Draw over: a whale', category: 'drawing',
+    type: 'guided-drawing', id: 'sketch-whale', title: 'Whale', category: 'drawing',
     ageBands: ['3-5', '5-7'], difficulty: 2, motorSkills: ['holding-moving', 'controlled-movement'],
     estimatedMinutes: 4, theme: 'underwater', locale: 'en-AU', instructionAudio: audio('draw-sketch'),
     steps: [{ prompt: 'images/whale.svg', overlay: [{ x: 0, y: 0 }, { x: 1000, y: 1000 }] }],
   },
   {
-    type: 'guided-drawing', id: 'sketch-cat', title: 'Draw over: a cat', category: 'drawing',
+    type: 'guided-drawing', id: 'sketch-cat', title: 'Cat', category: 'drawing',
     ageBands: ['3-5', '5-7'], difficulty: 2, motorSkills: ['holding-moving', 'controlled-movement'],
     estimatedMinutes: 4, theme: 'animals', locale: 'en-AU', instructionAudio: audio('draw-sketch'),
     steps: [{ prompt: 'images/cat.svg', overlay: [{ x: 0, y: 0 }, { x: 1000, y: 1000 }] }],
   },
   {
-    type: 'guided-drawing', id: 'sketch-rocket', title: 'Draw over: a rocket', category: 'drawing',
+    type: 'guided-drawing', id: 'sketch-rocket', title: 'Rocket', category: 'drawing',
     ageBands: ['3-5', '5-7'], difficulty: 2, motorSkills: ['holding-moving', 'controlled-movement'],
     estimatedMinutes: 4, theme: 'space', locale: 'en-AU', instructionAudio: audio('draw-sketch'),
     steps: [{ prompt: 'images/rocket.svg', overlay: [{ x: 0, y: 0 }, { x: 1000, y: 1000 }] }],
   },
   {
-    type: 'guided-drawing', id: 'sketch-car', title: 'Draw over: a car', category: 'drawing',
+    type: 'guided-drawing', id: 'sketch-car', title: 'Car', category: 'drawing',
     ageBands: ['3-5', '5-7'], difficulty: 2, motorSkills: ['holding-moving', 'controlled-movement'],
     estimatedMinutes: 4, theme: 'vehicles', locale: 'en-AU', instructionAudio: audio('draw-sketch'),
     steps: [{ prompt: 'images/car.svg', overlay: [{ x: 0, y: 0 }, { x: 1000, y: 1000 }] }],
   },
   {
-    type: 'guided-drawing', id: 'sketch-treehouse', title: 'Draw over: a treehouse', category: 'drawing',
+    type: 'guided-drawing', id: 'sketch-treehouse', title: 'Treehouse', category: 'drawing',
     ageBands: ['3-5', '5-7'], difficulty: 2, motorSkills: ['holding-moving', 'controlled-movement'],
     estimatedMinutes: 4, theme: 'nature', locale: 'en-AU', instructionAudio: audio('draw-sketch'),
     steps: [{ prompt: 'images/treehouse.svg', overlay: [{ x: 0, y: 0 }, { x: 1000, y: 1000 }] }],

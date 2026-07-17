@@ -314,6 +314,13 @@ const IMAGES = {
     <path d="M96 62 L100 70 L109 71 L102 77 L104 86 L96 81 L88 86 L90 77 L83 71 L92 70 Z" fill="#FFD84D" stroke="#EBB93C" stroke-width="2"/>
   </g>`),
 
+  maze: svg(`
+  <rect x="30" y="30" width="140" height="140" rx="18" fill="#CDE9FF" stroke="#5C8FD6" stroke-width="6"/>
+  <path d="M60 170 L60 90 L140 90 M90 170 L90 120 L110 120 M140 90 L140 140 L110 140 M60 60 L140 60"
+        fill="none" stroke="#5C8FD6" stroke-width="8" stroke-linecap="round"/>
+  <circle cx="45" cy="172" r="10" fill="#FFD84D" stroke="#EBB93C" stroke-width="3"/>
+  <path d="M158 40 L163 50 L174 51 L166 58 L168 69 L158 63 L148 69 L150 58 L142 51 L153 50 Z" fill="#FFD84D" stroke="#EBB93C" stroke-width="2"/>`),
+
   'star-mascot': svg(`
   <path d="M100 14 L124 70 L184 76 L139 116 L152 176 L100 145 L48 176 L61 116 L16 76 L76 70 Z"
         fill="#FFD84D" stroke="#EBB93C" stroke-width="5" stroke-linejoin="round"/>

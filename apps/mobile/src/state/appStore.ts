@@ -31,7 +31,7 @@ import { getRepositories } from '../storage/db';
 export type Screen =
   | { name: 'onboarding' }
   | { name: 'home' }
-  | { name: 'picker'; category: Activity['category'] }
+  | { name: 'picker'; category: Activity['category'] | 'mazes' }
   | { name: 'activity'; activity: Activity }
   | { name: 'daily-adventure' }
   | { name: 'rewards' }

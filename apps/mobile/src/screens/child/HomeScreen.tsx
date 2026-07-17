@@ -17,21 +17,32 @@ import { audioService } from '../../services/audio';
  * and theme subtitle, star pill + Grown-ups lock on the right, eight tiles
  * with subtitles in two columns, and a full-width "My Rewards" banner.
  */
-const TILES: Array<{ label: string; target: { category?: ActivityCategory; special?: 'daily' } }> = [
-  { label: 'Draw', target: { category: 'drawing' } },
-  { label: 'Colour', target: { category: 'colouring' } },
-  { label: 'Puzzles', target: { category: 'puzzles' } },
-  { label: 'Tracing', target: { category: 'tracing' } },
-  { label: 'Little Games', target: { category: 'toddler' } },
-  { label: 'Big Kid Games', target: { category: 'preschool' } },
-  { label: 'Think & Solve', target: { category: 'logic' } },
-  { label: 'Daily Adventure', target: { special: 'daily' } },
+const TILES: Array<{
+  label: string;
+  idx: number;
+  sub?: string;
+  icon?: string;
+  bigKidsOnly?: boolean;
+  target: { category?: ActivityCategory | 'mazes'; special?: 'daily' };
+}> = [
+  { label: 'Draw', idx: 0, target: { category: 'drawing' } },
+  { label: 'Colour', idx: 1, target: { category: 'colouring' } },
+  { label: 'Puzzles', idx: 2, target: { category: 'puzzles' } },
+  { label: 'Tracing', idx: 3, target: { category: 'tracing' } },
+  { label: 'Little Games', idx: 4, target: { category: 'toddler' } },
+  // Owner direction: Big Kid Games appears only on a 5-7 profile.
+  { label: 'Big Kid Games', idx: 5, bigKidsOnly: true, target: { category: 'preschool' } },
+  { label: 'Think & Solve', idx: 6, target: { category: 'logic' } },
+  { label: 'Mazes', idx: 2, sub: 'Find the way', icon: '🌀', target: { category: 'mazes' } },
+  { label: 'Daily Adventure', idx: 7, target: { special: 'daily' } },
 ];
 
 export function HomeScreen(): React.JSX.Element {
   const { profile, screenTime, navigate, rewards } = useAppStore();
   const theme = childTheme(profile?.accessibility ?? defaultAccessibilitySettings(), profile?.themeId);
   const app = theme.app;
+
+  const visibleTiles = TILES.filter((t) => !t.bigKidsOnly || profile?.ageBand === '5-7');
 
   function open(target: (typeof TILES)[number]['target'], label: string): void {
     void audioService.playInstruction(`label/${label}`);
@@ -76,13 +87,13 @@ export function HomeScreen(): React.JSX.Element {
         </View>
       </View>
       <ScrollView contentContainerStyle={styles.grid}>
-        {TILES.map((tile, i) => (
+        {visibleTiles.map((tile) => (
           <View key={tile.label} style={styles.cell}>
             <BigTile
               label={tile.label}
-              subtitle={HOME_TILE_SUBTITLES[i] ?? ''}
-              emoji={app.tileIcons[i] ?? '⭐'}
-              colour={theme.tileColours[i % theme.tileColours.length]!}
+              subtitle={tile.sub ?? HOME_TILE_SUBTITLES[tile.idx] ?? ''}
+              emoji={tile.icon ?? app.tileIcons[tile.idx] ?? '⭐'}
+              colour={theme.tileColours[tile.idx % theme.tileColours.length]!}
               theme={theme}
               onPress={() => open(tile.target, tile.label)}
             />

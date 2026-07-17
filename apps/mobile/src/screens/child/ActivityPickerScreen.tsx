@@ -12,24 +12,32 @@ import { IMPLEMENTED_GAME_TEMPLATES } from './games/registry';
  * templates not yet implemented in this scaffold are filtered out entirely -
  * children never see locked or broken teasers.
  */
-export function ActivityPickerScreen(props: { category: ActivityCategory }): React.JSX.Element {
+export function ActivityPickerScreen(props: { category: ActivityCategory | 'mazes' }): React.JSX.Element {
   const { profile, catalogue, navigate } = useAppStore();
   const theme = childTheme(profile?.accessibility ?? defaultAccessibilitySettings(), profile?.themeId);
 
   const playable = catalogue.filter(
     (a) => a.type !== 'game' || IMPLEMENTED_GAME_TEMPLATES.includes(a.template),
   );
-  const ranked = recommendActivities(
-    playable.filter((a) => a.category === props.category),
-    {
-      ageBand: profile?.ageBand ?? '3-5',
-      difficulty: profile?.difficulty ?? 2,
-      favouriteCategories: profile?.favouriteCategories ?? [],
-      enabledCategories: [...ACTIVITY_CATEGORIES],
-      recentActivityIds: [],
-    },
-    24,
-  );
+  // Mazes are their own door (owner direction): every path-maze, gated by the
+  // profile's age band so little kids see the easy ones and big kids the rest.
+  const ranked =
+    props.category === 'mazes'
+      ? playable
+          .filter((a) => a.type === 'game' && a.template === 'path-maze')
+          .filter((a) => a.ageBands.includes(profile?.ageBand ?? '3-5'))
+          .sort((a, b) => a.difficulty - b.difficulty)
+      : recommendActivities(
+          playable.filter((a) => a.category === props.category),
+          {
+            ageBand: profile?.ageBand ?? '3-5',
+            difficulty: profile?.difficulty ?? 2,
+            favouriteCategories: profile?.favouriteCategories ?? [],
+            enabledCategories: [...ACTIVITY_CATEGORIES],
+            recentActivityIds: [],
+          },
+          24,
+        );
 
   const emojiFor = (a: Activity): string =>
     ({ drawing: '🖍️', colouring: '🎨', puzzles: '🧩', tracing: '✏️', toddler: '🐣', preschool: '🦘', logic: '💡' })[a.category];
@@ -38,7 +46,7 @@ export function ActivityPickerScreen(props: { category: ActivityCategory }): Rea
   function glyphFor(id: string): string | undefined {
     const letter = /^trace-letter-(.)$/.exec(id);
     if (letter) return `${letter[1]!.toUpperCase()} ${letter[1]!}`;
-    const num = /^trace-number-(.)$/.exec(id);
+    const num = /^trace-number-(\d+)$/.exec(id);
     return num ? num[1]! : undefined;
   }
 

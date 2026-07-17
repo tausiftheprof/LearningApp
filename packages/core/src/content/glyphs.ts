@@ -147,8 +147,16 @@ export function letterStrokes(letter: string): Point[][] {
   ];
 }
 
-/** Strokes for one digit activity, centred. */
+/** Strokes for one digit activity, centred. "10" composes 1 and 0 side by side. */
 export function digitStrokes(digit: string): Point[][] {
+  if (digit === '10') {
+    const k = 0.55;
+    const oy = (1000 - 1000 * k) / 2;
+    return [
+      ...mapStrokes(widen(DIGITS['1']!, 1.1), k, 300 - 500 * k, k, oy),
+      ...mapStrokes(widen(DIGITS['0']!, 1.1), k, 700 - 500 * k, k, oy),
+    ];
+  }
   const glyph = DIGITS[digit];
   if (!glyph) throw new Error(`no glyph for digit ${digit}`);
   const k = 0.66;
