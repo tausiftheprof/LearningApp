@@ -285,7 +285,20 @@ const jigsaw = (
   motorSkills: rotating ? ['dragging', 'rotating', 'precision-placement'] : ['dragging', 'precision-placement'],
   estimatedMinutes: rows * cols <= 4 ? 3 : 4, theme, locale: 'en-AU',
   instructionAudio: audio('puzzle-jigsaw'),
-  image: `images/${image}.svg`, rows, cols, rotatingPieces: rotating,
+  image: `images/${image}.svg`, rows, cols, rotatingPieces: rotating, sizeSelectable: false,
+});
+
+/** Owner-supplied photo jigsaws (July 2026): the child picks 2x2/3x3/4x4
+ *  before the board appears (see `sizeSelectable`, web-demo/demo-shell.html's
+ *  renderPuzzle) - `rows`/`cols` here are just the schema-required default. */
+const photoJigsaw = (
+  id: string, title: string, image: string, ageBands: Activity['ageBands'], theme: string,
+): Activity => ({
+  type: 'jigsaw', id, title, category: 'puzzles', ageBands, difficulty: 2,
+  motorSkills: ['dragging', 'precision-placement'],
+  estimatedMinutes: 4, theme, locale: 'en-AU',
+  instructionAudio: audio('puzzle-jigsaw'),
+  image: `images/${image}.png`, rows: 3, cols: 3, rotatingPieces: false, sizeSelectable: true,
 });
 
 const puzzleActivities: Activity[] = [
@@ -299,6 +312,10 @@ const puzzleActivities: Activity[] = [
   jigsaw('puzzle-treehouse', 'Treehouse hideout', 'treehouse', 3, 3, 3, ['5-7'], 'nature'),
   jigsaw('puzzle-balloon', 'Rainbow balloon', 'balloon', 3, 3, 3, ['5-7'], 'adventure'),
   jigsaw('puzzle-rocket', 'Rocket to the stars', 'rocket', 3, 3, 3, ['5-7'], 'space', true),
+  photoJigsaw('puzzle-photo-monkey', 'Monkey Puzzle', 'puzzle-monkey', ['2-3', '3-5', '5-7'], 'animals'),
+  photoJigsaw('puzzle-photo-rabbit', 'Rabbit Puzzle', 'puzzle-rabbit', ['2-3', '3-5', '5-7'], 'animals'),
+  photoJigsaw('puzzle-photo-unicorn', 'Unicorn Puzzle', 'puzzle-unicorn', ['2-3', '3-5', '5-7'], 'fairy-tales'),
+  photoJigsaw('puzzle-photo-whale', 'Whale Puzzle', 'puzzle-whale', ['2-3', '3-5', '5-7'], 'underwater'),
 ];
 
 /* ---------- Games: 10 toddler + 10 preschool + 10 logic (FR-008..FR-010) ---------- */

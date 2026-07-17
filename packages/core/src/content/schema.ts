@@ -95,6 +95,10 @@ export const jigsawActivitySchema = activityBase.extend({
   rows: z.number().int().min(1).max(6),
   cols: z.number().int().min(1).max(6),
   rotatingPieces: z.boolean().default(false),
+  /** When true, the player picks the grid size (2x2/3x3/4x4) before the board
+   *  appears, and that choice overrides `rows`/`cols` for the session -
+   *  `rows`/`cols` above just need to be a valid default. */
+  sizeSelectable: z.boolean().default(false),
 });
 
 /** Small, safe, parameterised game engines implemented in the app (docs/03 S14). */

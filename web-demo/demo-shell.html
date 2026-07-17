@@ -1858,20 +1858,38 @@ function renderPuzzle(activity) {
   setStatus('Puzzle — ' + activity.title, ['puzzles.PuzzleSession', 'puzzles.puzzleConfigFor']);
   const config = LH.puzzleConfigFor(state.profile?.difficulty ?? 1);
   const imageName = imageNameFromRef(activity.image);
+  const isRaster = Boolean(RASTER_IMAGES[imageName]);
   const stage = el(`<div class="play-stage" aria-label="Puzzle board"></div>`);
   app.append(stage);
 
+  let rows = activity.rows, cols = activity.cols;
   let pieces = [], session = null, dragging = null, hintFor = null, done = false;
   let slotFn = null, cellSize = 0;
 
+  /** Owner direction: let the child choose how many pieces before the board
+   *  appears, rather than a fixed grid baked into the activity. */
+  function renderSizePicker() {
+    stage.innerHTML = '';
+    const box = el(`<div class="center-col"><h2>How many pieces?</h2></div>`);
+    const row = el(`<div style="display:flex;gap:16px;margin-top:14px;flex-wrap:wrap;justify-content:center"></div>`);
+    [2, 3, 4].forEach((n) => {
+      const btn = el(`<button class="primary-btn" style="border-radius:18px;padding:16px 22px;font-size:22px;min-width:96px" aria-label="${n} by ${n} pieces">${n} × ${n}</button>`);
+      btn.onclick = () => { rows = n; cols = n; speak(n + ' by ' + n); requestAnimationFrame(layout); };
+      row.append(btn);
+    });
+    box.append(row);
+    stage.append(box);
+    speak('How many pieces would you like?');
+  }
+
   function layout() {
     const r = stage.getBoundingClientRect();
-    const cell = Math.min((r.width * 0.9) / activity.cols, (r.height * 0.55) / activity.rows);
-    const originX = (r.width - cell * activity.cols) / 2;
+    const cell = Math.min((r.width * 0.9) / cols, (r.height * 0.55) / rows);
+    const originX = (r.width - cell * cols) / 2;
     const slot = (row, col) => ({ x: originX + col * cell + cell / 2, y: 14 + row * cell + cell / 2 });
     pieces = [];
     let n = 0;
-    for (let row = 0; row < activity.rows; row++) for (let col = 0; col < activity.cols; col++) {
+    for (let row = 0; row < rows; row++) for (let col = 0; col < cols; col++) {
       const trayX = 40 + ((n * 111) % Math.max(111, r.width - 120));
       const trayY = r.height * 0.68 + (n % 2) * (cell * 0.6);
       pieces.push({ id: row + '-' + col, row, col, x: trayX, y: trayY, trayX, trayY, placed: false, n: ++n });
@@ -1883,7 +1901,13 @@ function renderPuzzle(activity) {
 
   /** One jigsaw piece = a window onto the full image (assets/images/). */
   function pieceHtml(p, cell) {
-    const w = cell * activity.cols, h = cell * activity.rows;
+    const w = cell * cols, h = cell * rows;
+    if (isRaster) {
+      // draggable="false" + pointer-events:none: a bare <img> intercepts the
+      // browser's native image drag-and-drop, which swallows our custom
+      // pointer-drag before it ever reaches the piece's own handler.
+      return `<div style="position:absolute;inset:0;overflow:hidden;border-radius:${p.placed ? 4 : 12}px"><img src="${RASTER_IMAGES[imageName]}" alt="" draggable="false" style="position:absolute;width:${w}px;height:${h}px;left:${-p.col * cell}px;top:${-p.row * cell}px;object-fit:fill;pointer-events:none;-webkit-user-drag:none"></div>`;
+    }
     const inner = (IMAGES[imageName] || IMAGES.star).replace(
       '<svg ',
       `<svg preserveAspectRatio="none" style="width:${w}px;height:${h}px;position:absolute;left:${-p.col * cell}px;top:${-p.row * cell}px" `,
@@ -1896,9 +1920,11 @@ function renderPuzzle(activity) {
     const cell = cellSize;
     // Faint full image behind the board: "background guidance" (PRD section 6.4).
     const board = slotFn(0, 0);
-    const gw = cell * activity.cols, gh = cell * activity.rows;
-    const guideSvg = (IMAGES[imageName] || IMAGES.star).replace('<svg ', `<svg preserveAspectRatio="none" style="width:${gw}px;height:${gh}px;display:block" `);
-    stage.append(el(`<div style="position:absolute;left:${board.x - cell / 2}px;top:${board.y - cell / 2}px;opacity:0.22;pointer-events:none">${guideSvg}</div>`));
+    const gw = cell * cols, gh = cell * rows;
+    const guideHtml = isRaster
+      ? `<img src="${RASTER_IMAGES[imageName]}" alt="" draggable="false" style="width:${gw}px;height:${gh}px;display:block;object-fit:fill">`
+      : (IMAGES[imageName] || IMAGES.star).replace('<svg ', `<svg preserveAspectRatio="none" style="width:${gw}px;height:${gh}px;display:block" `);
+    stage.append(el(`<div style="position:absolute;left:${board.x - cell / 2}px;top:${board.y - cell / 2}px;opacity:0.22;pointer-events:none">${guideHtml}</div>`));
     for (const p of pieces) {
       const sl = slotFn(p.row, p.col);
       const hinted = hintFor === p.id;
@@ -1939,7 +1965,8 @@ function renderPuzzle(activity) {
     paint();
   });
 
-  requestAnimationFrame(layout);
+  if (activity.sizeSelectable) renderSizePicker();
+  else requestAnimationFrame(layout);
 }
 
 /* ---------- game templates: all 15 schema templates (FR-008..FR-010) ---------- */
