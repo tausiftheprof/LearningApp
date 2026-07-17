@@ -1,9 +1,11 @@
 import React, { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { GestureResponderEvent } from 'react-native';
-import { Canvas, Circle, Group, LinearGradient, Path, Skia, vec } from '@shopify/react-native-skia';
+import { Canvas, Circle, Group, LinearGradient, Path, Skia, useCanvasRef, vec } from '@shopify/react-native-skia';
 import type { ColouringActivity } from '@littlegrip/core';
 import { PALETTES } from '@littlegrip/core';
+import { useAppStore } from '../../../state/appStore';
+import { getRepositories } from '../../../storage/db';
 import type { Theme } from '../../../ui/theme';
 import { CompletionBanner } from '../ActivityPlayerScreen';
 
@@ -39,7 +41,13 @@ export function ColouringPlayer(props: {
   const [strokes, setStrokes] = useState<Record<string, RegionStroke[]>>({});
   const [attempts, setAttempts] = useState(1);
   const [done, setDone] = useState(false);
-  const [liveRegion, setLiveRegion] = useState<string | null>(null);
+  const [liveRegion, setLiveRegion] = useState<string | 'background' | null>(null);
+  // Owner-directed layout: the palette collapses to the picked option.
+  const [menuOpen, setMenuOpen] = useState(true);
+  const [bg, setBg] = useState<Swatch | null>(null);
+  const [bgStrokes, setBgStrokes] = useState<RegionStroke[]>([]);
+  const canvasRef = useCanvasRef();
+  const profile = useAppStore((st) => st.profile);
 
   const scale = Math.min(size.w, size.h) / DESIGN;
   const byNumber = activity.mode === 'by-number';
@@ -106,7 +114,11 @@ export function ColouringPlayer(props: {
   function fillTap(x: number, y: number): void {
     if (done) return;
     const hit = hitRegion(x, y);
-    if (!hit) return;
+    if (!hit) {
+      // Tap outside the picture colours the background (owner direction).
+      setBg(swatch);
+      return;
+    }
     const expected = expectedColour(hit.number);
     if (byNumber && expected !== null && !(swatch.kind === 'solid' && swatch.colour === expected)) {
       // Gentle: nothing negative happens; child can keep exploring colours.
@@ -122,20 +134,36 @@ export function ColouringPlayer(props: {
     if (done) return;
     const { locationX: x, locationY: y } = e.nativeEvent;
     const hit = hitRegion(x, y);
-    if (!hit) return;
     const stroke: RegionStroke = { swatch, width: brushWidth, points: [{ x: x / scale, y: y / scale }] };
+    if (!hit) {
+      // Painting the background (behind the picture).
+      setLiveRegion('background');
+      setBgStrokes((list) => [...list, stroke]);
+      return;
+    }
     setLiveRegion(hit.id);
     setStrokes((s) => ({ ...s, [hit.id]: [...(s[hit.id] ?? []), stroke] }));
   }
   function brushMove(e: GestureResponderEvent): void {
     if (done || liveRegion === null) return;
     const { locationX: x, locationY: y } = e.nativeEvent;
+    const pt = { x: x / scale, y: y / scale };
+    if (liveRegion === 'background') {
+      setBgStrokes((list) => {
+        if (!list.length) return list;
+        const updated = [...list];
+        const last = updated[updated.length - 1]!;
+        updated[updated.length - 1] = { ...last, points: [...last.points, pt] };
+        return updated;
+      });
+      return;
+    }
     setStrokes((s) => {
       const list = s[liveRegion];
       if (!list?.length) return s;
       const updated = [...list];
       const last = updated[updated.length - 1]!;
-      updated[updated.length - 1] = { ...last, points: [...last.points, { x: x / scale, y: y / scale }] };
+      updated[updated.length - 1] = { ...last, points: [...last.points, pt] };
       return { ...s, [liveRegion]: updated };
     });
   }
@@ -152,6 +180,26 @@ export function ColouringPlayer(props: {
     for (const pt of points.slice(1)) p.lineTo(pt.x * scale, pt.y * scale);
     return p;
   };
+
+  async function saveArtwork(): Promise<void> {
+    if (!profile) return;
+    // Snapshot the whole page into the on-device artwork gallery.
+    const snap = canvasRef.current?.makeImageSnapshot();
+    const b64 = snap?.encodeToBase64();
+    if (!b64) return;
+    const repos = await getRepositories();
+    await repos.artwork.save({
+      id: 'art-' + Date.now(), profileId: profile.id, createdAt: Date.now(),
+      ops: [], png: 'data:image/png;base64,' + b64,
+    });
+    if (!done) {
+      setDone(true);
+      props.onComplete({ attempts, hintCount: 0, accuracyScore: null });
+    }
+  }
+  function resetAll(): void {
+    setFills({}); setStrokes({}); setBg(null); setBgStrokes([]); setDone(false);
+  }
 
   const brushTouchProps = mode === 'brush' && !byNumber
     ? {
@@ -173,7 +221,46 @@ export function ColouringPlayer(props: {
         accessibilityLabel="Colouring picture. Tap an area to fill it, or paint inside the lines with the brush."
         {...brushTouchProps}
       >
-        <Canvas style={styles.canvas}>
+        <Canvas style={styles.canvas} ref={canvasRef}>
+          {/* Background layer (owner: the background is colourable too) */}
+          <Path path={Skia.Path.Make().addRect(Skia.XYWHRect(0, 0, size.w, size.h))} color="#FFFFFF" style="fill" />
+          {bg?.kind === 'solid' && (
+            <Path path={Skia.Path.Make().addRect(Skia.XYWHRect(0, 0, size.w, size.h))} color={bg.colour} style="fill" />
+          )}
+          {bg?.kind === 'glitter' && (
+            <Group>
+              <Path path={Skia.Path.Make().addRect(Skia.XYWHRect(0, 0, size.w, size.h))} color={GLITTER_BASE} style="fill" />
+              {Array.from({ length: 120 }, (_, i) => (
+                <Circle
+                  key={i}
+                  cx={((Math.sin(97 * 61 + i * 37.7) + 1) / 2) * size.w}
+                  cy={((Math.cos(97 * 43 + i * 53.3) + 1) / 2) * size.h}
+                  r={i % 5 === 0 ? 2.6 : 1.5}
+                  color={GLITTER_SPECKS[i % GLITTER_SPECKS.length]!}
+                />
+              ))}
+            </Group>
+          )}
+          {bg?.kind === 'rainbow' && (
+            <Path path={Skia.Path.Make().addRect(Skia.XYWHRect(0, 0, size.w, size.h))} style="fill">
+              <LinearGradient start={vec(0, 0)} end={vec(size.w, size.h)} colors={RAINBOW} />
+            </Path>
+          )}
+          {bgStrokes.map((st, si) => (
+            <Path
+              key={`bg-${si}`}
+              path={strokePath(st.points)}
+              style="stroke"
+              strokeWidth={st.width * scale}
+              strokeCap="round"
+              strokeJoin="round"
+              color={st.swatch.kind === 'solid' ? st.swatch.colour : GLITTER_BASE}
+            >
+              {st.swatch.kind === 'rainbow' && (
+                <LinearGradient start={vec(0, 0)} end={vec(size.w, size.h)} colors={RAINBOW} />
+              )}
+            </Path>
+          ))}
           {regionPaths.map(({ region, path, box, specks }) => {
             const f = fills[region.id];
             return (
@@ -245,53 +332,83 @@ export function ColouringPlayer(props: {
               </Text>
             ) : null,
           )}
-      </Pressable>
 
-      {!byNumber && (
-        <View style={styles.modeRow}>
-          <ModeButton label="🪣" aria="Fill with a tap" active={mode === 'fill'} onPress={() => setMode('fill')} />
-          <ModeButton label="🖌️" aria="Paint inside the lines" active={mode === 'brush'} onPress={() => setMode('brush')} />
-          {mode === 'brush' &&
-            ([[7, '•'], [14, '●'], [26, '⬤']] as const).map(([w, icon]) => (
-              <ModeButton key={w} label={icon} aria={`Brush width ${w}`} active={brushWidth === w} onPress={() => setBrushWidth(w)} />
+        {/* Right-aligned collapsible palette (owner direction): only the
+            selected option shows once a pick is made. */}
+        {menuOpen ? (
+          <ScrollView style={styles.panel} contentContainerStyle={styles.panelContent}>
+            {!byNumber && (
+              <>
+                <ModeButton label="🪣" aria="Fill with a tap" active={mode === 'fill'} onPress={() => setMode('fill')} />
+                <ModeButton label="🖌️" aria="Paint inside the lines" active={mode === 'brush'} onPress={() => setMode('brush')} />
+                {mode === 'brush' &&
+                  ([[7, '•'], [14, '●'], [26, '⬤']] as const).map(([w, icon]) => (
+                    <ModeButton key={w} label={icon} aria={`Brush width ${w}`} active={brushWidth === w} onPress={() => setBrushWidth(w)} />
+                  ))}
+                <View style={styles.panelSep} />
+              </>
+            )}
+            {PALETTES.standard.map((c, i) => (
+              <Swatch key={c} colour={c} active={swatch.kind === 'solid' && swatch.colour === c}
+                aria={byNumber ? `Colour number ${i + 1}` : `Colour ${c}`}
+                onPress={() => { setSwatch({ kind: 'solid', colour: c }); setMenuOpen(false); }}>
+                {byNumber && <Text style={styles.swatchNumber}>{i + 1}</Text>}
+              </Swatch>
             ))}
-        </View>
-      )}
-
-      <ScrollView horizontal style={styles.palette} contentContainerStyle={styles.paletteContent}>
-        {PALETTES.standard.map((c, i) => (
-          <Swatch key={c} colour={c} active={swatch.kind === 'solid' && swatch.colour === c}
-            aria={byNumber ? `Colour number ${i + 1}` : `Colour ${c}`}
-            onPress={() => setSwatch({ kind: 'solid', colour: c })}>
-            {byNumber && <Text style={styles.swatchNumber}>{i + 1}</Text>}
-          </Swatch>
-        ))}
-        {!byNumber &&
-          PALETTES.pastel.map((c) => (
-            <Swatch key={c} colour={c} active={swatch.kind === 'solid' && swatch.colour === c}
-              aria={`Pastel colour ${c}`} onPress={() => setSwatch({ kind: 'solid', colour: c })} />
-          ))}
-        {!byNumber && (
-          <Swatch colour={GLITTER_BASE} active={swatch.kind === 'glitter'} aria="Glitter"
-            onPress={() => setSwatch({ kind: 'glitter' })}>
-            <Text style={styles.swatchIcon}>✨</Text>
-          </Swatch>
-        )}
-        {!byNumber && (
+            {!byNumber &&
+              PALETTES.pastel.map((c) => (
+                <Swatch key={c} colour={c} active={swatch.kind === 'solid' && swatch.colour === c}
+                  aria={`Pastel colour ${c}`} onPress={() => { setSwatch({ kind: 'solid', colour: c }); setMenuOpen(false); }} />
+              ))}
+            {!byNumber && (
+              <Swatch colour={GLITTER_BASE} active={swatch.kind === 'glitter'} aria="Glitter"
+                onPress={() => { setSwatch({ kind: 'glitter' }); setMenuOpen(false); }}>
+                <Text style={styles.swatchIcon}>✨</Text>
+              </Swatch>
+            )}
+            {!byNumber && (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Rainbow"
+                onPress={() => { setSwatch({ kind: 'rainbow' }); setMenuOpen(false); }}
+                style={[styles.swatch, { borderWidth: swatch.kind === 'rainbow' ? 4 : 1, overflow: 'hidden', backgroundColor: '#FFF' }]}
+              >
+                <Canvas style={styles.rainbowSwatch}>
+                  <Path path={Skia.Path.Make().addRect(Skia.XYWHRect(0, 0, 44, 44))} style="fill">
+                    <LinearGradient start={vec(0, 0)} end={vec(44, 44)} colors={RAINBOW} />
+                  </Path>
+                </Canvas>
+              </Pressable>
+            )}
+          </ScrollView>
+        ) : (
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Rainbow"
-            onPress={() => setSwatch({ kind: 'rainbow' })}
-            style={[styles.swatch, { borderWidth: swatch.kind === 'rainbow' ? 4 : 1, overflow: 'hidden', backgroundColor: '#FFF' }]}
+            accessibilityLabel="Open colours"
+            onPress={() => setMenuOpen(true)}
+            style={[styles.fab, { backgroundColor: swatch.kind === 'solid' ? swatch.colour : GLITTER_BASE }]}
           >
-            <Canvas style={styles.rainbowSwatch}>
-              <Path path={Skia.Path.Make().addRect(Skia.XYWHRect(0, 0, 56, 56))} style="fill">
-                <LinearGradient start={vec(0, 0)} end={vec(56, 56)} colors={RAINBOW} />
-              </Path>
-            </Canvas>
+            {swatch.kind === 'glitter' && <Text style={styles.swatchIcon}>✨</Text>}
+            {swatch.kind === 'rainbow' && (
+              <Canvas style={styles.fabRainbow}>
+                <Path path={Skia.Path.Make().addRect(Skia.XYWHRect(0, 0, 58, 58))} style="fill">
+                  <LinearGradient start={vec(0, 0)} end={vec(58, 58)} colors={RAINBOW} />
+                </Path>
+              </Canvas>
+            )}
           </Pressable>
         )}
-      </ScrollView>
+
+        {/* Save + start-again, bottom-left (owner direction) */}
+        <View style={styles.actions}>
+          <Pressable accessibilityRole="button" accessibilityLabel="Save my picture" onPress={() => void saveArtwork()} style={styles.actionBtn}>
+            <Text style={styles.actionIcon}>💾</Text>
+          </Pressable>
+          <Pressable accessibilityRole="button" accessibilityLabel="Start again" onPress={resetAll} style={styles.actionBtn}>
+            <Text style={styles.actionIcon}>🗑️</Text>
+          </Pressable>
+        </View>
+      </Pressable>
 
       <CompletionBanner visible={done} onDone={props.onDone} colour={props.theme.success} />
     </View>
@@ -334,19 +451,34 @@ const styles = StyleSheet.create({
   root: { flex: 1 },
   canvasWrap: { flex: 1, margin: 8, borderRadius: 16, overflow: 'hidden', backgroundColor: '#FFFFFF' },
   canvas: { flex: 1 },
-  modeRow: { flexDirection: 'row', paddingHorizontal: 8, alignItems: 'center' },
+  panel: {
+    position: 'absolute', top: 8, right: 8, bottom: 8, width: 66,
+    backgroundColor: 'rgba(255,255,255,0.94)', borderRadius: 20,
+  },
+  panelContent: { alignItems: 'center', paddingVertical: 8, gap: 4 },
+  panelSep: { width: 40, height: 2, backgroundColor: 'rgba(74,59,50,0.15)', borderRadius: 1, marginVertical: 4 },
+  fab: {
+    position: 'absolute', top: 10, right: 10, width: 58, height: 58, borderRadius: 29,
+    borderWidth: 3, borderColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center',
+    overflow: 'hidden', elevation: 3,
+  },
+  fabRainbow: { width: 58, height: 58 },
+  actions: { position: 'absolute', left: 10, bottom: 10, flexDirection: 'row', gap: 8 },
+  actionBtn: {
+    width: 52, height: 52, borderRadius: 26, backgroundColor: '#FFFFFF',
+    alignItems: 'center', justifyContent: 'center', elevation: 2,
+  },
+  actionIcon: { fontSize: 22 },
   modeButton: {
-    minWidth: 52, minHeight: 52, borderRadius: 14, margin: 4,
-    alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFFFFF',
+    minWidth: 48, minHeight: 48, borderRadius: 14, margin: 2,
+    alignItems: 'center', justifyContent: 'center', backgroundColor: '#F4F1FA',
   },
   modeButtonActive: { backgroundColor: '#FFE0B2' },
   modeLabel: { fontSize: 22 },
-  palette: { maxHeight: 76 },
-  paletteContent: { alignItems: 'center', paddingHorizontal: 8 },
-  swatch: { width: 56, height: 56, borderRadius: 28, margin: 6, borderColor: '#4A3B32', alignItems: 'center', justifyContent: 'center' },
+  swatch: { width: 44, height: 44, borderRadius: 22, margin: 3, borderColor: '#4A3B32', alignItems: 'center', justifyContent: 'center' },
   swatchNumber: { color: '#FFFFFF', fontWeight: '800', fontSize: 18, textShadowColor: '#000', textShadowRadius: 2 },
   swatchIcon: { fontSize: 20 },
-  rainbowSwatch: { width: 56, height: 56 },
+  rainbowSwatch: { width: 44, height: 44 },
   chip: {
     position: 'absolute',
     width: 28,

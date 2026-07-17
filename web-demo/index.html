@@ -208,6 +208,25 @@
   #app[data-app-theme="candy"] .play-stage { border-radius: 30px 38px 32px 40px / 34px 30px 40px 32px; }
   #app[data-app-theme="candy"] .picker-grid .big-tile:nth-child(3n) { border-radius: 36px 26px 40px 24px / 30px 36px 26px 40px; }
 
+  /* ---- Colour section layout (owner direction): right-aligned collapsible
+     palette, save/start-again bottom-left ---- */
+  .colour-panel {
+    position: absolute; top: 10px; right: 10px; bottom: 10px; width: 74px;
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+    overflow-y: auto; padding: 8px 5px;
+    background: rgba(255, 255, 255, 0.94); border-radius: 22px;
+    box-shadow: 0 4px 14px rgba(69, 61, 91, 0.16);
+  }
+  .colour-panel .swatch, .colour-panel .tool { flex-shrink: 0; }
+  .colour-sep { width: 70%; height: 2px; background: rgba(74, 59, 50, 0.15); border-radius: 1px; margin: 2px 0; flex-shrink: 0; }
+  .colour-fab {
+    position: absolute; top: 10px; right: 10px;
+    width: 58px; height: 58px; border-radius: 50%;
+    border: 3px solid #FFFFFF; cursor: pointer; display: grid; place-items: center;
+    font-size: 22px; box-shadow: 0 4px 14px rgba(69, 61, 91, 0.25);
+  }
+  .colour-actions { position: absolute; left: 10px; bottom: 10px; display: flex; gap: 8px; }
+
   .instruction-bar {
     flex: 1; display: flex; align-items: center; gap: 8px;
     background: #FFFFFF; border-radius: 16px; padding: 6px 12px; margin-right: 8px;
@@ -1129,12 +1148,49 @@ function renderHome() {
 }
 
 /* ---------- picker ---------- */
+/** Tracing chooser (owner direction): 1. Letters, 2. Numbers, 3. Shapes. */
+function renderTracingSections() {
+  setStatus('Tracing sections', ['content pack tracing']);
+  const top = el(`<div class="topbar"></div>`);
+  top.append(holdToHomeButton(() => navigate({ name: 'home' })), el(`<div class="hello">What shall we trace?</div>`));
+  const grid = el(`<div class="tile-grid home-grid"></div>`);
+  const sections = [
+    { key: 'tracing-letters', label: 'Letters', sub: 'A to Z, big and small', glyph: 'A a' },
+    { key: 'tracing-numbers', label: 'Numbers', sub: '0 to 10', glyph: '1 2 3' },
+    { key: 'tracing-shapes', label: 'Shapes', sub: 'Circles, squares and more', glyph: '○ △ □' },
+  ];
+  sections.forEach((sct, i) => {
+    const tile = el(`<button class="big-tile" style="background:${tiles()[(i + 2) % tiles().length]}">
+      <span class="glyph-big" aria-hidden="true">${sct.glyph}</span>
+      <span class="tile-text"><span class="label">${sct.label}</span><span class="sublabel">${sct.sub}</span></span>
+    </button>`);
+    tile.onclick = () => { speak(sct.label); navigate({ name: 'picker', category: sct.key }); };
+    grid.append(tile);
+  });
+  app.append(top, grid);
+}
+
 function renderPicker(category) {
   setStatus('Activity Picker — ' + category, ['recommendation.recommendActivities']);
+  // Tracing splits into three sections (owner direction): Letters, Numbers,
+  // Shapes. The 'tracing' door shows the chooser; each section lists its own.
+  if (category === 'tracing') { renderTracingSections(); return; }
+  const numericSort = (a, b) => a.id.localeCompare(b.id, undefined, { numeric: true });
+  const tracingOf = (kind) =>
+    state.catalogue
+      .filter((a) => a.type === 'tracing')
+      .filter((a) =>
+        kind === 'letters' ? /^trace-letter-/.test(a.id)
+        : kind === 'numbers' ? /^trace-number-/.test(a.id)
+        : !/^trace-(letter|number)-/.test(a.id))
+      .sort(numericSort);
   // "Mazes" is its own door (owner direction): every path-maze in the pack,
   // easy ones for little kids and harder ones for bigger kids, gated by the
   // profile's age band.
-  const ranked = category === 'mazes'
+  const ranked = category === 'tracing-letters' ? tracingOf('letters')
+    : category === 'tracing-numbers' ? tracingOf('numbers')
+    : category === 'tracing-shapes' ? tracingOf('shapes')
+    : category === 'mazes'
     ? state.catalogue
         .filter(playable)
         .filter((a) => a.type === 'game' && a.template === 'path-maze')
@@ -1153,7 +1209,13 @@ function renderPicker(category) {
       );
   const th = theme();
   const top = el(`<div class="topbar"></div>`);
-  top.append(holdToHomeButton(() => navigate({ name: 'home' })), el(`<div class="hello">Pick one!</div>`));
+  top.append(holdToHomeButton(() => navigate({ name: 'home' })));
+  if (/^tracing-/.test(category)) {
+    const back = el(`<button class="icon-btn" aria-label="Back">←</button>`);
+    back.onclick = () => navigate({ name: 'picker', category: 'tracing' });
+    top.append(back);
+  }
+  top.append(el(`<div class="hello">Pick one!</div>`));
   const grid = el(`<div class="tile-grid picker-grid"></div>`);
   // Category order matches home tiles, so each category reuses its illustration.
   const catIndex = { drawing: 0, colouring: 1, puzzles: 2, tracing: 3, toddler: 4, preschool: 5, logic: 6 };
@@ -1552,12 +1614,15 @@ function renderDrawing(activity) {
 function renderColouring(activity) {
   setStatus('Colouring — ' + activity.title, ['content pack regions', 'feedback registry']);
   const byNumber = activity.mode === 'by-number';
-  // Swatch = solid colour (standard or pastel), glitter, or rainbow (owner
-  // direction). Brush mode paints freehand but the paint snaps inside the
-  // region's lines via canvas clipping.
+  // Owner-directed layout: colour options live in a right-aligned panel that
+  // collapses to just the selected option after every pick; save + start-again
+  // sit bottom-left; the background itself is colourable too.
   let swatch = { kind: 'solid', colour: LH.PALETTES.standard[0] };
   let mode = 'fill'; // 'fill' (tap to fill) | 'brush' (paint inside the lines)
   let brushWidth = 14;
+  let menuOpen = true;
+  let bg = null;             // background swatch (or null = white)
+  let bgStrokes = [];        // brush strokes on the background (behind the picture)
   let attempts = 1, done = false, liveStroke = null;
   const fills = {};          // regionId -> swatch
   const strokes = {};        // regionId -> [{swatch, width, points:[{x,y} design units]}]
@@ -1565,46 +1630,63 @@ function renderColouring(activity) {
   const RAINBOW = ['#E53935', '#FB8C00', '#FDD835', '#43A047', '#1E88E5', '#5E35B1', '#8E24AA'];
 
   const stage = el(`<div class="play-stage"></div>`);
-  const canvas = el(`<canvas class="stage" aria-label="Colouring picture. Tap an area to fill it, or paint inside the lines with the brush."></canvas>`);
-  stage.append(canvas);
-  const bar = el(`<div class="toolbar" role="toolbar" aria-label="Colours and brushes"></div>`);
-  app.append(stage, bar);
+  const canvas = el(`<canvas class="stage" aria-label="Colouring picture. Tap a part to fill it, tap outside the picture to colour the background."></canvas>`);
+  const panel = el(`<div class="colour-panel" role="toolbar" aria-label="Colours and brushes"></div>`);
+  const fab = el(`<button class="colour-fab" aria-label="Open colours"></button>`);
+  fab.onclick = () => { menuOpen = true; renderPanel(); };
+  const actions = el(`<div class="colour-actions"></div>`);
+  const saveBtn = el(`<button class="icon-btn" aria-label="Save my picture">💾</button>`);
+  const resetBtn = el(`<button class="icon-btn" aria-label="Start again">🗑️</button>`);
+  actions.append(saveBtn, resetBtn);
+  stage.append(canvas, panel, fab, actions);
+  app.append(stage);
   const ctx = canvas.getContext('2d');
   let scale = 1, ox = 0, oy = 0;
 
-  function rebuildBar() {
-    bar.innerHTML = '';
+  const swatchCss = (sw) =>
+    sw.kind === 'rainbow' ? `linear-gradient(135deg, ${RAINBOW.join(',')})`
+    : sw.kind === 'glitter' ? 'radial-gradient(circle at 30% 30%, #FFF7FA, #F5C8DF 70%)'
+    : sw.colour;
+
+  function renderPanel() {
+    fab.style.display = menuOpen ? 'none' : 'grid';
+    fab.style.background = swatchCss(swatch);
+    fab.innerHTML = swatch.kind === 'glitter' ? '✨' : '';
+    panel.style.display = menuOpen ? 'flex' : 'none';
+    if (!menuOpen) return;
+    panel.innerHTML = '';
+    const pick = (sw) => { swatch = sw; menuOpen = false; renderPanel(); };
     if (!byNumber) {
       const fillB = el(`<button class="tool ${mode === 'fill' ? 'active' : ''}" aria-label="Fill with a tap">🪣</button>`);
-      fillB.onclick = () => { mode = 'fill'; rebuildBar(); };
+      fillB.onclick = () => { mode = 'fill'; renderPanel(); };
       const brushB = el(`<button class="tool ${mode === 'brush' ? 'active' : ''}" aria-label="Paint inside the lines">🖌️</button>`);
-      brushB.onclick = () => { mode = 'brush'; rebuildBar(); };
-      bar.append(fillB, brushB);
+      brushB.onclick = () => { mode = 'brush'; renderPanel(); };
+      panel.append(fillB, brushB);
       if (mode === 'brush') {
         [['thin', 7, '•'], ['medium', 14, '●'], ['thick', 26, '⬤']].forEach(([name, w, icon]) => {
           const b = el(`<button class="tool ${brushWidth === w ? 'active' : ''}" aria-label="${name} brush">${icon}</button>`);
-          b.onclick = () => { brushWidth = w; rebuildBar(); };
-          bar.append(b);
+          b.onclick = () => { brushWidth = w; renderPanel(); };
+          panel.append(b);
         });
       }
+      panel.append(el(`<div class="colour-sep" aria-hidden="true"></div>`));
     }
-    const addSwatch = (sw, css, aria, extra = '') => {
+    const addSwatch = (sw, aria, extra = '') => {
       const active = JSON.stringify(swatch) === JSON.stringify(sw);
-      const b = el(`<button class="swatch ${active ? 'active' : ''}" style="background:${css}" aria-label="${aria}">${extra}</button>`);
-      b.onclick = () => { swatch = sw; rebuildBar(); };
-      bar.append(b);
+      const b = el(`<button class="swatch ${active ? 'active' : ''}" style="background:${swatchCss(sw)}" aria-label="${aria}">${extra}</button>`);
+      b.onclick = () => pick(sw);
+      panel.append(b);
     };
     LH.PALETTES.standard.forEach((c, i) => {
-      addSwatch({ kind: 'solid', colour: c }, c, byNumber ? 'Colour number ' + (i + 1) : 'Colour ' + c,
+      addSwatch({ kind: 'solid', colour: c }, byNumber ? 'Colour number ' + (i + 1) : 'Colour ' + c,
         byNumber ? `<span class="num">${i + 1}</span>` : '');
     });
     if (!byNumber) {
-      for (const c of LH.PALETTES.pastel) addSwatch({ kind: 'solid', colour: c }, c, 'Pastel colour ' + c);
-      addSwatch({ kind: 'glitter', colour: '#F8BBD0' }, 'radial-gradient(circle at 30% 30%, #FFF7FA, #F5C8DF 70%)', 'Glitter', '✨');
-      addSwatch({ kind: 'rainbow' }, `linear-gradient(90deg, ${RAINBOW.join(',')})`, 'Rainbow');
+      for (const c of LH.PALETTES.pastel) addSwatch({ kind: 'solid', colour: c }, 'Pastel colour ' + c);
+      addSwatch({ kind: 'glitter', colour: '#F8BBD0' }, 'Glitter', '✨');
+      addSwatch({ kind: 'rainbow' }, 'Rainbow');
     }
   }
-  rebuildBar();
 
   function regionPath(region) {
     ctx.beginPath();
@@ -1615,32 +1697,63 @@ function renderColouring(activity) {
     const xs = region.polygon.map((p) => p.x), ys = region.polygon.map((p) => p.y);
     return { x0: Math.min(...xs), x1: Math.max(...xs), y0: Math.min(...ys), y1: Math.max(...ys) };
   }
+  function gradientFor(region) {
+    const b = region ? bbox(region) : null;
+    const g = region
+      ? ctx.createLinearGradient(ox + b.x0 * scale, oy + b.y0 * scale, ox + b.x1 * scale, oy + b.y1 * scale)
+      : ctx.createLinearGradient(0, 0, canvas.width / devicePixelRatio, canvas.height / devicePixelRatio);
+    RAINBOW.forEach((c, i) => g.addColorStop(i / (RAINBOW.length - 1), c));
+    return g;
+  }
   function fillStyleFor(sw, region) {
-    if (sw.kind === 'rainbow') {
-      const b = bbox(region);
-      const g = ctx.createLinearGradient(ox + b.x0 * scale, oy + b.y0 * scale, ox + b.x1 * scale, oy + b.y1 * scale);
-      RAINBOW.forEach((c, i) => g.addColorStop(i / (RAINBOW.length - 1), c));
-      return g;
-    }
+    if (sw.kind === 'rainbow') return gradientFor(region);
     return sw.colour;
   }
   function sparkle(region, seedBase) {
-    // Deterministic glitter speckles clipped to the region.
-    const b = bbox(region);
+    // Deterministic glitter speckles clipped to the region (or the whole page).
+    const b = region ? bbox(region) : { x0: 0, x1: 1000, y0: 0, y1: 1000 };
     const colours = ['#FFFFFF', '#FFE082', '#F8BBD0', '#FFF59D'];
-    for (let i = 0; i < 46; i++) {
+    const n = region ? 46 : 130;
+    for (let i = 0; i < n; i++) {
       const rx = b.x0 + ((Math.sin(seedBase * 61 + i * 37.7) + 1) / 2) * (b.x1 - b.x0);
       const ry = b.y0 + ((Math.cos(seedBase * 43 + i * 53.3) + 1) / 2) * (b.y1 - b.y0);
-      if (!inPoly(rx, ry, region.polygon)) continue;
+      if (region && !inPoly(rx, ry, region.polygon)) continue;
       ctx.beginPath();
       ctx.arc(ox + rx * scale, oy + ry * scale, i % 5 === 0 ? 2.6 : 1.5, 0, Math.PI * 2);
       ctx.fillStyle = colours[i % colours.length];
       ctx.fill();
     }
   }
+  function drawRegionStroke(st, region) {
+    if (st.points.length < 2) return;
+    ctx.strokeStyle = st.swatch.kind === 'rainbow' ? gradientFor(region) : st.swatch.kind === 'glitter' ? '#F5C8DF' : st.swatch.colour;
+    ctx.beginPath();
+    st.points.forEach((p, i) => (i ? ctx.lineTo(ox + p.x * scale, oy + p.y * scale) : ctx.moveTo(ox + p.x * scale, oy + p.y * scale)));
+    ctx.lineCap = ctx.lineJoin = 'round';
+    ctx.lineWidth = st.width * scale;
+    ctx.stroke();
+    if (st.swatch.kind === 'glitter') {
+      ctx.fillStyle = '#FFF9E5';
+      for (let i = 0; i < st.points.length; i += 2) {
+        const p = st.points[i];
+        ctx.beginPath();
+        ctx.arc(ox + (p.x + Math.sin(i * 7) * 9) * scale, oy + (p.y + Math.cos(i * 5) * 9) * scale, 1.7, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+  }
   function draw() {
     const r = stage.getBoundingClientRect();
-    ctx.clearRect(0, 0, r.width, r.height);
+    if (!r.width || !canvas.width) return;
+    // Background layer first (owner: the background is colourable too).
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillRect(0, 0, r.width, r.height);
+    if (bg) {
+      ctx.fillStyle = bg.kind === 'rainbow' ? gradientFor(null) : bg.kind === 'glitter' ? '#F5C8DF' : bg.colour;
+      ctx.fillRect(0, 0, r.width, r.height);
+      if (bg.kind === 'glitter') sparkle(null, 99);
+    }
+    for (const st of bgStrokes) drawRegionStroke(st, null);
     // Regions render background-to-foreground so layered shapes (window, eye,
     // nose) sit on top of the shapes behind them - a real colouring sketch.
     activity.regions.forEach((region, ri) => {
@@ -1658,31 +1771,7 @@ function renderColouring(activity) {
         ctx.save();
         regionPath(region);
         ctx.clip(); // the snap: paint cannot escape the lines
-        for (const st of regionStrokes) {
-          if (st.points.length < 2) continue;
-          if (st.swatch.kind === 'rainbow') {
-            const b = bbox(region);
-            const g = ctx.createLinearGradient(ox + b.x0 * scale, oy + b.y0 * scale, ox + b.x1 * scale, oy + b.y1 * scale);
-            RAINBOW.forEach((c, i) => g.addColorStop(i / (RAINBOW.length - 1), c));
-            ctx.strokeStyle = g;
-          } else {
-            ctx.strokeStyle = st.swatch.colour;
-          }
-          ctx.beginPath();
-          st.points.forEach((p, i) => (i ? ctx.lineTo(ox + p.x * scale, oy + p.y * scale) : ctx.moveTo(ox + p.x * scale, oy + p.y * scale)));
-          ctx.lineCap = ctx.lineJoin = 'round';
-          ctx.lineWidth = st.width * scale;
-          ctx.stroke();
-          if (st.swatch.kind === 'glitter') {
-            ctx.fillStyle = '#FFF9E5';
-            for (let i = 0; i < st.points.length; i += 2) {
-              const p = st.points[i];
-              ctx.beginPath();
-              ctx.arc(ox + (p.x + Math.sin(i * 7) * 9) * scale, oy + (p.y + Math.cos(i * 5) * 9) * scale, 1.7, 0, Math.PI * 2);
-              ctx.fill();
-            }
-          }
-        }
+        for (const st of regionStrokes) drawRegionStroke(st, region);
         ctx.restore();
       }
       if (f && f.kind === 'glitter') sparkle(region, ri + 1);
@@ -1727,11 +1816,17 @@ function renderColouring(activity) {
     if (done) return;
     const pt = toDesign(e);
     const hit = hitRegion(pt);
-    if (!hit) return;
     if (mode === 'brush' && !byNumber) {
       canvas.setPointerCapture(e.pointerId);
-      liveStroke = { regionId: hit.id, swatch, width: brushWidth, points: [pt] };
-      (strokes[hit.id] = strokes[hit.id] || []).push(liveStroke);
+      liveStroke = { swatch, width: brushWidth, points: [pt] };
+      if (hit) (strokes[hit.id] = strokes[hit.id] || []).push(liveStroke);
+      else bgStrokes.push(liveStroke); // painting the background
+      draw();
+      return;
+    }
+    if (!hit) {
+      // Tap outside the picture colours the background (owner direction).
+      bg = swatch;
       draw();
       return;
     }
@@ -1754,6 +1849,30 @@ function renderColouring(activity) {
   };
   canvas.addEventListener('pointerup', endStroke);
   canvas.addEventListener('pointercancel', endStroke);
+
+  saveBtn.onclick = async () => {
+    if (!state.profile) return;
+    // Colouring saves as a snapshot image in the same on-device gallery.
+    await repos.artwork.save({
+      id: 'art-' + Date.now(), profileId: state.profile.id, createdAt: Date.now(),
+      ops: [], png: canvas.toDataURL('image/png'),
+    });
+    persistSoon();
+    if (!done) {
+      done = true;
+      completeActivity(activity, { attempts, accuracyScore: null });
+      stage.append(completionBanner(onDone));
+    }
+  };
+  resetBtn.onclick = () => {
+    for (const k of Object.keys(fills)) delete fills[k];
+    for (const k of Object.keys(strokes)) delete strokes[k];
+    bg = null; bgStrokes = []; done = false;
+    stage.querySelectorAll('.banner').forEach((n) => n.remove());
+    draw();
+    speak("All clean! Let's colour!");
+  };
+
   function fit() {
     const r = stage.getBoundingClientRect();
     canvas.width = r.width * devicePixelRatio; canvas.height = r.height * devicePixelRatio;
@@ -1763,6 +1882,7 @@ function renderColouring(activity) {
     oy = (r.height - 1000 * scale) / 2;
     draw();
   }
+  renderPanel();
   requestAnimationFrame(fit);
   new ResizeObserver(fit).observe(stage);
 }
@@ -2694,12 +2814,25 @@ function renderParent(section) {
       if (!docs.length) { body.append(el(`<p>No saved drawings yet — the drawing board's 💾 button saves here.</p>`)); return; }
       const wrap = el(`<div class="art-thumbs"></div>`);
       for (const doc of docs) {
-        const c = el(`<canvas width="180" height="130" role="img" aria-label="Saved drawing"></canvas>`);
-        drawDocument(c, doc);
+        const c = el(`<canvas width="180" height="130" role="img" aria-label="Saved ${doc.png ? 'colouring' : 'drawing'}"></canvas>`);
         const cell = el(`<div style="text-align:center"></div>`);
-        const replay = el(`<button class="primary-btn teal" style="min-height:34px;padding:4px 12px;font-size:13px;margin-top:6px">▶ Replay</button>`);
-        replay.onclick = () => replayDocument(c, doc);
-        cell.append(c, el(`<br>`), replay);
+        if (doc.png) {
+          // Colouring snapshots save as an image; no stroke replay to offer.
+          const im = new Image();
+          im.onload = () => {
+            const g = c.getContext('2d');
+            const k = Math.min(180 / im.width, 130 / im.height);
+            g.fillStyle = '#fff'; g.fillRect(0, 0, 180, 130);
+            g.drawImage(im, (180 - im.width * k) / 2, (130 - im.height * k) / 2, im.width * k, im.height * k);
+          };
+          im.src = doc.png;
+          cell.append(c);
+        } else {
+          drawDocument(c, doc);
+          const replay = el(`<button class="primary-btn teal" style="min-height:34px;padding:4px 12px;font-size:13px;margin-top:6px">▶ Replay</button>`);
+          replay.onclick = () => replayDocument(c, doc);
+          cell.append(c, el(`<br>`), replay);
+        }
         wrap.append(cell);
       }
       body.append(wrap);

@@ -35,6 +35,9 @@ export interface DrawingDocument {
   profileId: string;
   createdAt: Timestamp;
   ops: DrawingOp[];
+  /** Snapshot image (data URL/base64) for artwork that isn't stroke-based,
+   *  e.g. a saved colouring page. Stays on-device like every drawing. */
+  png?: string;
 }
 
 /** Standard, pastel and high-contrast palettes (FR-003, docs/10 colour rules). */
