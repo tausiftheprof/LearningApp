@@ -1935,7 +1935,10 @@ function renderPuzzle(activity) {
       stage.append(el(`<div style="position:absolute;width:${cell - 6}px;height:${cell - 6}px;left:${sl.x - cell / 2 + 3}px;top:${sl.y - cell / 2 + 3}px;border:${hinted ? '4px solid #FF8A65' : '2px dashed #D7CCC8'};border-radius:8px"></div>`));
     }
     for (const p of pieces) {
-      const d = el(`<div role="img" aria-label="${p.placed ? 'Placed piece' : 'Puzzle piece ' + p.n}" style="position:absolute;width:${cell - 8}px;height:${cell - 8}px;left:${p.x - cell / 2 + 4}px;top:${p.y - cell / 2 + 4}px;cursor:${p.placed ? 'default' : 'grab'};box-shadow:${p.placed ? 'none' : '0 3px 8px rgba(74,59,50,0.3)'};background:#FFFDF9;border-radius:${p.placed ? 4 : 12}px">${pieceHtml(p, cell - 8)}</div>`);
+      // touch-action:none - without it, a touch-drag on the piece competes
+      // with the browser's own scroll/pan gesture recognition, which can
+      // cancel the drag mid-move (piece "drops" out of nowhere on a phone).
+      const d = el(`<div role="img" aria-label="${p.placed ? 'Placed piece' : 'Puzzle piece ' + p.n}" style="position:absolute;width:${cell - 8}px;height:${cell - 8}px;left:${p.x - cell / 2 + 4}px;top:${p.y - cell / 2 + 4}px;touch-action:none;cursor:${p.placed ? 'default' : 'grab'};box-shadow:${p.placed ? 'none' : '0 3px 8px rgba(74,59,50,0.3)'};background:#FFFDF9;border-radius:${p.placed ? 4 : 12}px">${pieceHtml(p, cell - 8)}</div>`);
       if (!p.placed) d.addEventListener('pointerdown', (e) => { dragging = p; draggingEl = d; d.setPointerCapture(e.pointerId); });
       stage.append(d);
     }
@@ -1954,7 +1957,7 @@ function renderPuzzle(activity) {
     draggingEl.style.left = (dragging.x - cell / 2 + 4) + 'px';
     draggingEl.style.top = (dragging.y - cell / 2 + 4) + 'px';
   });
-  stage.addEventListener('pointerup', () => {
+  function endDrag() {
     if (!dragging || !session) return;
     const p = dragging; dragging = null; draggingEl = null;
     const result = session.drop(p.id, { x: p.x, y: p.y });
@@ -1973,7 +1976,13 @@ function renderPuzzle(activity) {
       speak(LH.pickFeedback(result.showHint ? 'hint' : 'try-again'));
     }
     paint();
-  });
+  }
+  stage.addEventListener('pointerup', endDrag);
+  // A touch drag can be cancelled by the browser mid-gesture (system gesture,
+  // an incoming call, another touch) - without handling this the piece was
+  // left stranded wherever it last was, with no way to pick it up again.
+  // Treating it like a miss (piece returns to the tray) keeps it recoverable.
+  stage.addEventListener('pointercancel', endDrag);
 
   if (activity.sizeSelectable) renderSizePicker();
   else requestAnimationFrame(layout);
