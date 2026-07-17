@@ -229,48 +229,6 @@ const colouringActivities: Activity[] = [
       polyRegion('window', ellipse(500, 430, 62, 62, 20)),
     ],
   },
-  {
-    type: 'colouring', id: 'colour-book', title: 'Book', category: 'colouring',
-    ageBands: ['3-5', '5-7'], difficulty: 1, motorSkills: ['tapping', 'holding-moving'],
-    estimatedMinutes: 3, theme: 'letters-numbers', locale: 'en-AU', instructionAudio: audio('colour-free'),
-    mode: 'free',
-    // An open storybook: two pages, spine and a bookmark ribbon.
-    regions: [
-      polyRegion('page-left', [{ x: 140, y: 320 }, { x: 478, y: 262 }, { x: 478, y: 700 }, { x: 140, y: 758 }]),
-      polyRegion('page-right', [{ x: 522, y: 262 }, { x: 860, y: 320 }, { x: 860, y: 758 }, { x: 522, y: 700 }]),
-      polyRegion('spine', [{ x: 478, y: 262 }, { x: 522, y: 262 }, { x: 522, y: 700 }, { x: 478, y: 700 }]),
-      polyRegion('bookmark', [{ x: 680, y: 290 }, { x: 742, y: 300 }, { x: 736, y: 452 }, { x: 708, y: 420 }, { x: 682, y: 446 }]),
-    ],
-  },
-  {
-    type: 'colouring', id: 'colour-house', title: 'House', category: 'colouring',
-    ageBands: ['2-3', '3-5', '5-7'], difficulty: 1, motorSkills: ['tapping', 'holding-moving'],
-    estimatedMinutes: 3, theme: 'family', locale: 'en-AU', instructionAudio: audio('colour-free'),
-    regions: [
-      polyRegion('grass', [{ x: 60, y: 850 }, { x: 940, y: 850 }, { x: 940, y: 955 }, { x: 60, y: 955 }]),
-      polyRegion('sun', ellipse(150, 160, 78, 78)),
-      polyRegion('wall', [{ x: 280, y: 480 }, { x: 720, y: 480 }, { x: 720, y: 850 }, { x: 280, y: 850 }]),
-      polyRegion('roof', [{ x: 235, y: 480 }, { x: 500, y: 235 }, { x: 765, y: 480 }]),
-      polyRegion('door', [{ x: 445, y: 655 }, { x: 558, y: 655 }, { x: 558, y: 850 }, { x: 445, y: 850 }]),
-      polyRegion('window', [{ x: 330, y: 545 }, { x: 415, y: 545 }, { x: 415, y: 628 }, { x: 330, y: 628 }]),
-      polyRegion('window-2', [{ x: 588, y: 545 }, { x: 672, y: 545 }, { x: 672, y: 628 }, { x: 588, y: 628 }]),
-    ],
-    mode: 'free',
-  },
-  {
-    type: 'colouring', id: 'colour-tree', title: 'Tree', category: 'colouring',
-    ageBands: ['2-3', '3-5', '5-7'], difficulty: 1, motorSkills: ['tapping', 'holding-moving'],
-    estimatedMinutes: 3, theme: 'nature', locale: 'en-AU', instructionAudio: audio('colour-free'),
-    mode: 'free',
-    regions: [
-      polyRegion('grass', [{ x: 60, y: 855 }, { x: 940, y: 855 }, { x: 940, y: 955 }, { x: 60, y: 955 }]),
-      polyRegion('trunk', [{ x: 455, y: 585 }, { x: 545, y: 585 }, { x: 545, y: 855 }, { x: 455, y: 855 }]),
-      polyRegion('leaves', ellipse(500, 400, 265, 225)),
-      polyRegion('apple-1', ellipse(390, 350, 36, 36, 14)),
-      polyRegion('apple-2', ellipse(585, 300, 36, 36, 14)),
-      polyRegion('apple-3', ellipse(520, 480, 36, 36, 14)),
-    ],
-  },
 ];
 
 /** Full-page line-art scenes: the owner's own reference artwork (July 2026),
@@ -362,7 +320,6 @@ const games: GameSpec[] = [
   { id: 'toddler-shadow-match', title: 'Find my shadow', template: 'shadow-match', category: 'toddler', ageBands: ['2-3', '3-5'], difficulty: 1, motorSkills: ['dragging', 'precision-placement'], minutes: 2, theme: 'animals', params: { items: ['dolphin', 'dinosaur', 'rocket'] } },
   { id: 'toddler-reveal', title: 'Wipe and see!', template: 'reveal-wipe', category: 'toddler', ageBands: ['2-3'], difficulty: 1, motorSkills: ['swiping'], minutes: 1, theme: 'surprise', params: { pictures: ['unicorn', 'whale', 'treehouse'] } },
   { id: 'toddler-stack', title: 'Stack the blocks', template: 'stack-blocks', category: 'toddler', ageBands: ['2-3'], difficulty: 1, motorSkills: ['dragging', 'precision-placement'], minutes: 2, theme: 'everyday', params: { blocks: 4 } },
-  { id: 'toddler-follow-path', title: 'Follow the little chick', template: 'path-maze', category: 'toddler', ageBands: ['2-3'], difficulty: 1, motorSkills: ['controlled-movement', 'holding-moving'], minutes: 2, theme: 'nature', params: { pathComplexity: 1, mover: 'chick', goal: 'treehouse' } },
   // Preschool (PRD 6.6)
   { id: 'preschool-letter-match', title: 'Big and small letters', template: 'letter-match', category: 'preschool', ageBands: ['3-5', '5-7'], difficulty: 2, motorSkills: ['tapping', 'dragging'], minutes: 3, theme: 'letters-numbers', params: { letters: ['A', 'B', 'C', 'D'] } },
   { id: 'preschool-count-objects', title: 'Count the fish', template: 'counting', category: 'preschool', ageBands: ['3-5'], difficulty: 2, motorSkills: ['tapping'], minutes: 2, theme: 'food', params: { max: 5, item: 'fish' } },
@@ -379,14 +336,24 @@ const games: GameSpec[] = [
   { id: 'logic-odd-one-out', title: 'Find the odd one', template: 'odd-one-out', category: 'logic', ageBands: ['3-5', '5-7'], difficulty: 2, motorSkills: ['tapping'], minutes: 2, theme: 'everyday', params: { rounds: 5, kind: 'objects' } },
   { id: 'logic-memory-4', title: 'Memory friends', template: 'memory-cards', category: 'logic', ageBands: ['3-5'], difficulty: 2, motorSkills: ['tapping'], minutes: 3, theme: 'animals', params: { pairs: 4, images: ['dolphin', 'unicorn', 'dinosaur', 'whale'] } },
   { id: 'logic-memory-6', title: 'Memory master', template: 'memory-cards', category: 'logic', ageBands: ['5-7'], difficulty: 3, motorSkills: ['tapping'], minutes: 4, theme: 'space', params: { pairs: 6, images: ['dolphin', 'unicorn', 'dinosaur', 'whale', 'rocket', 'star'] } },
-  { id: 'logic-maze-easy', title: 'Garden maze', template: 'path-maze', category: 'logic', ageBands: ['3-5'], difficulty: 2, motorSkills: ['controlled-movement', 'holding-moving'], minutes: 3, theme: 'nature', params: { pathComplexity: 2, mover: 'fish', goal: 'treehouse' } },
-  { id: 'logic-maze-hard', title: 'Rocket maze', template: 'path-maze', category: 'logic', ageBands: ['5-7'], difficulty: 3, motorSkills: ['controlled-movement'], minutes: 4, theme: 'space', params: { pathComplexity: 3, mover: 'rocket', goal: 'moon' } },
-  // Maze section (owner direction): easy mazes for little ones, harder for big kids.
-  { id: 'maze-sunny-meadow', title: 'Sunny meadow', template: 'path-maze', category: 'toddler', ageBands: ['2-3', '3-5'], difficulty: 1, motorSkills: ['controlled-movement', 'holding-moving'], minutes: 2, theme: 'nature', params: { pathComplexity: 1, mover: 'duck', goal: 'sun' } },
-  { id: 'maze-pond', title: 'Across the pond', template: 'path-maze', category: 'toddler', ageBands: ['2-3', '3-5'], difficulty: 1, motorSkills: ['controlled-movement', 'holding-moving'], minutes: 2, theme: 'nature', params: { pathComplexity: 2, mover: 'fish', goal: 'treehouse' } },
-  { id: 'maze-reef', title: 'Reef wiggle', template: 'path-maze', category: 'logic', ageBands: ['3-5', '5-7'], difficulty: 2, motorSkills: ['controlled-movement'], minutes: 3, theme: 'underwater', params: { pathComplexity: 3, mover: 'dolphin', goal: 'star' } },
-  { id: 'maze-space-twist', title: 'Space twist', template: 'path-maze', category: 'logic', ageBands: ['5-7'], difficulty: 3, motorSkills: ['controlled-movement'], minutes: 4, theme: 'space', params: { pathComplexity: 4, mover: 'rocket', goal: 'moon' } },
-  { id: 'maze-unicorn-castle', title: 'Unicorn castle', template: 'path-maze', category: 'logic', ageBands: ['5-7'], difficulty: 3, motorSkills: ['controlled-movement'], minutes: 4, theme: 'fantasy', params: { pathComplexity: 5, mover: 'unicorn', goal: 'star' } },
+  // Mazes (owner-supplied artwork, July 2026): the real printed maze photo is
+  // the corridor - the player rasterises it, reads the ink as walls, and
+  // solves start-to-finish with a flood-fill/BFS (packages/core has no image
+  // decoder, so wall-detection + solving happens in the web demo/mobile
+  // player, same technique as the Colour flood-fill engine). `bbox` crops out
+  // the decorative border art so the solver only searches the maze grid;
+  // `start`/`finish` are seed points just inside the corridor mouth - all
+  // normalised 0..1 against the full image.
+  { id: 'maze-bee', title: 'Bee Maze', template: 'path-maze', category: 'toddler', ageBands: ['2-3', '3-5'], difficulty: 1, motorSkills: ['controlled-movement', 'holding-moving'], minutes: 2, theme: 'nature', params: { image: 'images/maze-bee.png', bbox: [0.08, 0.20, 0.90, 0.95], start: [0.28, 0.48], finish: [0.71, 0.81], mover: 'chick', goal: 'star' } },
+  { id: 'maze-fish', title: 'Fish Maze', template: 'path-maze', category: 'toddler', ageBands: ['2-3', '3-5'], difficulty: 1, motorSkills: ['controlled-movement', 'holding-moving'], minutes: 2, theme: 'underwater', params: { image: 'images/maze-fish.png', bbox: [0.10, 0.20, 0.93, 0.93], start: [0.27, 0.51], finish: [0.66, 0.81], mover: 'fish', goal: 'star' } },
+  { id: 'maze-puppy', title: 'Puppy Maze', template: 'path-maze', category: 'toddler', ageBands: ['2-3', '3-5'], difficulty: 1, motorSkills: ['controlled-movement', 'holding-moving'], minutes: 2, theme: 'animals', params: { image: 'images/maze-puppy.png', bbox: [0.18, 0.20, 0.84, 0.93], start: [0.25, 0.45], finish: [0.77, 0.92], mover: 'dog', goal: 'star' } },
+  { id: 'maze-rabbit', title: 'Rabbit Maze', template: 'path-maze', category: 'toddler', ageBands: ['2-3', '3-5'], difficulty: 1, motorSkills: ['controlled-movement', 'holding-moving'], minutes: 2, theme: 'animals', params: { image: 'images/maze-rabbit.png', bbox: [0.11, 0.24, 0.84, 0.93], start: [0.35, 0.48], finish: [0.72, 0.82], mover: 'chick', goal: 'star' } },
+  { id: 'maze-rocket', title: 'Rocket Maze', template: 'path-maze', category: 'toddler', ageBands: ['2-3', '3-5'], difficulty: 1, motorSkills: ['controlled-movement', 'holding-moving'], minutes: 2, theme: 'space', params: { image: 'images/maze-rocket.png', bbox: [0.11, 0.20, 0.84, 0.93], start: [0.28, 0.30], finish: [0.68, 0.81], mover: 'rocket', goal: 'star' } },
+  { id: 'maze-space', title: 'Space Maze', template: 'path-maze', category: 'logic', ageBands: ['5-7'], difficulty: 3, motorSkills: ['controlled-movement'], minutes: 4, theme: 'space', params: { image: 'images/maze-space.png', bbox: [0.22, 0.22, 0.86, 0.92], start: [0.26, 0.62], finish: [0.80, 0.62], mover: 'rocket', goal: 'star' } },
+  { id: 'maze-dragon', title: 'Dragon Maze', template: 'path-maze', category: 'logic', ageBands: ['5-7'], difficulty: 3, motorSkills: ['controlled-movement'], minutes: 4, theme: 'fantasy', params: { image: 'images/maze-dragon.png', bbox: [0.24, 0.25, 0.72, 0.94], start: [0.29, 0.81], finish: [0.70, 0.81], mover: 'unicorn', goal: 'star' } },
+  { id: 'maze-pirate', title: 'Pirate Maze', template: 'path-maze', category: 'logic', ageBands: ['5-7'], difficulty: 3, motorSkills: ['controlled-movement'], minutes: 4, theme: 'underwater', params: { image: 'images/maze-pirate.png', bbox: [0.28, 0.22, 0.85, 0.92], start: [0.30, 0.35], finish: [0.78, 0.63], mover: 'rocket', goal: 'star' } },
+  { id: 'maze-robot', title: 'Robot Maze', template: 'path-maze', category: 'logic', ageBands: ['5-7'], difficulty: 3, motorSkills: ['controlled-movement'], minutes: 4, theme: 'space', params: { image: 'images/maze-robot.png', bbox: [0.23, 0.22, 0.83, 0.92], start: [0.25, 0.32], finish: [0.80, 0.69], mover: 'rocket', goal: 'star' } },
+  { id: 'maze-shark', title: 'Shark Maze', template: 'path-maze', category: 'logic', ageBands: ['5-7'], difficulty: 3, motorSkills: ['controlled-movement'], minutes: 4, theme: 'underwater', params: { image: 'images/maze-shark.png', bbox: [0.24, 0.19, 0.82, 0.89], start: [0.24, 0.54], finish: [0.78, 0.69], mover: 'fish', goal: 'star' } },
   { id: 'logic-size-order', title: 'Small to big', template: 'drag-sort', category: 'logic', ageBands: ['3-5', '5-7'], difficulty: 2, motorSkills: ['dragging', 'precision-placement'], minutes: 2, theme: 'everyday', params: { bins: ['1', '2', '3', '4'], items: 4, ordered: true, item: 'dinosaur' } },
   { id: 'logic-belongs', title: 'What belongs together?', template: 'match-pairs', category: 'logic', ageBands: ['3-5', '5-7'], difficulty: 2, motorSkills: ['dragging'], minutes: 3, theme: 'everyday', params: { pairs: 4, kind: 'belongs' } },
   { id: 'logic-rotate-shape', title: 'Turn it to fit', template: 'sequence', category: 'logic', ageBands: ['5-7'], difficulty: 3, motorSkills: ['rotating', 'precision-placement'], minutes: 3, theme: 'shapes-patterns', params: { length: 3, rotation: true } },

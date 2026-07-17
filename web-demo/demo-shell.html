@@ -123,6 +123,12 @@
   .home-grid .sublabel { font-size: clamp(12px, 1.8vw, 17px); line-height: 1.25; white-space: normal; max-width: 22ch; }
   .tile-illo { display: grid; place-items: center; flex-shrink: 0; }
   .tile-illo .lg-img, .tile-illo svg { width: clamp(50px, 7vw, 72px) !important; height: clamp(50px, 7vw, 72px) !important; }
+  /* Owner-supplied home icons (July 2026): the photo IS the tile - no
+     background colour or medallion behind it, just a bigger picture. */
+  .tile-photo { display: grid; place-items: center; flex-shrink: 0; }
+  .tile-photo .lg-img, .tile-photo img { width: clamp(74px, 12vw, 112px) !important; height: clamp(74px, 12vw, 112px) !important; border-radius: 0 !important; }
+  .home-grid .big-tile.has-photo { box-shadow: none; }
+  .rewards-banner.has-photo .tile-photo .lg-img, .rewards-banner.has-photo .tile-photo img { width: clamp(60px, 8vw, 88px) !important; height: clamp(60px, 8vw, 88px) !important; }
 
   .starbar { text-align: center; font-size: 17px; font-weight: 800; padding: 6px; }
 
@@ -771,16 +777,28 @@ function renderHome() {
   right.append(gate);
   top.append(greet, right);
 
+  // Owner-supplied home icons (July 2026): full illustrated tiles for Candy
+  // Clouds - each photo already contains its own coloured card + decoration,
+  // so it replaces the tile's background colour and icon medallion entirely.
+  const CANDY_TILE_PHOTOS = {
+    drawing: 'tile-draw', colouring: 'tile-colour', puzzles: 'tile-puzzles',
+    tracing: 'tile-tracing', toddler: 'tile-toddler', preschool: 'tile-preschool',
+    logic: 'tile-logic',
+  };
   const grid = el(`<div class="tile-grid home-grid"></div>`);
   visibleHomeTiles().forEach((t) => {
+    const photoName = candy ? (t.special === 'daily' ? 'tile-daily' : CANDY_TILE_PHOTOS[t.category]) : null;
+    const usePhoto = photoName && RASTER_IMAGES[photoName];
     const imgName = t.image && IMAGES[t.image] ? t.image : th.tileImages?.[t.idx];
     const icon = t.icon ?? th.tileIcons[t.idx];
-    const iconHtml = imgName && IMAGES[imgName] && !hc
+    const iconHtml = usePhoto
+      ? `<span class="tile-photo" aria-hidden="true">${imgHtml(photoName, 96)}</span>`
+      : imgName && IMAGES[imgName] && !hc
       ? `<span class="tile-illo" aria-hidden="true">${imgHtml(imgName, 64)}</span>`
       : `<span class="medallion" style="background:${surface}" aria-hidden="true">${icon}</span>`;
-    const tile = el(`<button class="big-tile" style="background:${tiles()[t.idx % tiles().length]}">
+    const tile = el(`<button class="big-tile ${usePhoto ? 'has-photo' : ''}" style="background:${usePhoto ? 'none' : tiles()[t.idx % tiles().length]}">
       ${iconHtml}
-      <span class="tile-text"><span class="label">${t.label}</span><span class="sublabel">${t.sub ?? LH.HOME_TILE_SUBTITLES[t.idx]}</span></span>
+      <span class="tile-text"><span class="label" style="${usePhoto ? `color:${th.text}` : ''}">${t.label}</span><span class="sublabel" style="${usePhoto ? `color:${th.text}` : ''}">${t.sub ?? LH.HOME_TILE_SUBTITLES[t.idx]}</span></span>
     </button>`);
     tile.onclick = () => {
       speak(t.label);
@@ -791,10 +809,13 @@ function renderHome() {
     };
     grid.append(tile);
   });
-  const chestHtml = th.rewards.iconImage && IMAGES[th.rewards.iconImage]
+  const rewardsPhoto = candy && RASTER_IMAGES['tile-rewards'];
+  const chestHtml = rewardsPhoto
+    ? `<span class="tile-photo" aria-hidden="true">${imgHtml('tile-rewards', 84)}</span>`
+    : th.rewards.iconImage && IMAGES[th.rewards.iconImage]
     ? imgHtml(th.rewards.iconImage, 56)
     : `<span class="ic">${th.rewards.icon}</span>`;
-  const rewardsBanner = el(`<button class="rewards-banner" style="background:${hc ? HC_COLOURS[0] : th.rewards.background}">
+  const rewardsBanner = el(`<button class="rewards-banner ${rewardsPhoto ? 'has-photo' : ''}" style="background:${rewardsPhoto ? 'none' : hc ? HC_COLOURS[0] : th.rewards.background}">
     <span aria-hidden="true">${chestHtml}</span>
     <span><span class="t" style="display:block">My Rewards</span><span class="s">Stickers, badges and stars!</span></span>
     <span class="chev ${th.rewards.chevron && !hc ? 'chev-circle' : ''}" style="${th.rewards.chevron && !hc ? `background:${th.rewards.chevron};color:#fff` : ''}" aria-hidden="true">›</span>
