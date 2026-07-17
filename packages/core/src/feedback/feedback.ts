@@ -19,7 +19,7 @@ const REGISTRY: Record<FeedbackMoment, readonly string[]> = {
   'try-again': ["Let's try again!", 'Good trying!', 'Have another go!'],
   almost: ['Almost there!', 'So close!', 'Keep going!'],
   effort: ['Good trying!', 'You worked hard!', 'Great effort!'],
-  'session-end': ['Great playing today!', 'Time to rest your hands. See you next time!'],
+  'session-end': ["Today's screen time is up!", "That's all your screen time for today!"],
   hint: ["Here's a little help!", 'Look, it goes here!'],
 };
 

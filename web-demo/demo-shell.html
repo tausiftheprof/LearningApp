@@ -2800,12 +2800,13 @@ function renderDaily() {
 function renderTimesUp() {
   setStatus("Time's up (calm)", ['screenTime ledger']);
   const box = el(`<div class="center-col"></div>`);
-  box.append(el(`<div class="giant">👋</div>`), el(`<h2>${LH.pickFeedback('session-end')}</h2>`), el(`<p>Your hands did wonderful work today.</p>`));
+  const message = LH.pickFeedback('session-end');
+  box.append(el(`<div class="giant">⏰</div>`), el(`<h2>${message}</h2>`), el(`<p>Come back tomorrow for more fun.</p>`));
   const bye = el(`<button class="primary-btn">Bye! 🏠</button>`);
   bye.onclick = () => navigate({ name: 'home' });
   box.append(bye);
   app.append(box);
-  speak('Great playing today!');
+  speak(message + '. Come back tomorrow for more fun.');
 }
 
 /* ---------- parental gate ---------- */

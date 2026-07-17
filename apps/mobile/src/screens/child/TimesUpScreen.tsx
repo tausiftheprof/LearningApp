@@ -14,10 +14,10 @@ export function TimesUpScreen(): React.JSX.Element {
   const theme = childTheme(profile?.accessibility ?? defaultAccessibilitySettings(), profile?.themeId);
   return (
     <View style={[styles.root, { backgroundColor: theme.bg }]}>
-      <Text style={styles.wave}>👋</Text>
+      <Text style={styles.icon}>⏰</Text>
       <Text style={[styles.title, { color: theme.text }]}>{pickFeedback('session-end')}</Text>
       <Text style={[styles.subtitle, { color: theme.text }]}>
-        Your hands did wonderful work today.
+        Come back tomorrow for more fun.
       </Text>
       <PrimaryButton label="Bye! 🏠" theme={theme} onPress={() => navigate({ name: 'home' })} />
     </View>
@@ -26,7 +26,7 @@ export function TimesUpScreen(): React.JSX.Element {
 
 const styles = StyleSheet.create({
   root: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
-  wave: { fontSize: 80 },
+  icon: { fontSize: 80 },
   title: { fontSize: 28, fontWeight: '800', textAlign: 'center', marginTop: 16 },
   subtitle: { fontSize: 18, textAlign: 'center', marginTop: 8, marginBottom: 24 },
 });
