@@ -1,17 +1,28 @@
 import React, { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { Canvas, Path, Skia } from '@shopify/react-native-skia';
+import type { GestureResponderEvent } from 'react-native';
+import { Canvas, Circle, Group, LinearGradient, Path, Skia, vec } from '@shopify/react-native-skia';
 import type { ColouringActivity } from '@littlegrip/core';
 import { PALETTES } from '@littlegrip/core';
 import type { Theme } from '../../../ui/theme';
 import { CompletionBanner } from '../ActivityPlayerScreen';
 
 const DESIGN = 1000;
+const RAINBOW = ['#E53935', '#FB8C00', '#FDD835', '#43A047', '#1E88E5', '#5E35B1', '#8E24AA'];
+
+/** A selected "colour": a solid swatch, glitter, or the rainbow gradient. */
+type Swatch = { kind: 'solid'; colour: string } | { kind: 'glitter' } | { kind: 'rainbow' };
+type RegionStroke = { swatch: Swatch; width: number; points: { x: number; y: number }[] };
+
+const GLITTER_BASE = '#F5C8DF';
+const GLITTER_SPECKS = ['#FFFFFF', '#FFE082', '#F8BBD0', '#FFF59D'];
 
 /**
- * Colouring player (FR-006, docs/03 S12): tap-fill regions; colour-by-number
- * shows numeral chips (never colour-only cues - docs/10). Completion = every
- * region filled (by-number: correctly filled).
+ * Colouring player (FR-006, docs/03 S12): tap-fill regions, or brush mode
+ * where freehand paint clips inside the tapped region's lines (owner
+ * direction, parity with the web demo). Colour-by-number shows numeral chips
+ * (never colour-only cues - docs/10). Completion = every region coloured
+ * (by-number: correctly filled).
  */
 export function ColouringPlayer(props: {
   activity: ColouringActivity;
@@ -21,10 +32,14 @@ export function ColouringPlayer(props: {
 }): React.JSX.Element {
   const { activity } = props;
   const [size, setSize] = useState({ w: 1, h: 1 });
-  const [colour, setColour] = useState(PALETTES.standard[0]!);
-  const [fills, setFills] = useState<Record<string, string>>({});
+  const [swatch, setSwatch] = useState<Swatch>({ kind: 'solid', colour: PALETTES.standard[0]! });
+  const [mode, setMode] = useState<'fill' | 'brush'>('fill');
+  const [brushWidth, setBrushWidth] = useState(14);
+  const [fills, setFills] = useState<Record<string, Swatch>>({});
+  const [strokes, setStrokes] = useState<Record<string, RegionStroke[]>>({});
   const [attempts, setAttempts] = useState(1);
   const [done, setDone] = useState(false);
+  const [liveRegion, setLiveRegion] = useState<string | null>(null);
 
   const scale = Math.min(size.w, size.h) / DESIGN;
   const byNumber = activity.mode === 'by-number';
@@ -34,13 +49,24 @@ export function ColouringPlayer(props: {
 
   const regionPaths = useMemo(
     () =>
-      activity.regions.map((region) => {
+      activity.regions.map((region, index) => {
         const path = Skia.Path.Make();
         const first = region.polygon[0]!;
         path.moveTo(first.x * scale, first.y * scale);
         for (const p of region.polygon.slice(1)) path.lineTo(p.x * scale, p.y * scale);
         path.close();
-        return { region, path };
+        const xs = region.polygon.map((p) => p.x * scale);
+        const ys = region.polygon.map((p) => p.y * scale);
+        const box = { x0: Math.min(...xs), x1: Math.max(...xs), y0: Math.min(...ys), y1: Math.max(...ys) };
+        // Deterministic glitter speckles inside the region (no Math.random -
+        // renders identically every frame).
+        const specks: { x: number; y: number; r: number }[] = [];
+        for (let i = 0; i < 46; i++) {
+          const rx = box.x0 + ((Math.sin((index + 1) * 61 + i * 37.7) + 1) / 2) * (box.x1 - box.x0);
+          const ry = box.y0 + ((Math.cos((index + 1) * 43 + i * 53.3) + 1) / 2) * (box.y1 - box.y0);
+          specks.push({ x: rx, y: ry, r: i % 5 === 0 ? 2.6 : 1.5 });
+        }
+        return { region, path, box, specks };
       }),
     [activity, scale],
   );
@@ -54,46 +80,152 @@ export function ColouringPlayer(props: {
     return inside;
   }
 
-  function tap(x: number, y: number): void {
-    if (done) return;
+  function hitRegion(x: number, y: number) {
     const dx = x / scale, dy = y / scale;
     // Topmost (last-drawn) region wins, so layered shapes (window, eye, nose)
     // stay colourable inside the bigger shape behind them.
-    const hit = [...activity.regions].reverse().find((r) => pointInPolygon(dx, dy, r.polygon));
-    if (!hit) return;
-    const expected = expectedColour(hit.number);
-    if (byNumber && expected !== null && colour !== expected) {
-      // Gentle: nothing negative happens; child can keep exploring colours.
-      setAttempts((a) => a + 1);
-      return;
-    }
-    const next = { ...fills, [hit.id]: colour };
-    setFills(next);
-    const allFilled = activity.regions.every((r) => {
-      const filled = next[r.id];
-      if (filled === undefined) return false;
+    return [...activity.regions].reverse().find((r) => pointInPolygon(dx, dy, r.polygon));
+  }
+
+  function checkComplete(nextFills: Record<string, Swatch>, nextStrokes: Record<string, RegionStroke[]>): void {
+    const coloured = (id: string) => nextFills[id] !== undefined || (nextStrokes[id]?.length ?? 0) > 0;
+    const all = activity.regions.every((r) => {
+      if (!coloured(r.id)) return false;
       const exp = expectedColour(r.number);
-      return !byNumber || exp === null || filled === exp;
+      if (!byNumber || exp === null) return true;
+      const f = nextFills[r.id];
+      return f !== undefined && f.kind === 'solid' && f.colour === exp;
     });
-    if (allFilled) {
+    if (all && !done) {
       setDone(true);
       const accuracy = Math.max(0, Math.round(100 - (attempts - 1) * 5));
       props.onComplete({ attempts, hintCount: 0, accuracyScore: byNumber ? accuracy : null });
     }
   }
 
+  function fillTap(x: number, y: number): void {
+    if (done) return;
+    const hit = hitRegion(x, y);
+    if (!hit) return;
+    const expected = expectedColour(hit.number);
+    if (byNumber && expected !== null && !(swatch.kind === 'solid' && swatch.colour === expected)) {
+      // Gentle: nothing negative happens; child can keep exploring colours.
+      setAttempts((a) => a + 1);
+      return;
+    }
+    const next = { ...fills, [hit.id]: swatch };
+    setFills(next);
+    checkComplete(next, strokes);
+  }
+
+  function brushStart(e: GestureResponderEvent): void {
+    if (done) return;
+    const { locationX: x, locationY: y } = e.nativeEvent;
+    const hit = hitRegion(x, y);
+    if (!hit) return;
+    const stroke: RegionStroke = { swatch, width: brushWidth, points: [{ x: x / scale, y: y / scale }] };
+    setLiveRegion(hit.id);
+    setStrokes((s) => ({ ...s, [hit.id]: [...(s[hit.id] ?? []), stroke] }));
+  }
+  function brushMove(e: GestureResponderEvent): void {
+    if (done || liveRegion === null) return;
+    const { locationX: x, locationY: y } = e.nativeEvent;
+    setStrokes((s) => {
+      const list = s[liveRegion];
+      if (!list?.length) return s;
+      const updated = [...list];
+      const last = updated[updated.length - 1]!;
+      updated[updated.length - 1] = { ...last, points: [...last.points, { x: x / scale, y: y / scale }] };
+      return { ...s, [liveRegion]: updated };
+    });
+  }
+  function brushEnd(): void {
+    if (liveRegion === null) return;
+    setLiveRegion(null);
+    checkComplete(fills, strokes);
+  }
+
+  const strokePath = (points: { x: number; y: number }[]) => {
+    const p = Skia.Path.Make();
+    if (points.length === 0) return p;
+    p.moveTo(points[0]!.x * scale, points[0]!.y * scale);
+    for (const pt of points.slice(1)) p.lineTo(pt.x * scale, pt.y * scale);
+    return p;
+  };
+
+  const brushTouchProps = mode === 'brush' && !byNumber
+    ? {
+        onStartShouldSetResponder: () => true,
+        onMoveShouldSetResponder: () => true,
+        onResponderGrant: brushStart,
+        onResponderMove: brushMove,
+        onResponderRelease: brushEnd,
+        onResponderTerminate: brushEnd,
+      }
+    : {};
+
   return (
     <View style={styles.root}>
       <Pressable
         style={styles.canvasWrap}
         onLayout={(e) => setSize({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })}
-        onPress={(e) => tap(e.nativeEvent.locationX, e.nativeEvent.locationY)}
-        accessibilityLabel="Colouring picture. Tap an area to fill it with the selected colour."
+        onPress={mode === 'fill' || byNumber ? (e) => fillTap(e.nativeEvent.locationX, e.nativeEvent.locationY) : undefined}
+        accessibilityLabel="Colouring picture. Tap an area to fill it, or paint inside the lines with the brush."
+        {...brushTouchProps}
       >
         <Canvas style={styles.canvas}>
-          {regionPaths.map(({ region, path }) => (
-            <Path key={region.id} path={path} color={fills[region.id] ?? '#FFFFFF'} style="fill" />
-          ))}
+          {regionPaths.map(({ region, path, box, specks }) => {
+            const f = fills[region.id];
+            return (
+              <Group key={region.id}>
+                <Path path={path} color="#FFFFFF" style="fill" />
+                {f?.kind === 'solid' && <Path path={path} color={f.colour} style="fill" />}
+                {f?.kind === 'glitter' && (
+                  <Group clip={path}>
+                    <Path path={path} color={GLITTER_BASE} style="fill" />
+                    {specks.map((sp, i) => (
+                      <Circle key={i} cx={sp.x} cy={sp.y} r={sp.r} color={GLITTER_SPECKS[i % GLITTER_SPECKS.length]!} />
+                    ))}
+                  </Group>
+                )}
+                {f?.kind === 'rainbow' && (
+                  <Path path={path} style="fill">
+                    <LinearGradient start={vec(box.x0, box.y0)} end={vec(box.x1, box.y1)} colors={RAINBOW} />
+                  </Path>
+                )}
+                {(strokes[region.id] ?? []).map((st, si) => (
+                  // The snap: brush strokes clip to the region so paint cannot
+                  // escape the lines.
+                  <Group key={si} clip={path}>
+                    <Path
+                      path={strokePath(st.points)}
+                      style="stroke"
+                      strokeWidth={st.width * scale}
+                      strokeCap="round"
+                      strokeJoin="round"
+                      color={st.swatch.kind === 'solid' ? st.swatch.colour : GLITTER_BASE}
+                    >
+                      {st.swatch.kind === 'rainbow' && (
+                        <LinearGradient start={vec(box.x0, box.y0)} end={vec(box.x1, box.y1)} colors={RAINBOW} />
+                      )}
+                    </Path>
+                    {st.swatch.kind === 'glitter' &&
+                      st.points
+                        .filter((_, i) => i % 3 === 0)
+                        .map((pt, i) => (
+                          <Circle
+                            key={i}
+                            cx={(pt.x + Math.sin(i * 7) * 9) * scale}
+                            cy={(pt.y + Math.cos(i * 5) * 9) * scale}
+                            r={1.7}
+                            color="#FFF9E5"
+                          />
+                        ))}
+                  </Group>
+                ))}
+              </Group>
+            );
+          })}
           {regionPaths.map(({ region, path }) => (
             <Path key={`${region.id}-line`} path={path} color="#4A3B32" style="stroke" strokeWidth={3} />
           ))}
@@ -115,18 +247,50 @@ export function ColouringPlayer(props: {
           )}
       </Pressable>
 
+      {!byNumber && (
+        <View style={styles.modeRow}>
+          <ModeButton label="🪣" aria="Fill with a tap" active={mode === 'fill'} onPress={() => setMode('fill')} />
+          <ModeButton label="🖌️" aria="Paint inside the lines" active={mode === 'brush'} onPress={() => setMode('brush')} />
+          {mode === 'brush' &&
+            ([[7, '•'], [14, '●'], [26, '⬤']] as const).map(([w, icon]) => (
+              <ModeButton key={w} label={icon} aria={`Brush width ${w}`} active={brushWidth === w} onPress={() => setBrushWidth(w)} />
+            ))}
+        </View>
+      )}
+
       <ScrollView horizontal style={styles.palette} contentContainerStyle={styles.paletteContent}>
         {PALETTES.standard.map((c, i) => (
-          <Pressable
-            key={c}
-            accessibilityRole="button"
-            accessibilityLabel={byNumber ? `Colour number ${i + 1}` : `Colour ${c}`}
-            onPress={() => setColour(c)}
-            style={[styles.swatch, { backgroundColor: c, borderWidth: colour === c ? 4 : 1 }]}
-          >
+          <Swatch key={c} colour={c} active={swatch.kind === 'solid' && swatch.colour === c}
+            aria={byNumber ? `Colour number ${i + 1}` : `Colour ${c}`}
+            onPress={() => setSwatch({ kind: 'solid', colour: c })}>
             {byNumber && <Text style={styles.swatchNumber}>{i + 1}</Text>}
-          </Pressable>
+          </Swatch>
         ))}
+        {!byNumber &&
+          PALETTES.pastel.map((c) => (
+            <Swatch key={c} colour={c} active={swatch.kind === 'solid' && swatch.colour === c}
+              aria={`Pastel colour ${c}`} onPress={() => setSwatch({ kind: 'solid', colour: c })} />
+          ))}
+        {!byNumber && (
+          <Swatch colour={GLITTER_BASE} active={swatch.kind === 'glitter'} aria="Glitter"
+            onPress={() => setSwatch({ kind: 'glitter' })}>
+            <Text style={styles.swatchIcon}>✨</Text>
+          </Swatch>
+        )}
+        {!byNumber && (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Rainbow"
+            onPress={() => setSwatch({ kind: 'rainbow' })}
+            style={[styles.swatch, { borderWidth: swatch.kind === 'rainbow' ? 4 : 1, overflow: 'hidden', backgroundColor: '#FFF' }]}
+          >
+            <Canvas style={styles.rainbowSwatch}>
+              <Path path={Skia.Path.Make().addRect(Skia.XYWHRect(0, 0, 56, 56))} style="fill">
+                <LinearGradient start={vec(0, 0)} end={vec(56, 56)} colors={RAINBOW} />
+              </Path>
+            </Canvas>
+          </Pressable>
+        )}
       </ScrollView>
 
       <CompletionBanner visible={done} onDone={props.onDone} colour={props.theme.success} />
@@ -134,14 +298,55 @@ export function ColouringPlayer(props: {
   );
 }
 
+function ModeButton(props: { label: string; aria: string; active: boolean; onPress: () => void }): React.JSX.Element {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={props.aria}
+      onPress={props.onPress}
+      style={[styles.modeButton, props.active && styles.modeButtonActive]}
+    >
+      <Text style={styles.modeLabel}>{props.label}</Text>
+    </Pressable>
+  );
+}
+
+function Swatch(props: {
+  colour: string;
+  active: boolean;
+  aria: string;
+  onPress: () => void;
+  children?: React.ReactNode;
+}): React.JSX.Element {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={props.aria}
+      onPress={props.onPress}
+      style={[styles.swatch, { backgroundColor: props.colour, borderWidth: props.active ? 4 : 1 }]}
+    >
+      {props.children}
+    </Pressable>
+  );
+}
+
 const styles = StyleSheet.create({
   root: { flex: 1 },
   canvasWrap: { flex: 1, margin: 8, borderRadius: 16, overflow: 'hidden', backgroundColor: '#FFFFFF' },
   canvas: { flex: 1 },
+  modeRow: { flexDirection: 'row', paddingHorizontal: 8, alignItems: 'center' },
+  modeButton: {
+    minWidth: 52, minHeight: 52, borderRadius: 14, margin: 4,
+    alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFFFFF',
+  },
+  modeButtonActive: { backgroundColor: '#FFE0B2' },
+  modeLabel: { fontSize: 22 },
   palette: { maxHeight: 76 },
   paletteContent: { alignItems: 'center', paddingHorizontal: 8 },
   swatch: { width: 56, height: 56, borderRadius: 28, margin: 6, borderColor: '#4A3B32', alignItems: 'center', justifyContent: 'center' },
   swatchNumber: { color: '#FFFFFF', fontWeight: '800', fontSize: 18, textShadowColor: '#000', textShadowRadius: 2 },
+  swatchIcon: { fontSize: 20 },
+  rainbowSwatch: { width: 56, height: 56 },
   chip: {
     position: 'absolute',
     width: 28,
