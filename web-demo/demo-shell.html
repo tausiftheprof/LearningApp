@@ -1997,6 +1997,223 @@ function renderGame(activity) {
   const say = (m) => { note.textContent = m; speak(m); };
   const miss = (moment = 'try-again') => { attempts++; say(LH.pickFeedback(moment)); };
 
+  /** Real-photo maze (owner artwork, July 2026): rasterise the printed maze,
+   * read its ink as walls, BFS-solve start-to-finish inside a hand-marked
+   * bbox, then let the child re-trace that solved corridor - the visible
+   * trail they paint is clipped so it can never cover the maze's ink. */
+  function renderPhotoMaze() {
+    const imgName = imageNameFromRef(params.image);
+    const src = RASTER_IMAGES[imgName];
+    const mover = params.mover || 'fish';
+    const goal = params.goal || 'star';
+    const bbox = params.bbox || [0, 0, 1, 1];
+    const startFrac = params.start || [0.1, 0.5];
+    const finishFrac = params.finish || [0.9, 0.5];
+
+    const canvas = el(`<canvas class="stage" aria-label="Maze photo" style="touch-action:none"></canvas>`);
+    const trailCanvas = el(`<canvas class="stage" style="pointer-events:none"></canvas>`);
+    const moverEl = el(`<div role="img" aria-label="You" style="position:absolute;width:60px;height:60px;pointer-events:none">${itemHtml(mover, 60)}</div>`);
+    const goalEl = el(`<div role="img" aria-label="Goal" style="position:absolute;width:70px;height:70px;pointer-events:none">${itemHtml(goal, 70)}</div>`);
+    stage.append(canvas, trailCanvas, moverEl, goalEl);
+    const ctx = canvas.getContext('2d');
+    const tctx = trailCanvas.getContext('2d');
+
+    let ready = false, doneMaze = false, tracking = false, lastPt = null;
+    let W = 0, H = 0, wallMask = null, solved = null, session = null, config = null, wallStencil = null;
+    let scale = 1, ox = 0, oy = 0, displayW = 0, displayH = 0;
+
+    const img = new Image();
+    img.onload = () => {
+      const MAXW = 460;
+      const ratio = img.naturalWidth > MAXW ? MAXW / img.naturalWidth : 1;
+      W = Math.max(1, Math.round(img.naturalWidth * ratio));
+      H = Math.max(1, Math.round(img.naturalHeight * ratio));
+      const off = document.createElement('canvas');
+      off.width = W; off.height = H;
+      const octx = off.getContext('2d');
+      // Nearest-neighbour, not the browser's default smoothing: blending
+      // pixels here can blur a thin printed wall thin enough to vanish,
+      // opening a gap that isn't really there in the photo.
+      octx.imageSmoothingEnabled = false;
+      octx.drawImage(img, 0, 0, W, H);
+      const data = octx.getImageData(0, 0, W, H).data;
+      wallMask = new Uint8Array(W * H);
+      const stencil = document.createElement('canvas');
+      stencil.width = W; stencil.height = H;
+      const sctx = stencil.getContext('2d');
+      const simg = sctx.createImageData(W, H);
+      for (let i = 0; i < W * H; i++) {
+        const o = i * 4;
+        const whiteness = (data[o] + data[o + 1] + data[o + 2]) / 3;
+        const wall = whiteness < 170 ? 1 : 0;
+        wallMask[i] = wall;
+        simg.data[o] = 60; simg.data[o + 1] = 46; simg.data[o + 2] = 36;
+        simg.data[o + 3] = wall ? 255 : 0;
+      }
+      sctx.putImageData(simg, 0, 0);
+      wallStencil = stencil;
+      solved = solveMaze();
+      const level = activity.difficulty || 1;
+      const base = LH.tracingConfigFor(level, { accessibilityWiderCorridor: true });
+      config = { ...base, corridorWidth: Math.max(18, base.corridorWidth * (W / 1000)), coverageToComplete: level === 1 ? 0.55 : 0.65 };
+      session = new LH.TracingSession(solved, config);
+      ready = true;
+      fit();
+    };
+    img.src = src;
+
+    const idx = (x, y) => y * W + x;
+    const inBox = (x, y, b) => x >= b[0] && x <= b[2] && y >= b[1] && y <= b[3];
+    const DIRS = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+    function solveMaze() {
+      const b = [Math.round(bbox[0] * W), Math.round(bbox[1] * H), Math.round(bbox[2] * W), Math.round(bbox[3] * H)];
+      // Label every open pocket within the bbox and keep only the biggest -
+      // that's the printed maze network. Hand-eyeballed start/finish seeds
+      // then snap onto IT specifically, not onto some unrelated sliver of
+      // background (title text, a mascot's outline) that happens to be near.
+      const label = new Int32Array(W * H).fill(-1);
+      const compSizes = [];
+      const qx = new Int32Array(W * H), qy = new Int32Array(W * H);
+      for (let y = b[1]; y <= b[3]; y++) {
+        for (let x = b[0]; x <= b[2]; x++) {
+          const i = idx(x, y);
+          if (wallMask[i] || label[i] !== -1) continue;
+          const compId = compSizes.length;
+          let qh = 0, qt = 0;
+          qx[qt] = x; qy[qt] = y; qt++; label[i] = compId;
+          let size = 0;
+          while (qh < qt) {
+            const cx = qx[qh], cy = qy[qh]; qh++; size++;
+            for (const [dx, dy] of DIRS) {
+              const nx = cx + dx, ny = cy + dy;
+              if (!inBox(nx, ny, b)) continue;
+              const ni = idx(nx, ny);
+              if (wallMask[ni] || label[ni] !== -1) continue;
+              label[ni] = compId;
+              qx[qt] = nx; qy[qt] = ny; qt++;
+            }
+          }
+          compSizes.push(size);
+        }
+      }
+      let biggest = 0;
+      for (let c = 1; c < compSizes.length; c++) if (compSizes[c] > compSizes[biggest]) biggest = c;
+      function nearestOnMaze(fx, fy) {
+        const x0 = Math.round(fx * W), y0 = Math.round(fy * H);
+        if (x0 >= 0 && x0 < W && y0 >= 0 && y0 < H && inBox(x0, y0, b) && label[idx(x0, y0)] === biggest) return { x: x0, y: y0 };
+        const maxR = Math.max(W, H);
+        for (let r = 1; r < maxR; r++) {
+          for (let dy = -r; dy <= r; dy++) {
+            for (let dx = -r; dx <= r; dx++) {
+              if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
+              const nx = x0 + dx, ny = y0 + dy;
+              if (nx < 0 || nx >= W || ny < 0 || ny >= H || !inBox(nx, ny, b)) continue;
+              if (label[idx(nx, ny)] === biggest) return { x: nx, y: ny };
+            }
+          }
+        }
+        return { x: x0, y: y0 };
+      }
+      const s = nearestOnMaze(startFrac[0], startFrac[1]);
+      const f = nearestOnMaze(finishFrac[0], finishFrac[1]);
+      const prev = new Int32Array(W * H).fill(-1);
+      const visited = new Uint8Array(W * H);
+      let qh = 0, qt = 0;
+      qx[qt] = s.x; qy[qt] = s.y; qt++;
+      visited[idx(s.x, s.y)] = 1;
+      let found = false;
+      while (qh < qt) {
+        const cx = qx[qh], cy = qy[qh]; qh++;
+        if (cx === f.x && cy === f.y) { found = true; break; }
+        for (const [dx, dy] of DIRS) {
+          const nx = cx + dx, ny = cy + dy;
+          if (!inBox(nx, ny, b) || wallMask[idx(nx, ny)] || visited[idx(nx, ny)]) continue;
+          visited[idx(nx, ny)] = 1;
+          prev[idx(nx, ny)] = idx(cx, cy);
+          qx[qt] = nx; qy[qt] = ny; qt++;
+        }
+      }
+      let path;
+      if (found) {
+        path = [];
+        let cur = idx(f.x, f.y);
+        while (cur !== -1) { path.push({ x: cur % W, y: Math.floor(cur / W) }); cur = prev[cur]; }
+        path.reverse();
+        const step = Math.max(1, Math.floor(path.length / 300));
+        path = path.filter((_, i) => i % step === 0 || i === path.length - 1);
+      } else {
+        // Extremely unlikely given the biggest-component snap above, but a
+        // straight line still lets the child complete the activity rather
+        // than get stuck on a broken maze.
+        path = [s, f];
+      }
+      return path;
+    }
+
+    function fit() {
+      if (!ready) return;
+      const r = stage.getBoundingClientRect();
+      canvas.width = r.width * devicePixelRatio; canvas.height = r.height * devicePixelRatio;
+      trailCanvas.width = r.width * devicePixelRatio; trailCanvas.height = r.height * devicePixelRatio;
+      ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+      tctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+      scale = Math.min(r.width / W, r.height / H);
+      displayW = W * scale; displayH = H * scale;
+      ox = (r.width - displayW) / 2; oy = (r.height - displayH) / 2;
+      const s0 = solved[0], sE = solved[solved.length - 1];
+      moverEl.style.left = (s0.x * scale + ox - 30) + 'px'; moverEl.style.top = (s0.y * scale + oy - 30) + 'px';
+      goalEl.style.left = (sE.x * scale + ox - 35) + 'px'; goalEl.style.top = (sE.y * scale + oy - 35) + 'px';
+      ctx.clearRect(0, 0, r.width, r.height);
+      ctx.drawImage(img, ox, oy, displayW, displayH);
+    }
+
+    function paintTrailSegment(x1, y1, x2, y2) {
+      tctx.save();
+      tctx.globalCompositeOperation = 'source-over';
+      tctx.lineCap = 'round'; tctx.lineJoin = 'round';
+      tctx.strokeStyle = '#57C7E3'; tctx.globalAlpha = 0.8; tctx.lineWidth = 16;
+      tctx.beginPath(); tctx.moveTo(x1, y1); tctx.lineTo(x2, y2); tctx.stroke();
+      tctx.restore();
+      // Never let the trail visually paint over the maze's own ink.
+      tctx.save();
+      tctx.globalCompositeOperation = 'destination-out';
+      tctx.drawImage(wallStencil, ox, oy, displayW, displayH);
+      tctx.restore();
+    }
+
+    canvas.addEventListener('pointerdown', (e) => {
+      if (doneMaze || !ready) return;
+      tracking = true;
+      const r = canvas.getBoundingClientRect();
+      lastPt = { x: e.clientX - r.left, y: e.clientY - r.top };
+    });
+    canvas.addEventListener('pointermove', (e) => {
+      if (!tracking || doneMaze || !ready) return;
+      const r = canvas.getBoundingClientRect();
+      const x = e.clientX - r.left, y = e.clientY - r.top;
+      const wx = (x - ox) / scale, wy = (y - oy) / scale;
+      const result = session.addPoint({ x: wx, y: wy });
+      if (result.onPath) {
+        moverEl.style.left = (x - 30) + 'px'; moverEl.style.top = (y - 30) + 'px';
+        if (lastPt) paintTrailSegment(lastPt.x, lastPt.y, x, y);
+      }
+      lastPt = { x, y };
+      if (result.completed) {
+        doneMaze = true; tracking = false;
+        const summary = session.endAttempt();
+        completeActivity(activity, { attempts: summary.attemptNumber, accuracyScore: summary.accuracyScore });
+        stage.append(completionBanner(onDone));
+      }
+    });
+    window.addEventListener('pointerup', () => {
+      if (!tracking || doneMaze || !ready) return;
+      tracking = false; lastPt = null;
+      const summary = session.endAttempt();
+      if (!summary.completed) say(LH.pickFeedback(summary.coverage > 0.4 ? 'almost' : 'try-again'));
+    });
+    new ResizeObserver(fit).observe(stage);
+  }
+
   const T = {
     'pop-bubbles': () => {
       let left = 8;
@@ -2300,6 +2517,7 @@ function renderGame(activity) {
     },
 
     'path-maze': () => {
+      if (params.image) { renderPhotoMaze(); return; }
       // The maze is a corridor-follow: the same core TracingSession engine,
       // with a wide forgiving corridor and a picture to carry to the goal.
       const mover = params.mover || 'fish';
