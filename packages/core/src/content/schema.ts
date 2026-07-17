@@ -72,7 +72,8 @@ export const tracingActivitySchema = activityBase.extend({
 
 export const colouringActivitySchema = activityBase.extend({
   type: z.literal('colouring'),
-  /** Closed polygon regions in design space; `number` supports colour-by-number mode. */
+  /** Closed polygon regions in design space; `number` supports colour-by-number mode.
+   *  Empty for 'line-art' mode, which flood-fills `image` instead. */
   regions: z
     .array(
       z.object({
@@ -81,8 +82,11 @@ export const colouringActivitySchema = activityBase.extend({
         number: z.number().int().positive().optional(),
       }),
     )
-    .min(1),
-  mode: z.enum(['free', 'by-number']).default('free'),
+    .default([]),
+  mode: z.enum(['free', 'by-number', 'line-art']).default('free'),
+  /** Full-page line-art asset (mode 'line-art'): a bold black-outline SVG
+   *  that the player flood-fills on tap, rather than authored polygons. */
+  image: assetRefSchema.optional(),
 });
 
 export const jigsawActivitySchema = activityBase.extend({
@@ -169,6 +173,10 @@ export function validateContentPack(data: unknown): PackValidationResult {
   for (const a of parsed.data.activities) {
     if (ids.has(a.id)) errors.push(`duplicate activity id: ${a.id}`);
     ids.add(a.id);
+    if (a.type === 'colouring') {
+      if (a.mode === 'line-art' && !a.image) errors.push(`${a.id}: line-art colouring needs an image`);
+      if (a.mode !== 'line-art' && a.regions.length === 0) errors.push(`${a.id}: colouring needs at least one region`);
+    }
   }
   return errors.length > 0
     ? { ok: false, errors }

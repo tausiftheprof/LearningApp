@@ -19,7 +19,12 @@ export function ActivityPickerScreen(props: { category: PickerCategory }): React
   const theme = childTheme(profile?.accessibility ?? defaultAccessibilitySettings(), profile?.themeId);
 
   const playable = catalogue.filter(
-    (a) => a.type !== 'game' || IMPLEMENTED_GAME_TEMPLATES.includes(a.template),
+    (a) =>
+      (a.type !== 'game' || IMPLEMENTED_GAME_TEMPLATES.includes(a.template)) &&
+      // Line-art colouring scenes flood-fill a rasterised SVG - shipped in the
+      // web demo only for now, since the native app has no SVG pipeline yet
+      // (tracked as a follow-up; see ColouringPlayer.tsx for the same guard).
+      !(a.type === 'colouring' && a.mode === 'line-art'),
   );
   // Tracing splits into Letters / Numbers / Shapes (owner direction).
   const numericSort = (a: Activity, b: Activity) => a.id.localeCompare(b.id, undefined, { numeric: true });

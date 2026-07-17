@@ -32,6 +32,29 @@ export function ColouringPlayer(props: {
   onComplete: (r: { attempts: number; hintCount: number; accuracyScore: number | null }) => void;
   onDone: () => void;
 }): React.JSX.Element {
+  // Line-art scenes (flood-fill over a rasterised SVG) ship in the web demo
+  // only for now - the native app has no SVG pipeline yet. The picker already
+  // filters these out (ActivityPickerScreen.tsx); this is a defensive guard.
+  // Branching here (rather than an early return inside RegionColouringPlayer)
+  // keeps every hook call unconditional, as React requires.
+  if (props.activity.mode === 'line-art') {
+    return (
+      <View style={styles.unavailable}>
+        <Text style={styles.unavailableText}>
+          This picture is ready on the web demo - it's coming to the tablet app soon!
+        </Text>
+      </View>
+    );
+  }
+  return <RegionColouringPlayer {...props} />;
+}
+
+function RegionColouringPlayer(props: {
+  activity: ColouringActivity;
+  theme: Theme;
+  onComplete: (r: { attempts: number; hintCount: number; accuracyScore: number | null }) => void;
+  onDone: () => void;
+}): React.JSX.Element {
   const { activity } = props;
   const [size, setSize] = useState({ w: 1, h: 1 });
   const [swatch, setSwatch] = useState<Swatch>({ kind: 'solid', colour: PALETTES.standard[0]! });
@@ -449,6 +472,8 @@ function Swatch(props: {
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
+  unavailable: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 },
+  unavailableText: { fontSize: 18, textAlign: 'center', color: '#4A3B32' },
   canvasWrap: { flex: 1, margin: 8, borderRadius: 16, overflow: 'hidden', backgroundColor: '#FFFFFF' },
   canvas: { flex: 1 },
   panel: {

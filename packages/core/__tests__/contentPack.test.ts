@@ -23,6 +23,37 @@ describe('starter content pack', () => {
     }
   });
 
+  it('ships five owner-supplied line-art colouring scenes (July 2026)', () => {
+    const scenes = pack.activities.filter((a) => a.type === 'colouring' && a.mode === 'line-art');
+    expect(scenes.map((s) => s.id).sort()).toEqual([
+      'colour-monkey-tree',
+      'colour-rabbit-carrot',
+      'colour-rocket-space',
+      'colour-solar-system',
+      'colour-unicorn-rainbow',
+    ]);
+    for (const s of scenes) {
+      expect(s.image).toMatch(/^images\/scene-[a-z-]+\.svg$/);
+      expect(s.regions).toEqual([]);
+    }
+  });
+
+  it('rejects a line-art colouring activity with no image (schema hardening)', () => {
+    const bad = {
+      ...pack,
+      activities: [
+        {
+          type: 'colouring', id: 'colour-broken', title: 'Broken', category: 'colouring',
+          ageBands: ['3-5'], difficulty: 1, motorSkills: ['tapping'],
+          estimatedMinutes: 3, theme: 'test', locale: 'en-AU', instructionAudio: 'audio/en-AU/x.mp3',
+          mode: 'line-art', regions: [],
+        },
+      ],
+    };
+    const result = validateContentPack(bad);
+    expect(result.ok).toBe(false);
+  });
+
   it('ships at least 10 toddler, preschool and logic games (PRD section 25 + maze set)', () => {
     const count = (c: string) => pack.activities.filter((a) => a.category === c).length;
     expect(count('toddler')).toBeGreaterThanOrEqual(10);
