@@ -423,6 +423,9 @@ const tiles = () => (highContrast() ? HC_COLOURS : theme().tileColours);
 
 /* ---------- images: every picture comes from assets/images/ (see its README) ---------- */
 const IMAGES = window.LG_IMAGES || {};
+// Owner-supplied full-page colouring scenes ship as raster photos (PNG), not
+// the inline SVG markup the icon set uses - a separate map, base64 data URIs.
+const RASTER_IMAGES = window.LG_RASTER_IMAGES || {};
 function img(name, sizePx) {
   const holder = document.createElement('span');
   holder.className = 'lg-img';
@@ -434,12 +437,15 @@ function img(name, sizePx) {
   return holder;
 }
 function imgHtml(name, sizePx, extraStyle = '') {
+  if (RASTER_IMAGES[name]) {
+    return `<img class="lg-img" src="${RASTER_IMAGES[name]}" alt="${name}" style="display:inline-block;width:${sizePx}px;height:${sizePx}px;object-fit:contain;border-radius:8px;${extraStyle}">`;
+  }
   const raw = IMAGES[name] || IMAGES.star || '';
   return `<span class="lg-img" role="img" aria-label="${name}" style="display:inline-block;width:${sizePx}px;height:${sizePx}px;${extraStyle}">${raw.replace('<svg ', `<svg style="width:${sizePx}px;height:${sizePx}px;display:block" `)}</span>`;
 }
 /** Image name for a jigsaw's pack-relative ref, e.g. images/dolphin.svg -> dolphin. */
 function imageNameFromRef(ref) {
-  const m = /images\/([a-z0-9-]+)\.svg$/i.exec(ref || '');
+  const m = /images\/([a-z0-9-]+)\.(?:svg|png|jpe?g)$/i.exec(ref || '');
   return m ? m[1] : 'star';
 }
 
@@ -882,7 +888,8 @@ function renderPicker(category) {
     else if (a.type === 'colouring' && a.mode === 'line-art') imgName = imageNameFromRef(a.image);
     else if (a.type === 'colouring') imgName = (/^colour-([a-z]+)/.exec(a.id) || [])[1] || null;
     else if (category === 'mazes') imgName = a.params?.mover || 'maze';
-    if (!imgName || !IMAGES[imgName]) imgName = th.tileImages?.[catIndex[a.category] ?? 0] ?? null;
+    const hasPicture = (n) => Boolean(n && (IMAGES[n] || RASTER_IMAGES[n]));
+    if (!hasPicture(imgName)) imgName = th.tileImages?.[catIndex[a.category] ?? 0] ?? null;
     // Letter/number tracing tiles show just the big glyph pair, no icon or
     // "Letter" prefix (owner direction): "A a", "B b", ... "9".
     const letterM = /^trace-letter-(.)$/.exec(a.id);
@@ -890,7 +897,7 @@ function renderPicker(category) {
     const glyph = letterM ? `${letterM[1].toUpperCase()} ${letterM[1]}` : numberM ? numberM[1] : null;
     const inner = glyph
       ? `<span class="glyph-big" aria-hidden="true">${glyph}</span>`
-      : (imgName && IMAGES[imgName] && !highContrast()
+      : (hasPicture(imgName) && !highContrast()
         ? `<span class="tile-illo" aria-hidden="true">${imgHtml(imgName, 52)}</span>`
         : `<span class="emoji">${emojiFor[a.category]}</span>`) + `<span class="label picker-label">${a.title}</span>`;
     const tile = el(`<button class="big-tile" aria-label="${a.title}" style="background:${tiles()[i % tiles().length]}">${inner}</button>`);
@@ -1353,13 +1360,28 @@ function renderColouringLineArt(activity) {
   img.onload = () => {
     lineCtx.clearRect(0, 0, RES, RES);
     lineCtx.drawImage(img, 0, 0, RES, RES);
-    const data = lineCtx.getImageData(0, 0, RES, RES).data;
+    const imgData = lineCtx.getImageData(0, 0, RES, RES);
+    const data = imgData.data;
+    // These scenes are plain photos: bold black lines (+ a small coloured
+    // mascot) on an OPAQUE WHITE background, not transparent SVG art. Wall =
+    // genuinely dark ink (luminance threshold), computed from the untouched
+    // pixel first; then the background is keyed out to transparent so the
+    // same buffer can double as the crisp top overlay once the child paints
+    // underneath it - white fades out, ink and the mascot's colours stay put.
     wallMask = new Uint8Array(RES * RES);
-    for (let i = 0; i < RES * RES; i++) wallMask[i] = data[i * 4 + 3] > 80 ? 1 : 0;
+    for (let i = 0; i < RES * RES; i++) {
+      const o = i * 4;
+      const r = data[o], g = data[o + 1], b = data[o + 2];
+      const whiteness = (r + g + b) / 3;
+      wallMask[i] = whiteness < 170 ? 1 : 0;
+      data[o + 3] = Math.max(0, Math.min(255, (255 - whiteness) * 4));
+    }
+    lineCtx.putImageData(imgData, 0, 0);
     ready = true;
     draw();
   };
-  img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(IMAGES[imgName] || '');
+  img.crossOrigin = 'anonymous';
+  img.src = RASTER_IMAGES[imgName] || ('data:image/svg+xml;charset=utf-8,' + encodeURIComponent(IMAGES[imgName] || ''));
 
   function draw() {
     const r = stage.getBoundingClientRect();

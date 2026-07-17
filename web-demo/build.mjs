@@ -22,14 +22,28 @@ const result = await build({
 });
 const core = result.outputFiles[0].text;
 
-// Image library: every assets/images/*.svg ships into the page. Replacing a
-// file in that folder and rebuilding swaps the image everywhere (see its README).
+// Image library: every assets/images/*.svg ships into the page as inline SVG
+// markup. Full-page colouring scenes (assets/images/scene-*.png) are owner-
+// supplied raster artwork - they ship as base64 data URIs in a separate map,
+// since they're not text/markup like the SVG icon set. Replacing either kind
+// of file in that folder and rebuilding swaps the image everywhere (README).
 const imagesDir = join(here, '../assets/images');
 const images = {};
+const rasterImages = {};
+const RASTER_MIME = { '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg' };
 for (const f of readdirSync(imagesDir)) {
-  if (f.endsWith('.svg')) images[f.replace(/\.svg$/, '')] = readFileSync(join(imagesDir, f), 'utf8');
+  if (f.endsWith('.svg')) {
+    images[f.replace(/\.svg$/, '')] = readFileSync(join(imagesDir, f), 'utf8');
+  } else {
+    const ext = /\.[a-z]+$/i.exec(f)?.[0]?.toLowerCase();
+    const mime = ext && RASTER_MIME[ext];
+    if (mime) {
+      const b64 = readFileSync(join(imagesDir, f)).toString('base64');
+      rasterImages[f.slice(0, -ext.length)] = `data:${mime};base64,${b64}`;
+    }
+  }
 }
-const imagesJs = `window.LG_IMAGES = ${JSON.stringify(images)};`;
+const imagesJs = `window.LG_IMAGES = ${JSON.stringify(images)};\nwindow.LG_RASTER_IMAGES = ${JSON.stringify(rasterImages)};`;
 
 const shell = readFileSync(join(here, 'demo-shell.html'), 'utf8');
 const coreMarker = '<script>/*__CORE_BUNDLE__*/</script>';
@@ -46,4 +60,4 @@ writeFileSync(
     .replace(coreMarker, () => '<script>\n' + core + '\n</script>')
     .replace(imgMarker, () => '<script>' + imagesJs + '</script>'),
 );
-console.log(`web-demo/index.html rebuilt: core + ${Object.keys(images).length} images`);
+console.log(`web-demo/index.html rebuilt: core + ${Object.keys(images).length} images + ${Object.keys(rasterImages).length} scene photos`);

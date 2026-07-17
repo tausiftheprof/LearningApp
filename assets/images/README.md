@@ -14,14 +14,34 @@ placed your own files, then run `node web-demo/build.mjs` for the demo / rebuild
 | `elephant.svg`, `monkey.svg`, `panda.svg`, `bear.svg`, `cat.svg`, `dog.svg`, `duck.svg`, `chick.svg` | jigsaws, matching, feeding game, stickers |
 | `star.svg`, `sun.svg`, `moon.svg` | rewards/stickers, sequences, patterns |
 | `rocket.svg`, `balloon.svg`, `car.svg`, `treehouse.svg` | jigsaws, mazes (goal), sequences |
+| `scene-*.png` | Colour section: full-page flood-fill scenes (solar system, rocket, unicorn, monkey, rabbit, whale) |
+
+## Full-page colouring scenes (`scene-*.png`)
+
+Unlike the icon set above, these are the owner's own commissioned/supplied artwork (July 2026),
+used as-is - plain photos (PNG/JPG both work), not vector. The in-app **flood-fill colouring
+engine** (`renderColouringLineArt` in `web-demo/demo-shell.html`) rasterises whichever picture is
+referenced, reads its dark ink as a wall, and fills whatever enclosed area a child taps - no
+per-shape authoring needed. To add or replace a scene:
+
+1. Drop a PNG/JPG here named `scene-<name>.png` - bold black outlines on a plain white (or
+   transparent) background, at least ~1200px on the short side, no colour needed (small colour
+   accents like a mascot are fine and stay untouched by flood fill).
+2. Add a `colouring` activity in `packages/core/src/content/starterPack.ts` with
+   `mode: 'line-art'` and `image: 'images/scene-<name>.png'` (`regions: []`).
+3. Run `node web-demo/build.mjs` (bundles the PNG as a base64 data URI - no separate generator
+   step, unlike the SVG icon set).
+
+The original, unedited files as supplied are also kept in `design-reference/colouring-pages/`
+for reference/reprinting - the copies in this folder are the ones the app actually loads.
 
 ## Licensing / provenance
 
-Every image in this folder was authored for this project from geometric primitives by the
-generator script (`assets/generate-images.mjs`). None is copied from, traced from, or derived
-from any third-party artwork, stock library, or another business's assets — there is nothing to
-license and nothing to attribute. If you replace them, ensure your replacements are equally
-original or properly licensed.
+Every icon `.svg` in this folder was authored for this project from geometric primitives by the
+generator script (`assets/generate-images.mjs`) - none is copied from, traced from, or derived
+from any third-party artwork, stock library, or another business's assets. The `scene-*.png`
+full-page colouring scenes are supplied directly by the product owner; if you replace either
+kind, ensure your replacements are equally original or properly licensed for this app.
 
 ## Guidelines for replacements
 

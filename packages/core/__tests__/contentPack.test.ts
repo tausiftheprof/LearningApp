@@ -23,17 +23,20 @@ describe('starter content pack', () => {
     }
   });
 
-  it('ships five owner-supplied line-art colouring scenes (July 2026)', () => {
-    const scenes = pack.activities.filter((a) => a.type === 'colouring' && a.mode === 'line-art');
+  it('ships six owner-supplied line-art colouring scenes (July 2026)', () => {
+    const scenes = pack.activities.filter(
+      (a): a is Extract<typeof a, { type: 'colouring' }> => a.type === 'colouring' && a.mode === 'line-art',
+    );
     expect(scenes.map((s) => s.id).sort()).toEqual([
       'colour-monkey-tree',
       'colour-rabbit-carrot',
       'colour-rocket-space',
       'colour-solar-system',
       'colour-unicorn-rainbow',
+      'colour-whale-waves',
     ]);
     for (const s of scenes) {
-      expect(s.image).toMatch(/^images\/scene-[a-z-]+\.svg$/);
+      expect(s.image).toMatch(/^images\/scene-[a-z-]+\.png$/);
       expect(s.regions).toEqual([]);
     }
   });
