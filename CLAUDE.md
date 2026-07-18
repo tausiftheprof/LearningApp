@@ -59,6 +59,13 @@ Because the mobile app and the web demo are two independent renderers of the sam
 `web-demo/demo-shell.html`, and the corresponding `apps/mobile/src/screens/child/players/*.tsx`
 (or a new one) wired into `ActivityPlayerScreen.tsx`.
 
+**Verifying UI changes**: the mobile app can't be driven here without an emulator, so the web
+demo is the practical way to exercise a feature end-to-end. `demo-shell.html` exposes a Playwright
+test seam — `window.__lgTest` (`{ navigate, getState, activateProfile }`) drives/reads any screen,
+and some players add their own live-state hook (e.g. `window.__lgMaze`). Drive `web-demo/index.html`
+(after rebuilding it) with headless Chromium via these hooks. Onboarding path in the demo:
+"Set up (for grown-ups)" → fill `#nick` → pick an age → "Next" → "Agree and start playing".
+
 ### Storage: repository interfaces are the seam
 
 `packages/core/src/storage/repositories.ts` defines `ProfileRepository`, `ProgressRepository`,
