@@ -417,7 +417,7 @@ const state = {
 const IMPLEMENTED_TEMPLATES = [
   'pop-bubbles', 'tap-target', 'match-pairs', 'memory-cards', 'counting', 'odd-one-out',
   'drag-sort', 'shadow-match', 'feed-animal', 'reveal-wipe', 'stack-blocks', 'path-maze',
-  'sequence', 'pattern-complete', 'letter-match',
+  'sequence', 'pattern-complete', 'letter-match', 'dot-to-dot',
 ];
 const playable = (a) => a.type !== 'game' || IMPLEMENTED_TEMPLATES.includes(a.template);
 
@@ -851,11 +851,37 @@ function renderTracingSections() {
   app.append(top, grid);
 }
 
+/** Draw chooser (owner direction, July 2026): 1. Blank canvas, 2. Guided
+ *  drawing, 3. Dot to dot. */
+function renderDrawSections() {
+  setStatus('Draw sections', ['content pack drawing']);
+  const top = el(`<div class="topbar"></div>`);
+  top.append(holdToHomeButton(() => navigate({ name: 'home' })), el(`<div class="hello">What shall we draw?</div>`));
+  const grid = el(`<div class="tile-grid home-grid"></div>`);
+  const sections = [
+    { key: 'draw-blank', label: 'Blank Canvas', sub: 'Draw anything you like', glyph: '🖍️' },
+    { key: 'draw-guided', label: 'Guided Drawing', sub: 'Follow the lines to draw a picture', glyph: '✏️' },
+    { key: 'draw-dotdot', label: 'Dot to Dot', sub: 'Join the numbers in order', glyph: '🔢' },
+  ];
+  sections.forEach((sct, i) => {
+    const tile = el(`<button class="big-tile" style="background:${tiles()[(i + 2) % tiles().length]}">
+      <span class="glyph-big" aria-hidden="true">${sct.glyph}</span>
+      <span class="tile-text"><span class="label">${sct.label}</span><span class="sublabel">${sct.sub}</span></span>
+    </button>`);
+    tile.onclick = () => { speak(sct.label); navigate({ name: 'picker', category: sct.key }); };
+    grid.append(tile);
+  });
+  app.append(top, grid);
+}
+
 function renderPicker(category) {
   setStatus('Activity Picker — ' + category, ['recommendation.recommendActivities']);
   // Tracing splits into three sections (owner direction): Letters, Numbers,
   // Shapes. The 'tracing' door shows the chooser; each section lists its own.
   if (category === 'tracing') { renderTracingSections(); return; }
+  // Draw splits into three sections too: Blank Canvas, Guided Drawing, Dot
+  // to Dot (owner direction, July 2026).
+  if (category === 'drawing') { renderDrawSections(); return; }
   const numericSort = (a, b) => a.id.localeCompare(b.id, undefined, { numeric: true });
   const tracingOf = (kind) =>
     state.catalogue
@@ -871,6 +897,9 @@ function renderPicker(category) {
   const ranked = category === 'tracing-letters' ? tracingOf('letters')
     : category === 'tracing-numbers' ? tracingOf('numbers')
     : category === 'tracing-shapes' ? tracingOf('shapes')
+    : category === 'draw-blank' ? state.catalogue.filter((a) => a.type === 'guided-drawing' && a.steps.length <= 1)
+    : category === 'draw-guided' ? state.catalogue.filter((a) => a.type === 'guided-drawing' && a.steps.length > 1)
+    : category === 'draw-dotdot' ? state.catalogue.filter((a) => a.type === 'game' && a.template === 'dot-to-dot')
     : category === 'mazes'
     ? state.catalogue
         .filter(playable)
@@ -896,6 +925,11 @@ function renderPicker(category) {
     back.onclick = () => navigate({ name: 'picker', category: 'tracing' });
     top.append(back);
   }
+  if (/^draw-/.test(category)) {
+    const back = el(`<button class="icon-btn" aria-label="Back">←</button>`);
+    back.onclick = () => navigate({ name: 'picker', category: 'drawing' });
+    top.append(back);
+  }
   top.append(el(`<div class="hello">Pick one!</div>`));
   const grid = el(`<div class="tile-grid picker-grid"></div>`);
   // Category order matches home tiles, so each category reuses its illustration.
@@ -906,10 +940,11 @@ function renderPicker(category) {
     // otherwise use the category illustration from the theme.
     let imgName = null;
     if (a.type === 'jigsaw') imgName = imageNameFromRef(a.image);
-    else if (/^sketch-/.test(a.id)) imgName = imageNameFromRef(a.steps?.[0]?.prompt || '');
+    else if (a.type === 'guided-drawing') imgName = imageNameFromRef(a.steps?.[0]?.prompt || '');
     else if (a.type === 'colouring' && a.mode === 'line-art') imgName = imageNameFromRef(a.image);
     else if (a.type === 'colouring') imgName = (/^colour-([a-z]+)/.exec(a.id) || [])[1] || null;
     else if (category === 'mazes') imgName = a.params?.mover || 'maze';
+    else if (category === 'draw-dotdot') imgName = imageNameFromRef(a.params?.image || '');
     const hasPicture = (n) => Boolean(n && (IMAGES[n] || RASTER_IMAGES[n]));
     if (!hasPicture(imgName)) imgName = th.tileImages?.[catIndex[a.category] ?? 0] ?? null;
     // Letter/number tracing tiles show just the big glyph pair, no icon or
@@ -959,6 +994,11 @@ function renderActivity(activity) {
   else if (activity.type === 'colouring') renderColouring(activity);
   else if (activity.type === 'jigsaw') renderPuzzle(activity);
   else if (activity.type === 'game') renderGame(activity);
+  // Guided-drawing activities with more than one step carry a real
+  // traceable outline (steps[i].overlay) - the pilot whale, for now
+  // (renderGuidedDrawing). Single-step entries are the older "faint
+  // reference image behind a blank canvas" activities (renderDrawing).
+  else if (activity.type === 'guided-drawing' && activity.steps.length > 1) renderGuidedDrawing(activity);
   else renderDrawing(activity);
 }
 
@@ -966,7 +1006,8 @@ function instructionFor(a) {
   if (a.type === 'tracing') return 'Follow the path with your finger, starting at the orange dot.';
   if (a.type === 'colouring') return a.mode === 'by-number' ? 'Match the numbers! Pick a colour, then tap its number.' : 'Pick a colour and tap a space to fill it in.';
   if (a.type === 'jigsaw') return 'Drag each piece to its home.';
-  if (a.type === 'game') return ({ 'pop-bubbles': 'Pop all the bubbles!', 'tap-target': 'Tap what I ask for!', 'match-pairs': 'Find the pairs!', 'memory-cards': 'Remember where the friends hide!', counting: 'Count the apples and tap the number.', 'odd-one-out': 'Which one is different?' })[a.template] || a.title;
+  if (a.type === 'game') return ({ 'pop-bubbles': 'Pop all the bubbles!', 'tap-target': 'Tap what I ask for!', 'match-pairs': 'Find the pairs!', 'memory-cards': 'Remember where the friends hide!', counting: 'Count the apples and tap the number.', 'odd-one-out': 'Which one is different?', 'dot-to-dot': 'Tap the numbers in order to reveal the picture!' })[a.template] || a.title;
+  if (a.type === 'guided-drawing' && a.steps.length > 1) return 'Follow the lines with your favourite colour to draw a picture!';
   return 'Draw anything you like! Tap save to keep it.';
 }
 
@@ -1132,6 +1173,218 @@ function renderTracing(firstActivity) {
   requestAnimationFrame(fit);
   new ResizeObserver(fit).observe(stage);
   speak(activity.title.replace('·', 'and little'));
+}
+
+/**
+ * Guided drawing (owner direction, July 2026): follow real guide lines to
+ * draw a picture with an actual crayon/brush, not a strict trace-and-pass
+ * test. Combines two existing engines: TracingSession (core.tracing) tracks
+ * how much of each guide stroke the child has covered so we know when to
+ * celebrate and move to the next part of the picture, and DrawingSession
+ * (core.drawing) holds the child's own ink so it can be saved to the
+ * gallery exactly like free drawing.
+ *
+ * Deliberately more forgiving than letter/shape tracing: ink is never
+ * rejected or clipped (whatever the child draws is kept, wobbles and all),
+ * and lifting the pen before a guide stroke is "done" does NOT reset that
+ * stroke's progress - a few short dabs add up, same as a real kid's crayon
+ * technique. Pilot content: the whale (starterPack.ts `draw-guided-whale`).
+ */
+function renderGuidedDrawing(activity) {
+  setStatus('Guided Drawing — ' + activity.title, ['tracing.TracingSession (guide)', 'drawing.DrawingSession (ink)']);
+  const config = {
+    ...LH.tracingConfigFor(state.profile?.difficulty ?? 1, {
+      accessibilityWiderCorridor: Boolean(state.profile?.accessibility.widerTracingCorridor),
+    }),
+    corridorWidth: (LH.tracingConfigFor(state.profile?.difficulty ?? 1).corridorWidth) * 1.4,
+    coverageToComplete: 0.55,
+  };
+  const guides = activity.steps.map((s) => s.overlay);
+  let guideIndex = 0;
+  let session = new LH.TracingSession(guides[0], config);
+  const guideScores = [];
+  const drawingSession = new LH.DrawingSession();
+  let brush = 'crayon', colour = LH.PALETTES.standard[0], size = 'medium', paletteName = 'standard';
+  let live = null, scale = 1, ox = 0, oy = 0, done = false, tracing = false, activePointer = null, penPressure = 1;
+
+  const refName = imageNameFromRef(activity.steps[0].prompt);
+  const stage = el(`<div class="play-stage"></div>`);
+  if (IMAGES[refName]) {
+    const ref = el(`<div style="position:absolute;inset:0;display:grid;place-items:center;pointer-events:none;filter:grayscale(1);opacity:0.12"></div>`);
+    ref.append(el(imgHtml(refName, 420)));
+    stage.append(ref);
+    const rk = ref.querySelector('.lg-img svg');
+    if (rk) { rk.style.width = '55%'; rk.style.height = '55%'; }
+  }
+  const canvas = el(`<canvas class="stage" aria-label="Guided drawing canvas"></canvas>`);
+  stage.append(canvas);
+  const bar = el(`<div class="toolbar" role="toolbar" aria-label="Drawing tools"></div>`);
+  const note = el(`<div class="encourage" role="status"></div>`);
+  app.append(stage, bar, note);
+  const ctx = canvas.getContext('2d');
+
+  const widths = { small: 4, medium: 9, large: 16 };
+  const brushes = { crayon: '🖍️', pencil: '✏️', marker: '🖊️', paint: '🖌️' };
+
+  function rebuildToolbar() {
+    bar.innerHTML = '';
+    for (const [kind, icon] of Object.entries(brushes)) {
+      const b = el(`<button class="tool ${brush === kind ? 'active' : ''}" aria-label="${kind} brush">${icon}</button>`);
+      b.onclick = () => { brush = kind; rebuildToolbar(); };
+      bar.append(b);
+    }
+    for (const s of ['small', 'medium', 'large']) {
+      const b = el(`<button class="tool ${size === s ? 'active' : ''}" aria-label="${s} size">${s === 'small' ? '•' : s === 'medium' ? '●' : '⬤'}</button>`);
+      b.onclick = () => { size = s; rebuildToolbar(); };
+      bar.append(b);
+    }
+    const pal = el(`<button class="tool" aria-label="Switch palette">${paletteName === 'standard' ? '🎀' : '🌈'}</button>`);
+    pal.onclick = () => { paletteName = paletteName === 'standard' ? 'pastel' : 'standard'; rebuildToolbar(); };
+    bar.append(pal);
+    for (const c of LH.PALETTES[paletteName]) {
+      const sw = el(`<button class="swatch ${colour === c ? 'active' : ''}" style="background:${c}" aria-label="Colour ${c}"></button>`);
+      sw.onclick = () => { colour = c; rebuildToolbar(); };
+      bar.append(sw);
+    }
+    const mk = (label, aria, fn) => { const b = el(`<button class="tool" aria-label="${aria}" style="font-size:15px;font-weight:800">${label}</button>`); b.onclick = fn; bar.append(b); };
+    mk('↶', 'Undo', () => { drawingSession.undo(); paint(); });
+    mk('🧹', 'Clear page', () => { drawingSession.clear(); paint(); });
+    mk('💾', 'Save to gallery', save);
+  }
+
+  function strokeStyleFor(stroke, i) {
+    if (stroke.brush.kind === 'rainbow') return LH.PALETTES.standard[i % LH.PALETTES.standard.length];
+    return stroke.brush.colour;
+  }
+  function drawInkStroke(stroke, i) {
+    const pts = stroke.points;
+    if (pts.length < 2) return;
+    ctx.beginPath();
+    pts.forEach((p, j) => (j ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y)));
+    ctx.lineCap = ctx.lineJoin = 'round';
+    ctx.strokeStyle = strokeStyleFor(stroke, i);
+    ctx.globalAlpha = stroke.brush.kind === 'pencil' ? 0.75 : 1;
+    ctx.lineWidth = widths[stroke.brush.size] * (stroke.brush.kind === 'marker' ? 1.6 : 1);
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+  }
+  function guidePath(path) {
+    ctx.beginPath();
+    path.forEach((p, i) => (i ? ctx.lineTo(p.x * scale + ox, p.y * scale + oy) : ctx.moveTo(p.x * scale + ox, p.y * scale + oy)));
+  }
+  function drawGuides() {
+    ctx.lineCap = ctx.lineJoin = 'round';
+    guides.forEach((path, i) => {
+      if (i === guideIndex && !done) {
+        guidePath(path);
+        ctx.strokeStyle = 'rgba(215, 204, 200, 0.55)';
+        ctx.lineWidth = config.corridorWidth * 2 * scale;
+        ctx.stroke();
+      }
+      guidePath(path);
+      if (i < guideIndex || done) { ctx.strokeStyle = '#81C784'; ctx.lineWidth = 5; }
+      else if (i === guideIndex) { ctx.strokeStyle = '#BCAAA4'; ctx.lineWidth = 4; }
+      else { ctx.strokeStyle = 'rgba(215, 204, 200, 0.5)'; ctx.lineWidth = 3; }
+      ctx.stroke();
+    });
+    if (!done) {
+      const start = guides[guideIndex][0];
+      ctx.beginPath(); ctx.arc(start.x * scale + ox, start.y * scale + oy, 12, 0, Math.PI * 2);
+      ctx.fillStyle = '#FF8A65'; ctx.fill();
+    }
+  }
+  function paint() {
+    const r = stage.getBoundingClientRect();
+    if (!r.width || !r.height || !canvas.width) return;
+    ctx.clearRect(0, 0, r.width, r.height);
+    drawGuides();
+    const strokes = drawingSession.visibleOps().filter((o) => o.kind === 'stroke').map((o) => o.stroke);
+    strokes.forEach((st, i) => drawInkStroke(st, i));
+    if (live && live.length > 1) drawInkStroke({ brush: { kind: brush, colour, size }, points: live }, strokes.length);
+  }
+  function fit() {
+    const r = stage.getBoundingClientRect();
+    canvas.width = r.width * devicePixelRatio; canvas.height = r.height * devicePixelRatio;
+    ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+    const side = Math.min(r.width, r.height);
+    scale = side / 1000;
+    ox = (r.width - side) / 2; oy = (r.height - side) / 2;
+    paint();
+  }
+
+  function guideDone(summary) {
+    guideScores.push(summary.accuracyScore);
+    if (guideIndex + 1 < guides.length) {
+      guideIndex++;
+      session = new LH.TracingSession(guides[guideIndex], config);
+      note.textContent = LH.pickFeedback('completed') + ' Now the next part!';
+      speak(note.textContent);
+      paint();
+      return;
+    }
+    done = true; paint();
+    celebrate();
+    note.textContent = LH.pickFeedback('completed') + ' Tap 💾 to save your picture!';
+    speak(note.textContent);
+  }
+
+  canvas.addEventListener('pointerdown', (e) => {
+    if (activePointer !== null) return; // palm rejection
+    activePointer = e.pointerId;
+    canvas.setPointerCapture(e.pointerId);
+    penPressure = e.pointerType === 'pen' && e.pressure > 0 ? e.pressure : 1;
+    tracing = true;
+    const p = pt(e);
+    live = [p];
+    if (!done) session.addPoint({ x: (p.x - ox) / scale, y: (p.y - oy) / scale });
+    paint();
+  });
+  canvas.addEventListener('pointermove', (e) => {
+    if (!tracing || e.pointerId !== activePointer) return;
+    if (e.pointerType === 'pen' && e.pressure > 0) penPressure = 0.5 + e.pressure;
+    const p = pt(e);
+    live.push(p);
+    if (!done) {
+      const result = session.addPoint({ x: (p.x - ox) / scale, y: (p.y - oy) / scale });
+      if (result.completed) {
+        tracing = false;
+        drawingSession.apply({ kind: 'stroke', stroke: { brush: { kind: brush, colour, size }, points: live } });
+        live = null;
+        guideDone(session.endAttempt());
+        return;
+      }
+    }
+    paint();
+  });
+  window.addEventListener('pointerup', (e) => {
+    if (e.pointerId !== activePointer) return;
+    activePointer = null;
+    if (!tracing) return;
+    tracing = false;
+    // Ink is always kept, even if the guide stroke isn't finished yet - this
+    // is a drawing tool with a helper, not a pass/fail trace. The guide's
+    // own coverage is deliberately NOT reset here (see file doc comment):
+    // a few short dabs across several pen-lifts still add up to "done".
+    if (live && live.length > 1) {
+      drawingSession.apply({ kind: 'stroke', stroke: { brush: { kind: brush, colour, size }, points: live } });
+    }
+    live = null; penPressure = 1; paint();
+  });
+  function pt(e) { const r = canvas.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; }
+
+  async function save() {
+    if (!state.profile) return;
+    await repos.artwork.save(drawingSession.toDocument('art-' + Date.now(), state.profile.id, Date.now()));
+    const avg = guideScores.length ? Math.round(guideScores.reduce((x, y) => x + y, 0) / guideScores.length) : null;
+    await completeActivity(activity, { attempts: 1, accuracyScore: avg });
+    stage.append(completionBanner(onDone));
+    persistSoon();
+  }
+
+  rebuildToolbar();
+  requestAnimationFrame(fit);
+  new ResizeObserver(fit).observe(stage);
+  speak(activity.title + '. Follow the lines to draw!');
 }
 
 /* ---------- drawing (core DrawingSession) ---------- */
@@ -2561,6 +2814,87 @@ function renderGame(activity) {
           makeDraggable(stage, it, () => zones, () => miss());
         }
       });
+    },
+
+    /**
+     * Dot to dot (owner direction, July 2026, Draw section pilot): tap the
+     * numbered dots in order to reveal an outline. `params.dots` is an
+     * ordered Point[] in the same 0..1000 design space as tracing/mazes;
+     * `params.image` is an optional very-faint reference shown behind the
+     * dots as a gentle hint.
+     */
+    'dot-to-dot': () => {
+      const dots = params.dots || [];
+      const refName = params.image ? imageNameFromRef(params.image) : null;
+      let scale = 1, ox = 0, oy = 0, nextIndex = 0, doneAll = false;
+
+      if (refName && IMAGES[refName]) {
+        const ref = el(`<div style="position:absolute;inset:0;display:grid;place-items:center;pointer-events:none;filter:grayscale(1);opacity:0.08"></div>`);
+        ref.append(el(imgHtml(refName, 420)));
+        stage.append(ref);
+        const rk = ref.querySelector('.lg-img svg');
+        if (rk) { rk.style.width = '55%'; rk.style.height = '55%'; }
+      }
+      const canvas = el(`<canvas class="stage" aria-label="Dot to dot: tap the numbers in order" style="touch-action:none"></canvas>`);
+      stage.append(canvas);
+      const ctx = canvas.getContext('2d');
+
+      function toScreen(p) { return { x: p.x * scale + ox, y: p.y * scale + oy }; }
+      function fit() {
+        const r = stage.getBoundingClientRect();
+        canvas.width = r.width * devicePixelRatio; canvas.height = r.height * devicePixelRatio;
+        ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+        const side = Math.min(r.width, r.height);
+        scale = side / 1000; ox = (r.width - side) / 2; oy = (r.height - side) / 2;
+        draw();
+      }
+      function draw() {
+        const r = stage.getBoundingClientRect();
+        ctx.clearRect(0, 0, r.width, r.height);
+        if (nextIndex > 0) {
+          ctx.beginPath();
+          dots.slice(0, nextIndex).forEach((p, i) => { const s = toScreen(p); i ? ctx.lineTo(s.x, s.y) : ctx.moveTo(s.x, s.y); });
+          ctx.strokeStyle = '#5C8FD6'; ctx.lineWidth = 6; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+          ctx.stroke();
+        }
+        dots.forEach((p, i) => {
+          const s = toScreen(p);
+          const isDone = i < nextIndex, isNext = i === nextIndex;
+          ctx.beginPath();
+          ctx.arc(s.x, s.y, isNext ? 20 : 14, 0, Math.PI * 2);
+          ctx.fillStyle = isDone ? '#81C784' : isNext ? '#FF8A65' : '#FFFFFF';
+          ctx.fill();
+          ctx.lineWidth = 2; ctx.strokeStyle = '#4A3B32'; ctx.stroke();
+          if (!isDone) {
+            ctx.fillStyle = isNext ? '#fff' : '#4A3B32';
+            ctx.font = (isNext ? 'bold 16px' : '13px') + ' sans-serif';
+            ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            ctx.fillText(String(i + 1), s.x, s.y + 1);
+          }
+        });
+      }
+      canvas.addEventListener('pointerdown', (e) => {
+        if (doneAll || !dots.length) return;
+        const r = canvas.getBoundingClientRect();
+        const x = e.clientX - r.left, y = e.clientY - r.top;
+        const tapRadius = 34;
+        const target = toScreen(dots[nextIndex]);
+        if (Math.hypot(x - target.x, y - target.y) <= tapRadius) {
+          nextIndex++;
+          if (nextIndex === 1) say('Find number ' + (nextIndex + 1) + ' next!');
+          if (nextIndex >= dots.length) {
+            doneAll = true; draw();
+            completeActivity(activity, { attempts });
+            stage.append(completionBanner(onDone));
+            return;
+          }
+          draw();
+        } else if (dots.some((p, i) => i !== nextIndex && Math.hypot(x - toScreen(p).x, y - toScreen(p).y) <= tapRadius)) {
+          miss();
+        }
+      });
+      requestAnimationFrame(fit);
+      new ResizeObserver(fit).observe(stage);
     },
 
     'path-maze': () => {

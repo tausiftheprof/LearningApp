@@ -118,6 +118,7 @@ export const gameTemplateIds = [
   'feed-animal',
   'reveal-wipe',
   'pattern-complete',
+  'dot-to-dot',
 ] as const;
 
 export const gameActivitySchema = activityBase.extend({

@@ -8,6 +8,7 @@ import { HoldToHomeButton, InstructionBar } from '../../ui/components';
 import { audioService } from '../../services/audio';
 import { getRepositories } from '../../storage/db';
 import { DrawingBoard } from './players/DrawingBoard';
+import { GuidedDrawingPlayer } from './players/GuidedDrawingPlayer';
 import { TracingPlayer } from './players/TracingPlayer';
 import { ColouringPlayer } from './players/ColouringPlayer';
 import { PuzzlePlayer } from './players/PuzzlePlayer';
@@ -96,7 +97,10 @@ export function ActivityPlayerScreen(props: { activity: Activity }): React.JSX.E
         </View>
       </View>
 
-      {activity.type === 'guided-drawing' && (
+      {activity.type === 'guided-drawing' && activity.steps.length > 1 && (
+        <GuidedDrawingPlayer activity={activity} theme={theme} onComplete={complete} onDone={goHome} />
+      )}
+      {activity.type === 'guided-drawing' && activity.steps.length <= 1 && (
         <DrawingBoard activity={activity} theme={theme} onComplete={complete} onDone={goHome} />
       )}
       {activity.type === 'tracing' && (

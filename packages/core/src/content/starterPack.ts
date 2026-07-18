@@ -395,71 +395,100 @@ const gameActivities: Activity[] = games.map((g) => ({
 
 /* ---------- Drawing board entry (free drawing is app-native; this catalogues it) ---------- */
 
+/**
+ * Simplified whale silhouette for the guided-drawing / dot-to-dot pilot
+ * (owner direction, July 2026): body, tail flukes, fin, spout and eye, each
+ * its own traceable stroke in the same 0..1000 design space as tracing
+ * shapes. Proportions echo the whale.svg icon (head/eye at left, tail at
+ * right). If the pilot lands well, the same technique extends to the other
+ * jigsaw/sketch subjects (dolphin, dinosaur, unicorn, ...) later.
+ */
+function whaleBody(): Point[] {
+  // A circle squished vertically into an oval, same technique as trace-oval.
+  return arc(480, 480, 320, -90, 270, 40).map((p) => ({ x: p.x, y: 480 + (p.y - 480) * 0.5625 }));
+}
+function whaleTail(): Point[] {
+  // Both ends meet the body at its rightmost point (800, 480) - a clean
+  // fluke "M" shape with no gap where it joins the body outline.
+  return [
+    ...line(800, 480, 945, 320, 6),
+    ...line(945, 320, 865, 480, 6),
+    ...line(865, 480, 945, 645, 6),
+    ...line(945, 645, 800, 480, 6),
+  ];
+}
+function whaleFin(): Point[] {
+  return arc(480, 650, 110, 20, 160, 14);
+}
+function whaleSpout(): Point[] {
+  return [...line(235, 175, 280, 340, 6), ...line(280, 340, 325, 185, 6)];
+}
+function whaleEye(): Point[] {
+  return arc(235, 430, 24, -90, 270, 16);
+}
+/** Five strokes, drawn in a natural order: body, tail, fin, spout, eye. */
+function whaleOutline(): Point[][] {
+  return [whaleBody(), whaleTail(), whaleFin(), whaleSpout(), whaleEye()];
+}
+/**
+ * Evenly re-spaces points along a path by arc length (not by index), so a
+ * short, tightly-interpolated segment like the tail flukes doesn't end up
+ * with a cluster of dots while a long smooth arc gets sparse ones.
+ */
+function resampleByArcLength(points: Point[], count: number): Point[] {
+  const dist = [0];
+  for (let i = 1; i < points.length; i++) {
+    dist.push(dist[i - 1]! + Math.hypot(points[i]!.x - points[i - 1]!.x, points[i]!.y - points[i - 1]!.y));
+  }
+  const total = dist[dist.length - 1]!;
+  const out: Point[] = [];
+  for (let k = 0; k < count; k++) {
+    const target = (total * k) / count;
+    let i = 1;
+    while (i < dist.length - 1 && dist[i]! < target) i++;
+    const segStart = dist[i - 1]!, segEnd = dist[i]!;
+    const t = segEnd > segStart ? (target - segStart) / (segEnd - segStart) : 0;
+    const a = points[i - 1]!, b = points[i]!;
+    out.push({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t });
+  }
+  return out;
+}
+/** Body + tail as one closed loop, evenly spaced to a friendly dot count for dot-to-dot. */
+function whaleDotSequence(): Point[] {
+  const body = whaleBody(); // 41 points; index 10 is the rightmost (tail-side) point
+  const loop = [...body.slice(0, 11), ...whaleTail(), ...body.slice(11)];
+  return resampleByArcLength(loop, 18);
+}
+
 const drawingActivities: Activity[] = [
   {
-    type: 'guided-drawing', id: 'sketch-dolphin', title: 'Dolphin', category: 'drawing',
-    ageBands: ['3-5', '5-7'], difficulty: 2, motorSkills: ['holding-moving', 'controlled-movement'],
-    estimatedMinutes: 4, theme: 'underwater', locale: 'en-AU', instructionAudio: audio('draw-sketch'),
-    steps: [{ prompt: 'images/dolphin.svg', overlay: [{ x: 0, y: 0 }, { x: 1000, y: 1000 }] }],
-  },
-  {
-    type: 'guided-drawing', id: 'sketch-dinosaur', title: 'Dinosaur', category: 'drawing',
-    ageBands: ['3-5', '5-7'], difficulty: 2, motorSkills: ['holding-moving', 'controlled-movement'],
-    estimatedMinutes: 4, theme: 'dinosaurs', locale: 'en-AU', instructionAudio: audio('draw-sketch'),
-    steps: [{ prompt: 'images/dinosaur.svg', overlay: [{ x: 0, y: 0 }, { x: 1000, y: 1000 }] }],
-  },
-  {
-    type: 'guided-drawing', id: 'sketch-unicorn', title: 'Unicorn', category: 'drawing',
-    ageBands: ['3-5', '5-7'], difficulty: 2, motorSkills: ['holding-moving', 'controlled-movement'],
-    estimatedMinutes: 4, theme: 'fairy-tales', locale: 'en-AU', instructionAudio: audio('draw-sketch'),
-    steps: [{ prompt: 'images/unicorn.svg', overlay: [{ x: 0, y: 0 }, { x: 1000, y: 1000 }] }],
-  },
-  {
-    type: 'guided-drawing', id: 'sketch-whale', title: 'Whale', category: 'drawing',
-    ageBands: ['3-5', '5-7'], difficulty: 2, motorSkills: ['holding-moving', 'controlled-movement'],
-    estimatedMinutes: 4, theme: 'underwater', locale: 'en-AU', instructionAudio: audio('draw-sketch'),
-    steps: [{ prompt: 'images/whale.svg', overlay: [{ x: 0, y: 0 }, { x: 1000, y: 1000 }] }],
-  },
-  {
-    type: 'guided-drawing', id: 'sketch-cat', title: 'Cat', category: 'drawing',
-    ageBands: ['3-5', '5-7'], difficulty: 2, motorSkills: ['holding-moving', 'controlled-movement'],
-    estimatedMinutes: 4, theme: 'animals', locale: 'en-AU', instructionAudio: audio('draw-sketch'),
-    steps: [{ prompt: 'images/cat.svg', overlay: [{ x: 0, y: 0 }, { x: 1000, y: 1000 }] }],
-  },
-  {
-    type: 'guided-drawing', id: 'sketch-rocket', title: 'Rocket', category: 'drawing',
-    ageBands: ['3-5', '5-7'], difficulty: 2, motorSkills: ['holding-moving', 'controlled-movement'],
-    estimatedMinutes: 4, theme: 'space', locale: 'en-AU', instructionAudio: audio('draw-sketch'),
-    steps: [{ prompt: 'images/rocket.svg', overlay: [{ x: 0, y: 0 }, { x: 1000, y: 1000 }] }],
-  },
-  {
-    type: 'guided-drawing', id: 'sketch-car', title: 'Car', category: 'drawing',
-    ageBands: ['3-5', '5-7'], difficulty: 2, motorSkills: ['holding-moving', 'controlled-movement'],
-    estimatedMinutes: 4, theme: 'vehicles', locale: 'en-AU', instructionAudio: audio('draw-sketch'),
-    steps: [{ prompt: 'images/car.svg', overlay: [{ x: 0, y: 0 }, { x: 1000, y: 1000 }] }],
-  },
-  {
-    type: 'guided-drawing', id: 'sketch-treehouse', title: 'Treehouse', category: 'drawing',
-    ageBands: ['3-5', '5-7'], difficulty: 2, motorSkills: ['holding-moving', 'controlled-movement'],
-    estimatedMinutes: 4, theme: 'nature', locale: 'en-AU', instructionAudio: audio('draw-sketch'),
-    steps: [{ prompt: 'images/treehouse.svg', overlay: [{ x: 0, y: 0 }, { x: 1000, y: 1000 }] }],
-  },
-  {
-    type: 'guided-drawing', id: 'draw-free-board', title: 'Free drawing', category: 'drawing',
+    type: 'guided-drawing', id: 'draw-free-board', title: 'Blank canvas', category: 'drawing',
     ageBands: ['2-3', '3-5', '5-7'], difficulty: 1,
     motorSkills: ['holding-moving', 'controlled-movement', 'swiping'],
     estimatedMinutes: 5, theme: 'creative', locale: 'en-AU', instructionAudio: audio('draw-free'),
     steps: [{ prompt: 'images/blank.png', overlay: [{ x: 0, y: 0 }, { x: 1000, y: 1000 }] }],
   },
+  // Guided drawing pilot (owner direction, July 2026): a real traceable
+  // outline, not just a faint reference image - each step is one stroke the
+  // child follows with their own chosen brush/colour (web-demo's
+  // renderGuidedDrawing; mobile GuidedDrawingPlayer). More subjects land
+  // once this is validated.
   {
-    type: 'guided-drawing', id: 'draw-a-face', title: 'Draw a face', category: 'drawing',
-    ageBands: ['3-5', '5-7'], difficulty: 2, motorSkills: ['holding-moving', 'controlled-movement'],
-    estimatedMinutes: 4, theme: 'people', locale: 'en-AU', instructionAudio: audio('draw-face'),
-    steps: [
-      { prompt: 'images/face-step1.png', overlay: arc(500, 500, 320, -90, 270) },
-      { prompt: 'images/face-step2.png', overlay: [{ x: 380, y: 420 }, { x: 420, y: 420 }] },
-      { prompt: 'images/face-step3.png', overlay: arc(500, 620, 120, 20, 160) },
-    ],
+    type: 'guided-drawing', id: 'draw-guided-whale', title: 'Whale', category: 'drawing',
+    ageBands: ['3-5', '5-7'], difficulty: 2, motorSkills: ['holding-moving', 'controlled-movement', 'tracing'],
+    estimatedMinutes: 4, theme: 'underwater', locale: 'en-AU', instructionAudio: audio('draw-guided'),
+    steps: whaleOutline().map((overlay) => ({ prompt: 'images/whale.svg', overlay })),
+  },
+];
+
+/** Dot-to-dot pilot (owner direction, July 2026): tap the numbered dots in
+ *  order to reveal the outline, same subject as the guided-drawing pilot. */
+const dotToDotActivities: Activity[] = [
+  {
+    type: 'game', id: 'draw-dotdot-whale', title: 'Whale', category: 'drawing',
+    ageBands: ['3-5', '5-7'], difficulty: 2, motorSkills: ['tapping', 'controlled-movement'],
+    estimatedMinutes: 3, theme: 'underwater', locale: 'en-AU', instructionAudio: audio('dot-to-dot'),
+    template: 'dot-to-dot', params: { image: 'images/whale.svg', dots: whaleDotSequence() },
   },
 ];
 
@@ -473,6 +502,7 @@ export function buildStarterPack(): ContentPack {
     entitlement: 'free' as const,
     activities: [
       ...drawingActivities,
+      ...dotToDotActivities,
       ...tracingActivities,
       ...colouringActivities,
       ...puzzleActivities,
