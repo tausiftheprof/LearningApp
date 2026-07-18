@@ -346,26 +346,6 @@
   }
   #app.reduced-motion .confetti { animation: none; opacity: 0; }
 
-  /* maze activity */
-  .maze-controls { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 2px 14px 0; }
-  .maze-progress { font-weight: 800; font-size: clamp(14px, 2vw, 18px); margin-right: auto; }
-  .maze-controls .icon-btn { width: auto; min-width: var(--target, 60px); padding: 0 14px; gap: 6px; font-size: 16px; font-weight: 800; }
-  .maze-mover { position: absolute; pointer-events: none; z-index: 6; transition: none;
-    filter: drop-shadow(0 3px 4px rgba(60,46,36,0.35)); -webkit-user-drag: none; user-select: none; }
-  .maze-goal { position: absolute; pointer-events: none; z-index: 4; }
-  .maze-goal .ring { position: absolute; inset: -10px; border-radius: 50%;
-    border: 4px dashed rgba(255,138,101,0.9); animation: goalPulse 1.6s ease-in-out infinite; }
-  @keyframes goalPulse { 0%,100% { transform: scale(1); opacity: 0.85; } 50% { transform: scale(1.12); opacity: 1; } }
-  .maze-startcard { position: absolute; left: 50%; top: 12px; transform: translateX(-50%);
-    background: rgba(255,255,255,0.94); color: #4A3B32; border-radius: 20px; padding: 12px 18px;
-    font-weight: 800; font-size: clamp(15px, 2.2vw, 19px); text-align: center; z-index: 8;
-    box-shadow: 0 6px 16px rgba(69,61,91,0.18); max-width: 86%; pointer-events: none; }
-  .maze-hand { position: absolute; font-size: 44px; z-index: 7; pointer-events: none;
-    animation: handGlide 1.8s ease-in-out infinite; }
-  @keyframes handGlide { 0% { transform: translate(0,0) rotate(-8deg); } 50% { transform: translate(34px,26px) rotate(4deg); } 100% { transform: translate(0,0) rotate(-8deg); } }
-  #app.reduced-motion .maze-hand, #app.reduced-motion .maze-goal .ring { animation: none; }
-  @media (prefers-reduced-motion: reduce) { .maze-hand, .maze-goal .ring { animation: none; } }
-
   .sticker-grid { display: flex; flex-wrap: wrap; gap: 10px; padding: 4px 0; }
   .sticker { width: 76px; height: 76px; border-radius: 20px; background: #fff; display: grid; place-items: center; font-size: 40px; }
   .footsteps { display: flex; justify-content: center; gap: 10px; font-size: 34px; padding: 12px; }
@@ -439,7 +419,7 @@ const state = {
 // Full product scope: every template defined by the content schema is playable.
 const IMPLEMENTED_TEMPLATES = [
   'pop-bubbles', 'tap-target', 'match-pairs', 'memory-cards', 'counting', 'odd-one-out',
-  'drag-sort', 'shadow-match', 'feed-animal', 'reveal-wipe', 'stack-blocks', 'path-maze',
+  'drag-sort', 'shadow-match', 'feed-animal', 'reveal-wipe', 'stack-blocks',
   'sequence', 'pattern-complete', 'letter-match', 'dot-to-dot',
 ];
 const playable = (a) => a.type !== 'game' || IMPLEMENTED_TEMPLATES.includes(a.template);
@@ -803,7 +783,6 @@ function renderHome() {
   // own coloured card + decoration, so it replaces the background + medallion.
   LH.homeTilesForAge(ageBand).forEach((t, i) => {
     const isDaily = t.target.special === 'daily';
-    const isMaze = t.target.special === 'maze';
     const category = homeTileCategory(t);
     const photoName = candy ? (isDaily ? 'tile-daily' : CANDY_TILE_PHOTOS[category]) : null;
     const usePhoto = photoName && RASTER_IMAGES[photoName];
@@ -822,7 +801,6 @@ function renderHome() {
       speak(t.label);
       if (!guardScreenTime()) return;
       if (isDaily) navigate({ name: 'daily' });
-      else if (isMaze) navigate({ name: 'picker', category: 'mazes' });
       else navigate({ name: 'picker', category });
     };
     grid.append(tile);
@@ -908,21 +886,12 @@ function renderPicker(category) {
         : kind === 'numbers' ? /^trace-number-/.test(a.id)
         : !/^trace-(letter|number)-/.test(a.id))
       .sort(numericSort);
-  // "Mazes" is its own door (owner direction): every path-maze in the pack,
-  // easy ones for little kids and harder ones for bigger kids, gated by the
-  // profile's age band.
   const ranked = category === 'tracing-letters' ? tracingOf('letters')
     : category === 'tracing-numbers' ? tracingOf('numbers')
     : category === 'tracing-shapes' ? tracingOf('shapes')
     : category === 'draw-blank' ? state.catalogue.filter((a) => a.type === 'guided-drawing' && a.steps.length <= 1)
     : category === 'draw-guided' ? state.catalogue.filter((a) => a.type === 'guided-drawing' && a.steps.length > 1)
     : category === 'draw-dotdot' ? state.catalogue.filter((a) => a.type === 'game' && a.template === 'dot-to-dot')
-    : category === 'mazes'
-    ? state.catalogue
-        .filter(playable)
-        .filter((a) => a.type === 'game' && a.template === 'path-maze')
-        .filter((a) => a.ageBands.includes(state.profile?.ageBand ?? '3-5'))
-        .sort((a, b) => a.difficulty - b.difficulty)
     : LH.recommendActivities(
         state.catalogue.filter(playable).filter((a) => a.category === category),
         {
@@ -960,7 +929,6 @@ function renderPicker(category) {
     else if (a.type === 'guided-drawing') imgName = imageNameFromRef(a.steps?.[0]?.prompt || '');
     else if (a.type === 'colouring' && a.mode === 'line-art') imgName = imageNameFromRef(a.image);
     else if (a.type === 'colouring') imgName = (/^colour-([a-z]+)/.exec(a.id) || [])[1] || null;
-    else if (category === 'mazes') imgName = a.params?.mover || 'maze';
     else if (category === 'draw-dotdot') imgName = imageNameFromRef(a.params?.image || '');
     const hasPicture = (n) => Boolean(n && (IMAGES[n] || RASTER_IMAGES[n]));
     if (!hasPicture(imgName)) imgName = th.tileImages?.[catIndex[a.category] ?? 0] ?? null;
@@ -1023,7 +991,7 @@ function instructionFor(a) {
   if (a.type === 'tracing') return 'Follow the path with your finger, starting at the orange dot.';
   if (a.type === 'colouring') return a.mode === 'by-number' ? 'Match the numbers! Pick a colour, then tap its number.' : 'Pick a colour and tap a space to fill it in.';
   if (a.type === 'jigsaw') return 'Drag each piece to its home.';
-  if (a.type === 'game') return ({ 'pop-bubbles': 'Pop all the bubbles!', 'tap-target': 'Tap what I ask for!', 'match-pairs': 'Find the pairs!', 'memory-cards': 'Remember where the friends hide!', counting: 'Count the apples and tap the number.', 'odd-one-out': 'Which one is different?', 'dot-to-dot': 'Tap the numbers in order to reveal the picture!', 'path-maze': 'Hold and glide the character to the finish!' })[a.template] || a.title;
+  if (a.type === 'game') return ({ 'pop-bubbles': 'Pop all the bubbles!', 'tap-target': 'Tap what I ask for!', 'match-pairs': 'Find the pairs!', 'memory-cards': 'Remember where the friends hide!', counting: 'Count the apples and tap the number.', 'odd-one-out': 'Which one is different?', 'dot-to-dot': 'Tap the numbers in order to reveal the picture!' })[a.template] || a.title;
   if (a.type === 'guided-drawing' && a.steps.length > 1) return 'Follow the lines with your favourite colour to draw a picture!';
   return 'Draw anything you like! Tap save to keep it.';
 }
@@ -2314,332 +2282,6 @@ function renderGame(activity) {
   const say = (m) => { note.textContent = m; speak(m); };
   const miss = (moment = 'try-again') => { attempts++; say(LH.pickFeedback(moment)); };
 
-  /**
-   * Real-photo maze (owner artwork). FREE-DRAG with real collision:
-   *
-   * 1. Rasterise the printed maze once (dark ink = wall) into a wall mask,
-   *    with everything outside the hand-marked bbox forced to wall so the
-   *    character can only roam inside the maze picture itself.
-   * 2. Build a core MazeCollisionMap (clearance field) and auto-fit the
-   *    largest character disc that can still reach the finish - no per-maze
-   *    corridor tuning needed for new artwork.
-   * 3. The child grabs the character and glides it: movement is resolved by
-   *    the core engine (LH.slideMove) entirely in MASK SPACE, so it stops at
-   *    walls, slides along them, cannot tunnel through on a fast flick, and
-   *    stays pixel-accurate at any size or after a resize.
-   *
-   * There is NO auto-movement, pathfinding-to-goal or momentum: the character
-   * only moves while the child is actively dragging it, and stops the instant
-   * they let go. The hint merely highlights part of the route; it never moves
-   * the character.
-   */
-  function renderPhotoMaze() {
-    const imgName = imageNameFromRef(params.image);
-    const src = RASTER_IMAGES[imgName];
-    const mover = params.mover || 'fish';
-    const goal = params.goal || 'star';
-    const bbox = params.bbox || [0, 0, 1, 1];
-    const startFrac = params.start || [0.1, 0.5];
-    const finishFrac = params.finish || [0.9, 0.5];
-    const successMessage = params.successMessage || 'You found the way!';
-
-    // Ordered maze list for this profile (for "Maze N of M" and Next Maze) -
-    // same selection the Mazes door uses.
-    const siblings = state.catalogue
-      .filter(playable)
-      .filter((a) => a.type === 'game' && a.template === 'path-maze')
-      .filter((a) => a.ageBands.includes(state.profile?.ageBand ?? '3-5'))
-      .sort((a, b) => a.difficulty - b.difficulty);
-    let myIndex = siblings.findIndex((a) => a.id === activity.id);
-    const total = myIndex >= 0 ? siblings.length : 0;
-
-    // --- controls bar (above the maze so nothing covers the playable path) ---
-    const controls = el(`<div class="maze-controls"></div>`);
-    const progressEl = el(`<span class="maze-progress" role="status">${total ? `Maze ${myIndex + 1} of ${total}` : ''}</span>`);
-    const hintBtn = el(`<button class="icon-btn" aria-label="Show a hint">💡 Hint</button>`);
-    const resetBtn = el(`<button class="icon-btn" aria-label="Start this maze again">🔄 Reset</button>`);
-    let soundOn = state.profile?.sound.voice !== false;
-    const soundBtn = el(`<button class="icon-btn" aria-label="Turn sound ${soundOn ? 'off' : 'on'}">${soundOn ? '🔊' : '🔇'}</button>`);
-    controls.append(progressEl, hintBtn, resetBtn, soundBtn);
-    app.insertBefore(controls, stage);
-
-    const canvas = el(`<canvas class="stage" aria-label="${activity.title}: hold and glide the character to the finish" style="touch-action:none"></canvas>`);
-    const overlay = el(`<canvas class="stage" style="pointer-events:none"></canvas>`);
-    const moverEl = el(`<div class="maze-mover" role="img" aria-label="Your character - hold and glide it"></div>`);
-    moverEl.setAttribute('draggable', 'false');
-    const goalEl = el(`<div class="maze-goal" role="img" aria-label="The finish"><span class="ring"></span></div>`);
-    stage.append(canvas, overlay, moverEl, goalEl);
-    const ctx = canvas.getContext('2d');
-    const octx = overlay.getContext('2d');
-
-    let ready = false, doneMaze = false, tracking = false, activePointer = null;
-    let W = 0, H = 0, map = null, plan = null, radius = 8, collideR = 7, finishRadius = 16;
-    let charPos = { x: 0, y: 0 }, desired = null;
-    let scale = 1, ox = 0, oy = 0, spriteScreen = 48, goalScreen = 60;
-    let trailPts = [], hintUntil = 0;
-
-    const mazeSay = (m) => { note.textContent = m; if (soundOn) speak(m); };
-
-    const img = new Image();
-    img.onerror = () => {
-      // Graceful asset failure: never a blank broken screen.
-      note.textContent = 'Oops - this maze picture could not load. Try another maze! 🧩';
-      controls.remove();
-    };
-    img.onload = () => {
-      // Dense big-kid pencil mazes have very thin corridors; rasterise them at
-      // a higher resolution so each corridor is several mask-pixels wide and
-      // the character disc has room to manoeuvre. Wide little-kid mazes stay
-      // light-weight at the lower resolution.
-      const MAXW = (activity.difficulty || 1) >= 3 ? 900 : 480;
-      const ratio = img.naturalWidth > MAXW ? MAXW / img.naturalWidth : 1;
-      W = Math.max(1, Math.round(img.naturalWidth * ratio));
-      H = Math.max(1, Math.round(img.naturalHeight * ratio));
-      const off = document.createElement('canvas');
-      off.width = W; off.height = H;
-      const octx2 = off.getContext('2d');
-      // Nearest-neighbour, not the browser's default smoothing: blending
-      // pixels here can blur a thin printed wall thin enough to vanish,
-      // opening a gap that isn't really there in the photo.
-      octx2.imageSmoothingEnabled = false;
-      octx2.drawImage(img, 0, 0, W, H);
-      const data = octx2.getImageData(0, 0, W, H).data;
-      const bx0 = bbox[0] * W, by0 = bbox[1] * H, bx1 = bbox[2] * W, by1 = bbox[3] * H;
-      const walls = new Uint8Array(W * H);
-      for (let y = 0; y < H; y++) {
-        for (let x = 0; x < W; x++) {
-          const i = y * W + x;
-          // Outside the maze bbox is treated as wall, so the character is
-          // penned inside the printed maze (and stray title/mascot ink around
-          // the edges can never be wandered into).
-          if (x < bx0 || x > bx1 || y < by0 || y > by1) { walls[i] = 1; continue; }
-          const o = i * 4;
-          const whiteness = (data[o] + data[o + 1] + data[o + 2]) / 3;
-          walls[i] = whiteness < 170 ? 1 : 0;
-        }
-      }
-      // Clean the rasterised mask so the route is found reliably:
-      //  1. erode the walls 2px to reopen hair-thin pinches (anti-aliasing
-      //     artefacts that would otherwise split the corridor network);
-      //  2. keep only the largest open region (the maze's own corridors),
-      //     dropping decorative scenery so start/finish snap onto the maze.
-      const cleaned = LH.isolateLargestRegion(LH.erodeWalls(walls, W, H, 2), W, H);
-      map = LH.buildCollisionMap(cleaned, W, H);
-      // Auto-fit the character disc + route. Bigger, friendlier disc for the
-      // easy (little-kid) mazes; a touch smaller where corridors are tight.
-      const maxRadius = Math.round(Math.min(W, H) * ((activity.difficulty || 1) <= 1 ? 0.055 : 0.042));
-      plan = LH.planRoute(map, { x: startFrac[0], y: startFrac[1] }, { x: finishFrac[0], y: finishFrac[1] }, { maxRadius });
-      radius = plan.radius;
-      // Collision radius is a touch smaller than the route-planning radius, so
-      // the character never wedges on its own route and can slide/hug walls
-      // through the tightest corridors (on dense mazes this becomes a
-      // near-point token that simply cannot cross a printed line).
-      collideR = Math.max(0.5, radius - 1);
-      finishRadius = radius * 1.9;
-      charPos = { x: plan.start.x, y: plan.start.y };
-      ready = true;
-      fit();
-      showStartCard(); // first-time "hold and glide" prompt + hand demo
-      requestAnimationFrame(frame);
-    };
-    img.src = src || '';
-
-    // --- coordinate scaling: mask space (original maze px) <-> screen px ---
-    // A single square-fit transform keeps collision aligned at any size.
-    function maskToScreen(p) { return { x: p.x * scale + ox, y: p.y * scale + oy }; }
-    function fit() {
-      if (!ready) return;
-      const r = stage.getBoundingClientRect();
-      canvas.width = overlay.width = r.width * devicePixelRatio;
-      canvas.height = overlay.height = r.height * devicePixelRatio;
-      ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
-      octx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
-      scale = Math.min(r.width / W, r.height / H);
-      const displayW = W * scale, displayH = H * scale;
-      ox = (r.width - displayW) / 2; oy = (r.height - displayH) / 2;
-      // Size the character to the fitted collision disc (with a floor so it
-      // stays easy to see and grab). Wide mazes get a big friendly character;
-      // dense mazes get a smaller token that still tracks its corridor.
-      // Size the character to the fitted collision disc, with a floor so it
-      // stays easy to see and grab. Wide mazes get a big friendly character;
-      // dense pencil mazes get a smaller token that still tracks its corridor.
-      spriteScreen = Math.max(26, Math.min(120, radius * scale * 2.6));
-      goalScreen = Math.max(40, Math.min(110, finishRadius * scale * 1.8));
-      moverEl.style.width = moverEl.style.height = spriteScreen + 'px';
-      moverEl.innerHTML = itemHtml(mover, Math.round(spriteScreen));
-      const gsvg = moverEl.querySelector('svg,img'); if (gsvg) { gsvg.style.width = '100%'; gsvg.style.height = '100%'; }
-      goalEl.style.width = goalEl.style.height = goalScreen + 'px';
-      goalEl.querySelectorAll(':scope > :not(.ring)').forEach((n) => n.remove());
-      const gi = el(`<div style="position:absolute;inset:0">${itemHtml(goal, Math.round(goalScreen))}</div>`);
-      const gi2 = gi.querySelector('svg,img'); if (gi2) { gi2.style.width = '100%'; gi2.style.height = '100%'; }
-      goalEl.append(gi);
-      const g = maskToScreen(plan.finish);
-      goalEl.style.left = (g.x - goalScreen / 2) + 'px'; goalEl.style.top = (g.y - goalScreen / 2) + 'px';
-      ctx.clearRect(0, 0, r.width, r.height);
-      ctx.drawImage(img, ox, oy, displayW, displayH);
-      positionSprite();
-      // Reposition the hand demo (if still showing) beside the character.
-      const hand = stage.querySelector('.maze-hand');
-      if (hand) { const c = maskToScreen(charPos); hand.style.left = (c.x + spriteScreen * 0.3) + 'px'; hand.style.top = (c.y - spriteScreen * 0.1) + 'px'; }
-    }
-
-    function positionSprite() {
-      const c = maskToScreen(charPos);
-      moverEl.style.left = (c.x - spriteScreen / 2) + 'px';
-      moverEl.style.top = (c.y - spriteScreen / 2) + 'px';
-    }
-
-    // --- render loop (requestAnimationFrame) --------------------------------
-    // Self-terminating: when the child navigates away the stage detaches and
-    // the loop simply stops (no lingering listeners or memory).
-    function frame() {
-      if (!stage.isConnected) return;
-      if (ready && tracking && desired && !doneMaze) {
-        const res = LH.slideMove(map, charPos, desired, collideR);
-        charPos = res.position;
-        trailPts.push({ x: charPos.x, y: charPos.y });
-        if (trailPts.length > 1500) trailPts.shift();
-        positionSprite();
-        if (LH.reachedFinish(charPos, plan.finish, collideR, finishRadius)) win();
-      }
-      drawOverlay();
-      requestAnimationFrame(frame);
-    }
-
-    function drawOverlay() {
-      const r = stage.getBoundingClientRect();
-      octx.clearRect(0, 0, r.width, r.height);
-      // Breadcrumb trail: gentle visual feedback of where the child has been.
-      if (trailPts.length > 1) {
-        octx.save();
-        octx.lineCap = octx.lineJoin = 'round';
-        octx.strokeStyle = 'rgba(87,199,227,0.5)'; octx.lineWidth = Math.max(6, radius * scale * 0.8);
-        octx.beginPath();
-        trailPts.forEach((p, i) => { const s = maskToScreen(p); i ? octx.lineTo(s.x, s.y) : octx.moveTo(s.x, s.y); });
-        octx.stroke();
-        octx.restore();
-      }
-      // Hint: briefly highlight the FIRST part of the route (never the whole
-      // solution, and it never moves the character).
-      const now = performance.now();
-      if (now < hintUntil && plan.hintPath.length > 1) {
-        const alpha = Math.min(1, (hintUntil - now) / 500) * 0.9;
-        const portion = plan.hintPath.slice(0, Math.max(2, Math.ceil(plan.hintPath.length * 0.45)));
-        octx.save();
-        octx.lineCap = octx.lineJoin = 'round';
-        octx.setLineDash([2, 10]); octx.lineWidth = Math.max(7, radius * scale);
-        octx.strokeStyle = `rgba(255,193,7,${alpha})`;
-        octx.beginPath();
-        portion.forEach((p, i) => { const s = maskToScreen(p); i ? octx.lineTo(s.x, s.y) : octx.moveTo(s.x, s.y); });
-        octx.stroke();
-        octx.restore();
-      }
-    }
-
-    // --- the "hold and glide" instruction + one-time hand demo --------------
-    function showStartCard() {
-      if (stage.querySelector('.maze-startcard')) return;
-      const card = el(`<div class="maze-startcard">Hold and glide the character to the finish 👆</div>`);
-      const hand = el(`<div class="maze-hand" aria-hidden="true">👆</div>`);
-      const c = maskToScreen(charPos);
-      hand.style.left = (c.x + spriteScreen * 0.3) + 'px'; hand.style.top = (c.y - spriteScreen * 0.1) + 'px';
-      stage.append(card, hand);
-    }
-    function dismissStartCard() {
-      stage.querySelectorAll('.maze-startcard, .maze-hand').forEach((n) => n.remove());
-    }
-
-    // --- pointer input: character is only grabbable by touching it ----------
-    function pointerScreen(e) { const r = canvas.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top, type: e.pointerType }; }
-    function updateDesired(p) {
-      // On touch, lift the target slightly so the character rides just above
-      // the fingertip and stays visible; on mouse there is no occlusion.
-      const lift = p.type === 'touch' ? spriteScreen * 0.55 : 0;
-      desired = { x: (p.x - ox) / scale, y: (p.y - oy - lift) / scale };
-    }
-    canvas.addEventListener('pointerdown', (e) => {
-      if (!ready || doneMaze) return;
-      const p = pointerScreen(e);
-      const c = maskToScreen(charPos);
-      const grab = Math.max(spriteScreen, 52) * 0.85;
-      if (Math.hypot(p.x - c.x, p.y - c.y) > grab) return; // must touch the character
-      e.preventDefault();
-      tracking = true; activePointer = e.pointerId;
-      try { canvas.setPointerCapture(e.pointerId); } catch (_) { /* ignore */ }
-      dismissStartCard();
-      updateDesired(p);
-    });
-    canvas.addEventListener('pointermove', (e) => {
-      if (!tracking || e.pointerId !== activePointer) return;
-      e.preventDefault();
-      updateDesired(pointerScreen(e));
-    });
-    const release = (e) => {
-      if (e.pointerId !== activePointer) return;
-      tracking = false; desired = null; activePointer = null; // stop instantly on release
-    };
-    canvas.addEventListener('pointerup', release);
-    canvas.addEventListener('pointercancel', release);
-
-    // --- win / reset / hint -------------------------------------------------
-    function win() {
-      if (doneMaze) return;
-      doneMaze = true; tracking = false; desired = null; // lock movement
-      completeActivity(activity, { attempts }); // records progress + rewards + celebrate
-      note.textContent = successMessage;
-      stage.append(mazeWinBanner());
-    }
-    function mazeWinBanner() {
-      const hasNext = myIndex >= 0 && myIndex < siblings.length - 1;
-      const b = el(`<div class="banner" role="status">
-        <div class="big">🎉 ${successMessage}</div>
-        <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center">
-          <button data-a="again">🔁 Play Again</button>
-          ${hasNext ? '<button data-a="next">➡️ Next Maze</button>' : '<button data-a="mazes">🧩 More Mazes</button>'}
-          <button data-a="home">🏠 Home</button>
-        </div></div>`);
-      b.querySelector('[data-a="again"]').onclick = () => { attempts++; resetMaze(); };
-      b.querySelector('[data-a="home"]').onclick = onDone;
-      const nextBtn = b.querySelector('[data-a="next"]');
-      if (nextBtn) nextBtn.onclick = () => { const nx = siblings[myIndex + 1]; if (guardScreenTime()) navigate({ name: 'activity', activity: nx, from: 'picker', pickerCategory: 'mazes' }); };
-      const mazesBtn = b.querySelector('[data-a="mazes"]');
-      if (mazesBtn) mazesBtn.onclick = () => navigate({ name: 'picker', category: 'mazes' });
-      return b;
-    }
-    function resetMaze() {
-      stage.querySelectorAll('.banner').forEach((n) => n.remove());
-      charPos = { x: plan.start.x, y: plan.start.y };
-      trailPts = []; doneMaze = false; tracking = false; desired = null;
-      startActivityClock();
-      positionSprite();
-      mazeSay('Let’s try again!');
-      showStartCard();
-    }
-    resetBtn.onclick = () => { attempts++; resetMaze(); };
-    hintBtn.onclick = () => { if (ready && !doneMaze) { hintUntil = performance.now() + 1600; mazeSay('Follow the sparkly path!'); } };
-    soundBtn.onclick = () => {
-      soundOn = !soundOn;
-      soundBtn.textContent = soundOn ? '🔊' : '🔇';
-      soundBtn.setAttribute('aria-label', `Turn sound ${soundOn ? 'off' : 'on'}`);
-      if (!soundOn) { try { speechSynthesis.cancel(); } catch (_) { /* ignore */ } }
-    };
-
-    new ResizeObserver(fit).observe(stage);
-
-    // Test seam (same spirit as window.__lgTest): lets E2E read the live
-    // character/route in viewport coordinates and drive the drag precisely.
-    window.__lgMaze = {
-      ready: () => ready,
-      done: () => doneMaze,
-      radius: () => radius,
-      charMask: () => ({ x: charPos.x, y: charPos.y }),
-      routeMask: () => (plan ? plan.hintPath.map((p) => ({ x: p.x, y: p.y })) : []),
-      collideR: () => collideR,
-      char: () => { const r = canvas.getBoundingClientRect(); const c = maskToScreen(charPos); return { x: r.left + c.x, y: r.top + c.y }; },
-      finish: () => { if (!plan) return null; const r = canvas.getBoundingClientRect(); const c = maskToScreen(plan.finish); return { x: r.left + c.x, y: r.top + c.y }; },
-      route: () => { if (!plan) return []; const r = canvas.getBoundingClientRect(); return plan.hintPath.map((p) => { const c = maskToScreen(p); return { x: r.left + c.x, y: r.top + c.y }; }); },
-    };
-  }
 
   const T = {
     'pop-bubbles': () => {
@@ -2946,7 +2588,7 @@ function renderGame(activity) {
     /**
      * Dot to dot (owner direction, July 2026, Draw section pilot): tap the
      * numbered dots in order to reveal an outline. `params.dots` is an
-     * ordered Point[] in the same 0..1000 design space as tracing/mazes;
+     * ordered Point[] in the same 0..1000 design space as tracing;
      * `params.image` is an optional very-faint reference shown behind the
      * dots as a gentle hint.
      */
@@ -3024,76 +2666,6 @@ function renderGame(activity) {
       new ResizeObserver(fit).observe(stage);
     },
 
-    'path-maze': () => {
-      if (params.image) { renderPhotoMaze(); return; }
-      // The maze is a corridor-follow: the same core TracingSession engine,
-      // with a wide forgiving corridor and a picture to carry to the goal.
-      const mover = params.mover || 'fish';
-      const goal = params.goal || 'treehouse';
-      const complexity = params.pathComplexity || 1;
-      const paths = {
-        1: [{ x: 120, y: 500 }, { x: 500, y: 500 }, { x: 880, y: 500 }],
-        2: [{ x: 120, y: 260 }, { x: 500, y: 260 }, { x: 500, y: 700 }, { x: 880, y: 700 }],
-        3: [{ x: 120, y: 200 }, { x: 760, y: 200 }, { x: 760, y: 520 }, { x: 240, y: 520 }, { x: 240, y: 800 }, { x: 880, y: 800 }],
-        // Harder mazes for big kids (owner direction): more turns, tighter runs.
-        4: [{ x: 120, y: 140 }, { x: 860, y: 140 }, { x: 860, y: 400 }, { x: 260, y: 400 }, { x: 260, y: 620 }, { x: 740, y: 620 }, { x: 740, y: 860 }, { x: 140, y: 860 }],
-        5: [{ x: 120, y: 120 }, { x: 500, y: 120 }, { x: 500, y: 340 }, { x: 160, y: 340 }, { x: 160, y: 560 }, { x: 840, y: 560 }, { x: 840, y: 300 }, { x: 660, y: 300 }, { x: 660, y: 860 }, { x: 880, y: 860 }],
-      };
-      const path = paths[complexity] || paths[1];
-      const config = { ...LH.tracingConfigFor(1, { accessibilityWiderCorridor: true }), coverageToComplete: 0.7 };
-      const session = new LH.TracingSession(path, config);
-      const canvas = el(`<canvas class="stage" aria-label="Maze path" style="touch-action:none"></canvas>`);
-      const moverEl = el(`<div style="position:absolute;width:64px;height:64px;pointer-events:none">${itemHtml(mover, 64)}</div>`);
-      const goalEl = el(`<div style="position:absolute;width:76px;height:76px;pointer-events:none">${itemHtml(goal, 76)}</div>`);
-      stage.append(canvas, moverEl, goalEl);
-      const ctx = canvas.getContext('2d');
-      let scale = 1, mox = 0, moy = 0, doneMaze = false;
-      function fit() {
-        const r = stage.getBoundingClientRect();
-        canvas.width = r.width * devicePixelRatio; canvas.height = r.height * devicePixelRatio;
-        ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
-        const side = Math.min(r.width, r.height);
-        scale = side / 1000;
-        mox = (r.width - side) / 2;
-        moy = (r.height - side) / 2;
-        const start = path[0], endP = path[path.length - 1];
-        moverEl.style.left = start.x * scale + mox - 32 + 'px'; moverEl.style.top = start.y * scale + moy - 32 + 'px';
-        goalEl.style.left = endP.x * scale + mox - 38 + 'px'; goalEl.style.top = endP.y * scale + moy - 38 + 'px';
-        draw();
-      }
-      function draw() {
-        const r = stage.getBoundingClientRect();
-        ctx.clearRect(0, 0, r.width, r.height);
-        ctx.beginPath();
-        path.forEach((pt, i) => (i ? ctx.lineTo(pt.x * scale + mox, pt.y * scale + moy) : ctx.moveTo(pt.x * scale + mox, pt.y * scale + moy)));
-        ctx.lineCap = ctx.lineJoin = 'round';
-        ctx.strokeStyle = '#EAD9C4'; ctx.lineWidth = config.corridorWidth * 2 * scale; ctx.stroke();
-        ctx.strokeStyle = '#D8C2A6'; ctx.lineWidth = 5; ctx.setLineDash([14, 12]); ctx.stroke(); ctx.setLineDash([]);
-      }
-      let tracking = false;
-      canvas.addEventListener('pointerdown', () => { tracking = !doneMaze; });
-      canvas.addEventListener('pointermove', (e) => {
-        if (!tracking || doneMaze) return;
-        const r = canvas.getBoundingClientRect();
-        const x = e.clientX - r.left, y = e.clientY - r.top;
-        const result = session.addPoint({ x: (x - mox) / scale, y: (y - moy) / scale });
-        if (result.onPath) { moverEl.style.left = x - 32 + 'px'; moverEl.style.top = y - 32 + 'px'; }
-        if (result.completed) {
-          doneMaze = true; tracking = false;
-          const summary = session.endAttempt();
-          completeActivity(activity, { attempts: summary.attemptNumber, accuracyScore: summary.accuracyScore });
-          stage.append(completionBanner(onDone));
-        }
-      });
-      window.addEventListener('pointerup', () => {
-        if (!tracking || doneMaze) return;
-        tracking = false;
-        const summary = session.endAttempt();
-        if (!summary.completed) say(LH.pickFeedback(summary.coverage > 0.4 ? 'almost' : 'try-again'));
-      });
-      requestAnimationFrame(fit);
-      new ResizeObserver(fit).observe(stage);
-    },
   };
 
   function memoryGame(faceUp) {

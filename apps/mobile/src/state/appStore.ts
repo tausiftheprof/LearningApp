@@ -39,7 +39,7 @@ import { getRepositories } from '../storage/db';
 export type Screen =
   | { name: 'onboarding' }
   | { name: 'home' }
-  | { name: 'picker'; category: Activity['category'] | 'mazes' | 'tracing-letters' | 'tracing-numbers' | 'tracing-shapes' }
+  | { name: 'picker'; category: Activity['category'] | 'tracing-letters' | 'tracing-numbers' | 'tracing-shapes' }
   | { name: 'activity'; activity: Activity }
   | { name: 'daily-adventure' }
   | { name: 'rewards' }

@@ -7,10 +7,10 @@ describe('homeTilesForAge', () => {
   it('gives each band exactly the expected doors, in order', () => {
     expect(labelsFor('2-3')).toEqual(['Daily Adventure', 'Draw', 'Colour', 'Puzzles', 'Little Games']);
     expect(labelsFor('3-5')).toEqual([
-      'Daily Adventure', 'Draw', 'Colour', 'Tracing', 'Puzzles', 'Little Games', 'Mazes',
+      'Daily Adventure', 'Draw', 'Colour', 'Tracing', 'Puzzles', 'Little Games',
     ]);
     expect(labelsFor('5-7')).toEqual([
-      'Daily Adventure', 'Draw', 'Colour', 'Tracing', 'Puzzles', 'Mazes', 'Big Kid Games', 'Think & Solve',
+      'Daily Adventure', 'Draw', 'Colour', 'Tracing', 'Puzzles', 'Big Kid Games', 'Think & Solve',
     ]);
   });
 
@@ -22,7 +22,7 @@ describe('homeTilesForAge', () => {
 
   it('hides reading-heavy / advanced doors from the littlest (2-3)', () => {
     const labels = labelsFor('2-3');
-    for (const hidden of ['Tracing', 'Mazes', 'Think & Solve', 'Big Kid Games']) {
+    for (const hidden of ['Tracing', 'Think & Solve', 'Big Kid Games']) {
       expect(labels).not.toContain(hidden);
     }
   });
@@ -45,10 +45,4 @@ describe('homeTilesForAge', () => {
     }
   });
 
-  it('routes the Mazes tile to its own player with its own art override', () => {
-    const maze = homeTilesForAge('3-5').find((t) => t.label === 'Mazes');
-    expect(maze?.target).toEqual({ special: 'maze' });
-    expect(maze?.icon).toBe('🌀');
-    expect(maze?.image).toBe('maze');
-  });
 });

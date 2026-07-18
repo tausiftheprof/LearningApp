@@ -13,16 +13,14 @@ import sharp from 'sharp';
 const here = dirname(fileURLToPath(import.meta.url));
 
 // The owner artwork in assets/images/ is stored full-resolution (1254px+), but
-// the demo never renders a raster larger than ~900px (maze/scene canvases cap at
-// MAXW=900) and home tiles show at ~112px. Inlining the originals as base64 made
-// index.html ~54MB. So for the *demo bundle only* we downsample each raster to
-// the size it is actually shown at and re-encode as WebP (keeps tile alpha,
-// far smaller for photos). Source files are untouched, so the mobile app and
-// any future print/CMS pipeline still use the originals. Maze photos feed the
-// collision engine, so they keep a generous cap + high quality.
+// the demo never renders a raster larger than ~900px (the scene flood-fill
+// canvas caps at MAXW=900) and home tiles show at ~112px. Inlining the originals
+// as base64 made index.html ~54MB. So for the *demo bundle only* we downsample
+// each raster to the size it is actually shown at and re-encode as WebP (keeps
+// tile alpha, far smaller for photos). Source files are untouched, so the mobile
+// app and any future print/CMS pipeline still use the originals.
 const RASTER_CAPS = [
   { test: /^tile-/, max: 400, quality: 90 },
-  { test: /^maze-/, max: 1000, quality: 95 },
   { test: /^scene-/, max: 1000, quality: 88 },
   { test: /./, max: 700, quality: 88 },
 ];

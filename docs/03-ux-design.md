@@ -83,7 +83,7 @@ Screens: (1) Welcome + what the app is; (2) "For grown-ups" interstitial (gate-l
 | S11 | Tracing player | Child | Path corridor rendered with animated start dot + arrow; `DemoHand` traces first; live gentle sparkle on-path, soft fade off-path (never red/cross); restart; 3 low-accuracy tries → demo replays |
 | S12 | Colouring player | Child | Region tap-fill + freehand mode toggle; palette incl. glitter/pattern swatches; pinch zoom (2 fingers, bilateral); by-number mode shows numeral chips |
 | S13 | Puzzle player | Child | Tray of pieces bottom (or side for left-hand); drag with 1.15× lift scale; snap within radius (difficulty-scaled); wrong drop = gentle drift back, no sound sting; hint pulse after 3 misses; completion animation |
-| S14 | Game player (templates) | Child | Template-driven: tap-target, drag-sort, match-pairs, memory-cards, path-maze, odd-one-out, counting, letter-match, sequence, stack |
+| S14 | Game player (templates) | Child | Template-driven: tap-target, drag-sort, match-pairs, memory-cards, odd-one-out, counting, letter-match, sequence, stack |
 | S15 | Daily Adventure | Child | Recipe of 5 slots (§12); progress shown as a path with footprints; completion certificate animation |
 | S16 | My Rewards | Child | Star total, sticker book grid, badges; purely celebratory — no locked/greyed teaser items |
 | S17 | Time's-up | Child | Calm "all done today" + wave; single button "Bye!"; parent override via gate |

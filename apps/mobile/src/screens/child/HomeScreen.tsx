@@ -35,7 +35,6 @@ export function HomeScreen(): React.JSX.Element {
       return;
     }
     if ('special' in target && target.special === 'daily') navigate({ name: 'daily-adventure' });
-    else if ('special' in target && target.special === 'maze') navigate({ name: 'picker', category: 'mazes' });
     else if ('category' in target) navigate({ name: 'picker', category: target.category });
   }
 

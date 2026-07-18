@@ -16,8 +16,7 @@ import type { ActivityCategory, AgeBand } from '../types';
 /** Where a home tile sends the child. */
 export type HomeTarget =
   | { category: ActivityCategory }
-  | { special: 'daily' }
-  | { special: 'maze' };
+  | { special: 'daily' };
 
 export interface HomeTile {
   label: string;
@@ -29,9 +28,9 @@ export interface HomeTile {
    */
   idx: number;
   target: HomeTarget;
-  /** Emoji override when the tile has no themed icon of its own (Mazes). */
+  /** Optional emoji override when a tile wants its own icon over the theme's. */
   icon?: string;
-  /** Image-key override when the tile has its own illustration (Mazes). */
+  /** Optional image-key override when a tile ships its own illustration. */
   image?: string;
 }
 
@@ -47,7 +46,6 @@ const TRACING: HomeTile = { label: 'Tracing', idx: 3, target: { category: 'traci
 const LITTLE_GAMES: HomeTile = { label: 'Little Games', idx: 4, target: { category: 'toddler' } };
 const BIG_KID_GAMES: HomeTile = { label: 'Big Kid Games', idx: 5, target: { category: 'preschool' } };
 const THINK_SOLVE: HomeTile = { label: 'Think & Solve', idx: 6, target: { category: 'logic' } };
-const MAZES: HomeTile = { label: 'Mazes', idx: 2, target: { special: 'maze' }, icon: '🌀', image: 'maze' };
 
 /**
  * The ordered set of home tiles for a profile's age band. Daily Adventure leads
@@ -59,9 +57,9 @@ export function homeTilesForAge(ageBand: AgeBand): HomeTile[] {
       // Fewest, largest tiles: no reading-heavy or advanced doors.
       return [DAILY, DRAW, COLOUR, PUZZLES, LITTLE_GAMES];
     case '3-5':
-      return [DAILY, DRAW, COLOUR, TRACING, PUZZLES, LITTLE_GAMES, MAZES];
+      return [DAILY, DRAW, COLOUR, TRACING, PUZZLES, LITTLE_GAMES];
     case '5-7':
       // Little Games drops off; the "big kid" doors come in.
-      return [DAILY, DRAW, COLOUR, TRACING, PUZZLES, MAZES, BIG_KID_GAMES, THINK_SOLVE];
+      return [DAILY, DRAW, COLOUR, TRACING, PUZZLES, BIG_KID_GAMES, THINK_SOLVE];
   }
 }

@@ -108,7 +108,6 @@ export const gameTemplateIds = [
   'drag-sort',
   'match-pairs',
   'memory-cards',
-  'path-maze',
   'odd-one-out',
   'counting',
   'letter-match',

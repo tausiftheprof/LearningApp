@@ -20,7 +20,7 @@ npm run lint                         # no-op today: no workspace defines a "lint
 
 # Single test file / pattern (run from packages/core, or pass --workspace):
 npm test --workspace=packages/core -- tracing
-npx jest --config packages/core/jest.config.js maze
+npx jest --config packages/core/jest.config.js puzzles
 
 cd apps/mobile && npx expo start     # run the Expo app (Expo Go / dev client)
 
@@ -39,8 +39,8 @@ advertising-ID permissions.
 - **`packages/core`** (`@littlegrip/core`) — all domain logic as pure, framework-agnostic
   TypeScript (no React/RN imports). Runs in Node, the Expo app, and (bundled via esbuild) the
   browser. Everything is exported flat from `src/index.ts`. Each concern is a self-contained
-  module under `src/<domain>/`: `tracing` (corridor-following engine), `maze` (collision engine —
-  see below), `puzzles`, `rewards`, `screenTime`, `parentalGate`, `recommendation`, `dailyPlan`,
+  module under `src/<domain>/`: `tracing` (corridor-following engine), `puzzles`, `rewards`,
+  `screenTime`, `parentalGate`, `recommendation`, `dailyPlan`,
   `drawing`, `progress`, `profiles`, `settings`, `account` (parent cloud-sync, off by default),
   `deletion`, and `content` (the zod-validated content-pack schema + the bundled illustrative
   starter pack).
@@ -49,7 +49,7 @@ advertising-ID permissions.
 - **`web-demo`** — a single self-contained `index.html`, built by `web-demo/build.mjs`, which
   esbuild-bundles `packages/core` inline and inlines `assets/images/*` as data (SVGs as markup;
   raster PNG/JPG downsampled with `sharp` to the size the demo actually renders — tiles ≤400px,
-  maze/scene photos ≤1000px — and re-encoded as WebP, so `index.html` stays a few MB not ~50MB;
+  scene photos ≤1000px — and re-encoded as WebP, so `index.html` stays a few MB not ~50MB;
   the `assets/images/` originals are left full-res for the mobile app and print/CMS). It is a full
   parallel implementation of the UI in vanilla JS/canvas (`demo-shell.html`), used to preview and
   test features against the *real* core engines without an Expo toolchain. **Any change to a core
@@ -64,8 +64,8 @@ Because the mobile app and the web demo are two independent renderers of the sam
 
 **Verifying UI changes**: the mobile app can't be driven here without an emulator, so the web
 demo is the practical way to exercise a feature end-to-end. `demo-shell.html` exposes a Playwright
-test seam — `window.__lgTest` (`{ navigate, getState, activateProfile }`) drives/reads any screen,
-and some players add their own live-state hook (e.g. `window.__lgMaze`). Drive `web-demo/index.html`
+test seam — `window.__lgTest` (`{ navigate, getState, activateProfile }`) drives/reads any screen.
+Drive `web-demo/index.html`
 (after rebuilding it) with headless Chromium via these hooks. Onboarding path in the demo:
 "Set up (for grown-ups)" → fill `#nick` → pick an age → "Next" → "Agree and start playing".
 
@@ -82,7 +82,7 @@ child's data in one orchestrated, testable path (docs/07 §7.4).
 ### Content packs, not hardcoded activities
 
 `content/schema.ts` defines a zod `activitySchema` (discriminated union on `type`) and
-`gameTemplateIds` (the closed set of mini-game templates: `path-maze`, `dot-to-dot`,
+`gameTemplateIds` (the closed set of mini-game templates: `dot-to-dot`,
 `match-pairs`, `counting`, …). `content/starterPack.ts` builds the bundled `ContentPack` — every
 activity's geometry is procedurally generated (helpers like `arc()`, `line()`, `polygonPath()`) in
 a shared 0..1000 design space, since production illustrations arrive later via the CMS pipeline
@@ -97,29 +97,12 @@ gates — an activity whose template isn't listed is filtered out of pickers ent
 no broken screens) rather than shown half-working. Check these before assuming a game template
 "exists" on both surfaces.
 
-### The maze collision engine (`packages/core/src/maze/mazeEngine.ts`)
+### Mazes (extracted)
 
-Maze activities are printed/illustrated photos rasterised once into a wall mask (dark ink = wall).
-The engine (`buildCollisionMap`, `erodeWalls`, `isolateLargestRegion`, `planRoute`, `slideMove`,
-`snapToClear`, `reachedFinish`) treats the character as a disc and does all collision math in
-**mask space** (the original image's pixel dimensions), never in screen pixels — renderers convert
-pointer coordinates into mask space before calling in, which is what keeps collision aligned after
-any resize. `planRoute` auto-fits the *widest* disc that can still travel from start to finish (so
-wide little-kid mazes get a big character and dense pencil-maze big-kid levels get a small token),
-after cleaning the rasterised mask: `erodeWalls` reopens anti-aliasing pinches that would otherwise
-split one corridor network into disconnected pieces, and `isolateLargestRegion` discards
-decorative scenery that happens to be "open" too. `slideMove` steps ≤1px at a time specifically so
-a fast drag can never tunnel through a thin wall, and retries the still-open axis so the character
-slides along walls instead of stopping dead. There is deliberately no pathfinding-to-goal or
-momentum in the *gameplay* — `planRoute`'s BFS route is used only to size the character and to
-render the optional hint overlay; the child moves the character themselves via `slideMove`.
-
-Both surfaces feed the engine the same wall mask, built by rasterising the photo: the web demo
-draws it to a `<canvas>` and reads `getImageData`; mobile (`players/MazePlayer.tsx`) draws it into
-a `Skia.Surface.Make` offscreen surface and reads `readPixels` — the app's only raster-image →
-pixel pipeline, since every other player is vector/emoji. Because Metro resolves only literal
-`require()` paths, each maze photo must be listed in `players/mazeImages.ts`; add a maze there when
-you add its activity in the starter pack.
+The maze activity — its collision engine, players, artwork and the `path-maze` template — was
+split out into a separate repository (`little-grip-mazes`) to be developed on its own, and is no
+longer part of Little Grip. Don't re-add a `path-maze` template or maze activities here without
+bringing the engine back first.
 
 ### Multi-child profiles, screen time, rewards
 

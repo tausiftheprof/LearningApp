@@ -3,7 +3,7 @@
 **This folder is the single source of every picture used in the app and the web demo.**
 Replace any `.svg` file here (keep the same filename, any square `viewBox`) and your image
 appears everywhere that image is used — puzzles, matching/memory games, shadow games,
-reveal-and-wipe, counting, mazes, feeding games and stickers — after rebuilding
+reveal-and-wipe, counting, feeding games and stickers — after rebuilding
 (`node assets/generate-images.mjs` is only for regenerating the built-in art; skip it if you've
 placed your own files, then run `node web-demo/build.mjs` for the demo / rebuild the app).
 
@@ -13,7 +13,7 @@ placed your own files, then run `node web-demo/build.mjs` for the demo / rebuild
 | `unicorn.svg`, `dinosaur.svg` | jigsaws, odd-one-out, reveal-and-wipe |
 | `elephant.svg`, `monkey.svg`, `panda.svg`, `bear.svg`, `cat.svg`, `dog.svg`, `duck.svg`, `chick.svg` | jigsaws, matching, feeding game, stickers |
 | `star.svg`, `sun.svg`, `moon.svg` | rewards/stickers, sequences, patterns |
-| `rocket.svg`, `balloon.svg`, `car.svg`, `treehouse.svg` | jigsaws, mazes (goal), sequences |
+| `rocket.svg`, `balloon.svg`, `car.svg`, `treehouse.svg` | jigsaws, sequences |
 | `scene-*.png` | Colour section: full-page flood-fill scenes (solar system, rocket, unicorn, monkey, rabbit, whale) |
 
 ## Full-page colouring scenes (`scene-*.png`)

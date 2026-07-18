@@ -12,7 +12,7 @@ import { IMPLEMENTED_GAME_TEMPLATES } from './games/registry';
  * templates not yet implemented in this scaffold are filtered out entirely -
  * children never see locked or broken teasers.
  */
-type PickerCategory = ActivityCategory | 'mazes' | 'tracing-letters' | 'tracing-numbers' | 'tracing-shapes';
+type PickerCategory = ActivityCategory | 'tracing-letters' | 'tracing-numbers' | 'tracing-shapes';
 
 export function ActivityPickerScreen(props: { category: PickerCategory }): React.JSX.Element {
   const { profile, catalogue, navigate } = useAppStore();
@@ -36,20 +36,11 @@ export function ActivityPickerScreen(props: { category: PickerCategory }): React
         : kind === 'numbers' ? /^trace-number-/.test(a.id)
         : !/^trace-(letter|number)-/.test(a.id))
       .sort(numericSort);
-  // Mazes are their own door (owner direction): every path-maze, gated by the
-  // profile's age band so little kids see the easy ones and big kids the rest.
   const ranked =
     props.category === 'tracing-letters' ? tracingOf('letters')
     : props.category === 'tracing-numbers' ? tracingOf('numbers')
     : props.category === 'tracing-shapes' ? tracingOf('shapes')
-    : props.category === 'mazes'
-      // The Mazes door lists every path-maze directly (its own player), so it
-      // is not gated by IMPLEMENTED_GAME_TEMPLATES the way category games are.
-      ? catalogue
-          .filter((a) => a.type === 'game' && a.template === 'path-maze')
-          .filter((a) => a.ageBands.includes(profile?.ageBand ?? '3-5'))
-          .sort((a, b) => a.difficulty - b.difficulty)
-      : recommendActivities(
+    : recommendActivities(
           playable.filter((a) => a.category === props.category),
           {
             ageBand: profile?.ageBand ?? '3-5',
