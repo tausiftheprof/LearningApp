@@ -111,6 +111,13 @@ slides along walls instead of stopping dead. There is deliberately no pathfindin
 momentum in the *gameplay* — `planRoute`'s BFS route is used only to size the character and to
 render the optional hint overlay; the child moves the character themselves via `slideMove`.
 
+Both surfaces feed the engine the same wall mask, built by rasterising the photo: the web demo
+draws it to a `<canvas>` and reads `getImageData`; mobile (`players/MazePlayer.tsx`) draws it into
+a `Skia.Surface.Make` offscreen surface and reads `readPixels` — the app's only raster-image →
+pixel pipeline, since every other player is vector/emoji. Because Metro resolves only literal
+`require()` paths, each maze photo must be listed in `players/mazeImages.ts`; add a maze there when
+you add its activity in the starter pack.
+
 ### Multi-child profiles, screen time, rewards
 
 `screenTime/screenTime.ts` and `rewards/rewardsEngine.ts` are daily-capped, ledger-based state
