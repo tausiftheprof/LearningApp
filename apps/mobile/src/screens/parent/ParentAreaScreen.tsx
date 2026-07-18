@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 import type { ParentReport } from '@littlegrip/core';
 import {
   APP_THEMES,
@@ -16,7 +16,7 @@ import { ParentRow, PrimaryButton } from '../../ui/components';
 
 type Section =
   | 'dashboard' | 'profile' | 'progress' | 'screen-time'
-  | 'accessibility' | 'privacy' | 'subscription' | 'help';
+  | 'accessibility' | 'privacy' | 'cloud-sync' | 'subscription' | 'help';
 
 /**
  * Parent area (FR-018, docs/03 S20-S29). Visually distinct standard UI
@@ -56,6 +56,7 @@ export function ParentAreaScreen(props: { section: Section }): React.JSX.Element
         {props.section === 'screen-time' && <ScreenTimeSection />}
         {props.section === 'accessibility' && <AccessibilitySection />}
         {props.section === 'privacy' && <PrivacySection />}
+        {props.section === 'cloud-sync' && <CloudSyncSection />}
         {props.section === 'subscription' && <SubscriptionSection />}
         {props.section === 'help' && <HelpSection />}
       </ScrollView>
@@ -64,7 +65,7 @@ export function ParentAreaScreen(props: { section: Section }): React.JSX.Element
 }
 
 function Dashboard(): React.JSX.Element {
-  const { navigate, screenTime, rewards, profile } = useAppStore();
+  const { navigate, screenTime, rewards, profile, account } = useAppStore();
   const theme = parentTheme;
   const today = secondsUsed(screenTime, dayKeyFrom(new Date()));
   const rows: Array<{ title: string; subtitle: string; section: Section }> = [
@@ -73,6 +74,7 @@ function Dashboard(): React.JSX.Element {
     { title: 'Screen time', subtitle: `${Math.round(today / 60)} min today`, section: 'screen-time' },
     { title: 'Accessibility', subtitle: 'See, hear, touch and pace settings', section: 'accessibility' },
     { title: 'Privacy & data', subtitle: 'Notice, export and delete', section: 'privacy' },
+    { title: 'Cloud backup & sync', subtitle: cloudSyncSubtitle(account), section: 'cloud-sync' },
     { title: 'Subscription', subtitle: 'Free plan', section: 'subscription' },
     { title: 'Help & support', subtitle: 'FAQ, contact, complaints', section: 'help' },
   ];
@@ -263,7 +265,9 @@ function PrivacySection(): React.JSX.Element {
       <Text style={styles.body}>
         Everything your child makes and does in Little Grip stays on this device. We store the
         nickname and age range you chose, play progress, rewards and saved artwork - nothing else.
-        No ads, no chat, no location, no accounts. Uninstalling the app also removes everything.
+        No ads, no chat, no location. No account is required to use Little Grip - Cloud backup &
+        sync (below) is entirely optional and off unless you turn it on. Uninstalling the app also
+        removes everything that wasn't backed up.
       </Text>
       <Text style={styles.body}>
         Device backups (iCloud / Google) may include this app's data under your own account and
@@ -284,6 +288,127 @@ function PrivacySection(): React.JSX.Element {
           )
         }
       />
+    </View>
+  );
+}
+
+function cloudSyncSubtitle(account: ReturnType<typeof useAppStore.getState>['account']): string {
+  if (!account.enabled) return 'Off - everything stays on this device';
+  if (account.status === 'signed-in') return `Signed in as ${account.email}`;
+  return 'On - sign-in needed';
+}
+
+/**
+ * Cloud backup & sync (docs/04 section 4.6, "phase 2 accounts"; off by
+ * default per docs/01 A-01). Email + one-time code, never a password -
+ * children never see this screen or hold credentials.
+ *
+ * MOCK / ILLUSTRATIVE: there is no backend in this build. The "sent" code is
+ * shown directly on screen instead of emailed, and "Sync now" just
+ * timestamps a sync rather than talking to a server (see
+ * packages/core/src/account/account.ts). Real cloud sync needs the
+ * AU-region backend and updated Privacy Impact Assessment scoped in
+ * docs/07 section 7.1 before any account data leaves the device.
+ */
+function CloudSyncSection(): React.JSX.Element {
+  const {
+    account,
+    accountEnable,
+    accountDisable,
+    accountRequestCode,
+    accountConfirmCode,
+    accountSignOut,
+    accountSyncNow,
+  } = useAppStore();
+  const theme = parentTheme;
+  const [email, setEmail] = useState('');
+  const [code, setCode] = useState('');
+  const [codeError, setCodeError] = useState(false);
+
+  if (!account.enabled) {
+    return (
+      <View>
+        <Text style={styles.h1}>Cloud backup & sync</Text>
+        <Text style={styles.body}>
+          Off by default. Little Grip works fully with everything stored only on this device. Turn
+          this on if you'd like progress, rewards and saved artwork backed up and available on
+          another phone or tablet too.
+        </Text>
+        <Text style={styles.disclaimer}>
+          This is a demo of the feature: no email is really sent, and syncing is simulated. A real
+          launch needs a proper backend and privacy review first.
+        </Text>
+        <PrimaryButton label="Turn on cloud backup & sync" theme={theme} onPress={() => void accountEnable()} />
+      </View>
+    );
+  }
+
+  if (account.status === 'signed-in') {
+    return (
+      <View>
+        <Text style={styles.h1}>Cloud backup & sync</Text>
+        <ParentRow title="Signed in as" subtitle={account.email ?? ''} theme={theme} />
+        <ParentRow
+          title="Last synced"
+          subtitle={account.lastSyncedAt ? new Date(account.lastSyncedAt).toLocaleString() : 'Not yet synced'}
+          theme={theme}
+        />
+        <PrimaryButton label="Sync now" theme={theme} onPress={() => void accountSyncNow()} />
+        <PrimaryButton label="Sign out" theme={theme} onPress={() => void accountSignOut()} />
+        <PrimaryButton label="Turn off cloud backup & sync" destructive theme={theme} onPress={() => void accountDisable()} />
+      </View>
+    );
+  }
+
+  if (account.status === 'code-sent') {
+    return (
+      <View>
+        <Text style={styles.h1}>Enter your code</Text>
+        <Text style={styles.body}>
+          [Demo] Since there's no real email service yet, here's the code we would have sent to{' '}
+          {account.email}: <Text style={{ fontWeight: '800' }}>{account.pendingCode}</Text>
+        </Text>
+        <TextInput
+          style={styles.textInput}
+          value={code}
+          onChangeText={(v) => { setCode(v); setCodeError(false); }}
+          placeholder="6-digit code"
+          keyboardType="number-pad"
+          maxLength={6}
+          accessibilityLabel="6-digit sign-in code"
+        />
+        {codeError && <Text style={styles.errorText}>That code didn't match - check and try again.</Text>}
+        <PrimaryButton
+          label="Confirm"
+          theme={theme}
+          onPress={async () => {
+            const ok = await accountConfirmCode(code);
+            if (!ok) setCodeError(true);
+          }}
+        />
+        <PrimaryButton label="Turn off cloud backup & sync" destructive theme={theme} onPress={() => void accountDisable()} />
+      </View>
+    );
+  }
+
+  return (
+    <View>
+      <Text style={styles.h1}>Cloud backup & sync</Text>
+      <Text style={styles.body}>
+        Enter the email you'd like to use. We'll send a 6-digit code - no password to remember, and
+        your child never sees this screen.
+      </Text>
+      <TextInput
+        style={styles.textInput}
+        value={email}
+        onChangeText={setEmail}
+        placeholder="you@example.com"
+        keyboardType="email-address"
+        autoCapitalize="none"
+        accessibilityLabel="Email address"
+      />
+      <PrimaryButton label="Send code" theme={theme} onPress={() => void accountRequestCode(email)} />
+      <PrimaryButton label="Turn off cloud backup & sync" destructive theme={theme} onPress={() => void accountDisable()} />
     </View>
   );
 }
@@ -330,4 +455,9 @@ const styles = StyleSheet.create({
   stat: { fontSize: 15, color: '#1F2933', marginLeft: 8, marginBottom: 12 },
   radio: { fontSize: 20, color: '#2F6F62' },
   disclaimer: { fontSize: 13, fontStyle: 'italic', color: '#52606D', margin: 8, marginTop: 16 },
+  textInput: {
+    fontSize: 16, padding: 12, margin: 8, borderRadius: 10,
+    borderWidth: 1, borderColor: '#C5CDD4', backgroundColor: '#fff', color: '#1F2933',
+  },
+  errorText: { fontSize: 13, color: '#B3261E', marginHorizontal: 8, marginBottom: 8 },
 });

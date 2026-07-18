@@ -1,8 +1,10 @@
 import * as SQLite from 'expo-sqlite';
 import type {
+  AccountRepository,
   ArtworkRepository,
   ChildProfile,
   DrawingDocument,
+  ParentAccountState,
   ProfileRepository,
   ProgressRecord,
   ProgressRepository,
@@ -163,6 +165,26 @@ class SqliteArtworkRepository implements ArtworkRepository {
   }
 }
 
+/** Singleton row (id='singleton') - one parent identity, not per-profile. */
+class SqliteAccountRepository implements AccountRepository {
+  constructor(private db: SQLite.SQLiteDatabase) {}
+  async get(): Promise<ParentAccountState | null> {
+    const row = await this.db.getFirstAsync<{ data: string }>(
+      "SELECT data FROM parent_account WHERE id = 'singleton';",
+    );
+    return row ? (JSON.parse(row.data) as ParentAccountState) : null;
+  }
+  async save(state: ParentAccountState): Promise<void> {
+    await this.db.runAsync(
+      "INSERT OR REPLACE INTO parent_account (id, data) VALUES ('singleton', ?);",
+      JSON.stringify(state),
+    );
+  }
+  async clear(): Promise<void> {
+    await this.db.runAsync("DELETE FROM parent_account WHERE id = 'singleton';");
+  }
+}
+
 let repositories: Repositories | null = null;
 
 export async function getRepositories(): Promise<Repositories> {
@@ -176,6 +198,7 @@ export async function getRepositories(): Promise<Repositories> {
       rewards: rewards as RewardsRepository,
       artwork: new SqliteArtworkRepository(db),
       screenTime: screenTime as ScreenTimeRepository,
+      account: new SqliteAccountRepository(db),
     };
   }
   return repositories;

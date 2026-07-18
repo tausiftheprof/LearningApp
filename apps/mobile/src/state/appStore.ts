@@ -3,6 +3,7 @@ import type {
   Activity,
   ChildProfile,
   GateState,
+  ParentAccountState,
   RewardsState,
   ScreenTimeState,
 } from '@littlegrip/core';
@@ -10,13 +11,20 @@ import {
   applyRewardEvent,
   beginChallenge,
   buildStarterPack,
+  confirmSignInCode,
   dayKeyFrom,
   deleteAllChildData,
+  disableCloudSync,
+  emptyAccountState,
   emptyRewardsState,
   emptyScreenTime,
+  enableCloudSync,
   enforceRelock,
   initialGateState,
+  recordSync,
   recordUsage,
+  requestSignInCode,
+  signOut as signOutOfAccount,
   submitAnswer,
   touchSession,
   type RewardEvent,
@@ -37,7 +45,7 @@ export type Screen =
   | { name: 'rewards' }
   | { name: 'times-up' }
   | { name: 'gate' }
-  | { name: 'parent'; section: 'dashboard' | 'profile' | 'progress' | 'screen-time' | 'accessibility' | 'privacy' | 'subscription' | 'help' };
+  | { name: 'parent'; section: 'dashboard' | 'profile' | 'progress' | 'screen-time' | 'accessibility' | 'privacy' | 'cloud-sync' | 'subscription' | 'help' };
 
 interface AppState {
   ready: boolean;
@@ -47,6 +55,7 @@ interface AppState {
   screenTime: ScreenTimeState;
   gate: GateState;
   catalogue: Activity[];
+  account: ParentAccountState;
 
   init(): Promise<void>;
   navigate(screen: Screen): void;
@@ -58,6 +67,12 @@ interface AppState {
   gateTouch(): void;
   gateEnforceRelock(appBackgrounded: boolean): void;
   deleteChildData(): Promise<void>;
+  accountEnable(): Promise<void>;
+  accountDisable(): Promise<void>;
+  accountRequestCode(email: string): Promise<void>;
+  accountConfirmCode(code: string): Promise<boolean>;
+  accountSignOut(): Promise<void>;
+  accountSyncNow(): Promise<void>;
 }
 
 export const useAppStore = create<AppState>((set, get) => ({
@@ -68,10 +83,11 @@ export const useAppStore = create<AppState>((set, get) => ({
   screenTime: emptyScreenTime(15),
   gate: initialGateState(),
   catalogue: buildStarterPack().activities,
+  account: emptyAccountState(),
 
   async init() {
     const repos = await getRepositories();
-    const profiles = await repos.profiles.getAll();
+    const [profiles, account] = await Promise.all([repos.profiles.getAll(), repos.account.get()]);
     const profile = profiles[0] ?? null;
     if (profile) {
       const [rewards, screenTime] = await Promise.all([
@@ -84,9 +100,10 @@ export const useAppStore = create<AppState>((set, get) => ({
         rewards: rewards ?? emptyRewardsState(dayKeyFrom(new Date())),
         screenTime: screenTime ?? emptyScreenTime(profile.dailyScreenTimeMinutes),
         screen: { name: 'home' },
+        account: account ?? emptyAccountState(),
       });
     } else {
-      set({ ready: true, screen: { name: 'onboarding' } });
+      set({ ready: true, screen: { name: 'onboarding' }, account: account ?? emptyAccountState() });
     }
   },
 
@@ -160,5 +177,50 @@ export const useAppStore = create<AppState>((set, get) => ({
       screenTime: emptyScreenTime(15),
       screen: { name: 'onboarding' },
     });
+    // Deliberately NOT touching `account` here - deleting one child's local
+    // data must never sign a parent out of their own cloud account.
+  },
+
+  async accountEnable() {
+    const repos = await getRepositories();
+    const next = enableCloudSync(get().account);
+    await repos.account.save(next);
+    set({ account: next });
+  },
+
+  async accountDisable() {
+    const repos = await getRepositories();
+    const next = disableCloudSync(get().account);
+    await repos.account.save(next);
+    set({ account: next });
+  },
+
+  async accountRequestCode(email) {
+    const repos = await getRepositories();
+    const next = requestSignInCode(get().account, email);
+    await repos.account.save(next);
+    set({ account: next });
+  },
+
+  async accountConfirmCode(code) {
+    const repos = await getRepositories();
+    const next = confirmSignInCode(get().account, code);
+    await repos.account.save(next);
+    set({ account: next });
+    return next.status === 'signed-in';
+  },
+
+  async accountSignOut() {
+    const repos = await getRepositories();
+    const next = signOutOfAccount(get().account);
+    await repos.account.save(next);
+    set({ account: next });
+  },
+
+  async accountSyncNow() {
+    const repos = await getRepositories();
+    const next = recordSync(get().account, Date.now());
+    await repos.account.save(next);
+    set({ account: next });
   },
 }));

@@ -1,9 +1,11 @@
+import type { ParentAccountState } from '../account/account';
 import type { DrawingDocument } from '../drawing/drawing';
 import type { ChildProfile } from '../profiles/profile';
 import type { ProgressRecord } from '../progress/progress';
 import type { RewardsState } from '../rewards/rewardsEngine';
 import type { ScreenTimeState } from '../screenTime/screenTime';
 import type {
+  AccountRepository,
   ArtworkRepository,
   ProfileRepository,
   ProgressRepository,
@@ -94,6 +96,19 @@ export class InMemoryScreenTimeRepository implements ScreenTimeRepository {
   }
 }
 
+export class InMemoryAccountRepository implements AccountRepository {
+  private state: ParentAccountState | null = null;
+  async get(): Promise<ParentAccountState | null> {
+    return this.state;
+  }
+  async save(state: ParentAccountState): Promise<void> {
+    this.state = state;
+  }
+  async clear(): Promise<void> {
+    this.state = null;
+  }
+}
+
 export function inMemoryRepositories(): Repositories {
   return {
     profiles: new InMemoryProfileRepository(),
@@ -101,5 +116,6 @@ export function inMemoryRepositories(): Repositories {
     rewards: new InMemoryRewardsRepository(),
     artwork: new InMemoryArtworkRepository(),
     screenTime: new InMemoryScreenTimeRepository(),
+    account: new InMemoryAccountRepository(),
   };
 }

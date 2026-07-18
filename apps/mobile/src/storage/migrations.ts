@@ -32,4 +32,13 @@ export const MIGRATIONS: readonly string[] = [
   );
   CREATE INDEX IF NOT EXISTS idx_artwork_profile ON artwork (profile_id);
   `,
+  // v2: optional parent account & cloud sync (docs/04 section 4.6, phase 2) -
+  // a single row, not per-profile: one parent identity owns every local
+  // child profile. Off by default; see packages/core/src/account/account.ts.
+  `
+  CREATE TABLE IF NOT EXISTS parent_account (
+    id TEXT PRIMARY KEY NOT NULL,
+    data TEXT NOT NULL
+  );
+  `,
 ];

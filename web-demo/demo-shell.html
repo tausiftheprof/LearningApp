@@ -395,7 +395,7 @@ async function persist() {
     };
   }
   try {
-    localStorage.setItem(LS_KEY, JSON.stringify({ profiles, activeId: state.profile?.id ?? null, byProfile }));
+    localStorage.setItem(LS_KEY, JSON.stringify({ profiles, activeId: state.profile?.id ?? null, byProfile, account: state.account }));
   } catch (e) { /* storage full: demo keeps running in memory */ }
 }
 
@@ -410,6 +410,7 @@ const state = {
   catalogue: LH.buildStarterPack().activities,
   daily: null,
   activityStartedAt: null,
+  account: LH.emptyAccountState(),
 };
 
 // Full product scope: every template defined by the content schema is playable.
@@ -2857,13 +2858,20 @@ function renderGate() {
 }
 
 /* ---------- parent area ---------- */
+function cloudSyncSubtitle(account) {
+  if (!account.enabled) return 'Off — everything stays on this device';
+  if (account.status === 'signed-in') return `Signed in as ${account.email}`;
+  return 'On — sign-in needed';
+}
+
 function renderParent(section) {
   const engines = {
     dashboard: ['screenTime.secondsUsed'], profile: ['profiles + settings'],
     progress: ['progress.buildParentReport'], 'screen-time': ['screenTime.grantExtraTime'],
     appearance: ['themes (core APP_THEMES)'],
     accessibility: ['settings.accessibility'], privacy: ['deletion.deleteAllChildData'],
-    artwork: ['drawing replay'], subscription: ['(phase 2 placeholder)'], help: ['—'],
+    artwork: ['drawing replay'], 'cloud-sync': ['account.requestSignInCode (mock backend)'],
+    subscription: ['(phase 2 placeholder)'], help: ['—'],
   };
   setStatus('Parent — ' + section, engines[section] || []);
   state.gate = LH.touchSession(state.gate, Date.now());
@@ -2898,6 +2906,7 @@ function renderParent(section) {
       ['accessibility', 'Accessibility', 'See, hear, touch and pace settings'],
       ['artwork', 'Saved artwork', 'View and replay drawings'],
       ['privacy', 'Privacy & data', 'Notice, delete everything'],
+      ['cloud-sync', 'Cloud backup & sync', cloudSyncSubtitle(state.account)],
       ['subscription', 'Subscription', 'Free plan'],
       ['help', 'Help & support', 'FAQ, contact, complaints'],
     ];
@@ -3075,7 +3084,7 @@ function renderParent(section) {
   } else if (section === 'privacy') {
     body.append(
       el(`<h2>Privacy & data</h2>`),
-      el(`<p>Everything your child makes and does stays on this device. We store the nickname and age range you chose, play progress, rewards and saved artwork — nothing else. No ads, no chat, no location, no accounts.</p>`),
+      el(`<p>Everything your child makes and does stays on this device. We store the nickname and age range you chose, play progress, rewards and saved artwork — nothing else. No ads, no chat, no location. No account is required — Cloud backup & sync is optional and off unless you turn it on.</p>`),
     );
     const del = el(`<button class="primary-btn danger">Delete all child data</button>`);
     del.onclick = async () => {
@@ -3088,6 +3097,8 @@ function renderParent(section) {
       state.rewards = LH.emptyRewardsState(todayKey());
       state.screenTime = LH.emptyScreenTime(15);
       state.daily = null;
+      state.account = LH.emptyAccountState();
+      await repos.account.clear();
       alert(`Deleted and verified (${clean ? 'no child data remains' : 'verification failed'}):\n` +
         `• profile: ${summary.profileDeleted ? 'removed' : 'was already gone'}\n` +
         `• progress records: ${summary.progressRecordsDeleted}\n` +
@@ -3096,6 +3107,8 @@ function renderParent(section) {
       navigate({ name: 'onboarding' });
     };
     body.append(del);
+  } else if (section === 'cloud-sync') {
+    renderCloudSync(body);
   } else if (section === 'subscription') {
     body.append(
       el(`<h2>Subscription</h2>`),
@@ -3111,6 +3124,87 @@ function renderParent(section) {
   } else {
     body.append(el(`<p>No profile yet — set one up first.</p>`));
   }
+}
+
+/**
+ * Cloud backup & sync (docs/04 section 4.6, "phase 2 accounts"; off by
+ * default per docs/01 A-01). Email + one-time code, never a password -
+ * children never see this screen or hold credentials.
+ *
+ * MOCK / ILLUSTRATIVE: there is no backend in this demo. The "sent" code is
+ * shown directly on screen instead of emailed, and "Sync now" just
+ * timestamps a sync rather than talking to a server (see
+ * packages/core/src/account/account.ts). Real cloud sync needs the
+ * AU-region backend and updated Privacy Impact Assessment scoped in
+ * docs/07 section 7.1 before any account data leaves the device.
+ */
+function renderCloudSync(body) {
+  const a = state.account;
+  const save = async (next) => { state.account = next; await repos.account.save(next); persistSoon(); render(); };
+
+  if (!a.enabled) {
+    body.append(
+      el(`<h2>Cloud backup & sync</h2>`),
+      el(`<p>Off by default. Little Grip works fully with everything stored only on this device. Turn this on if you'd like progress, rewards and saved artwork backed up and available on another phone or tablet too.</p>`),
+      el(`<p class="disclaimer">This is a demo of the feature: no email is really sent, and syncing is simulated. A real launch needs a proper backend and privacy review first.</p>`),
+    );
+    const on = el(`<button class="primary-btn teal">Turn on cloud backup & sync</button>`);
+    on.onclick = () => save(LH.enableCloudSync(a));
+    body.append(on);
+    return;
+  }
+
+  if (a.status === 'signed-in') {
+    body.append(
+      el(`<h2>Cloud backup & sync</h2>`),
+      el(`<div class="choice-row" style="cursor:default"><span>Signed in as<span class="sub">${a.email}</span></span></div>`),
+      el(`<div class="choice-row" style="cursor:default"><span>Last synced<span class="sub">${a.lastSyncedAt ? new Date(a.lastSyncedAt).toLocaleString() : 'Not yet synced'}</span></span></div>`),
+    );
+    const sync = el(`<button class="primary-btn teal">Sync now</button>`);
+    sync.onclick = () => save(LH.recordSync(a, Date.now()));
+    const out = el(`<button class="primary-btn teal">Sign out</button>`);
+    out.onclick = () => save(LH.signOut(a));
+    const off = el(`<button class="primary-btn danger">Turn off cloud backup & sync</button>`);
+    off.onclick = () => save(LH.disableCloudSync(a));
+    body.append(sync, out, off);
+    return;
+  }
+
+  if (a.status === 'code-sent') {
+    body.append(
+      el(`<h2>Enter your code</h2>`),
+      el(`<p>[Demo] Since there's no real email service yet, here's the code we would have sent to ${a.email}: <strong>${a.pendingCode}</strong></p>`),
+    );
+    const input = el(`<input type="text" inputmode="numeric" maxlength="6" placeholder="6-digit code" style="font-size:18px;padding:10px 14px;border:1px solid #C5CDD4;border-radius:10px;background:#fff;letter-spacing:2px" aria-label="6-digit sign-in code">`);
+    const err = el(`<p style="color:#B3261E;display:none">That code didn't match — check and try again.</p>`);
+    const confirmBtn = el(`<button class="primary-btn teal">Confirm</button>`);
+    confirmBtn.onclick = () => {
+      const next = LH.confirmSignInCode(a, input.value);
+      if (next.status !== 'signed-in') { err.style.display = 'block'; return; }
+      save(next);
+    };
+    const off = el(`<button class="primary-btn danger">Turn off cloud backup & sync</button>`);
+    off.onclick = () => save(LH.disableCloudSync(a));
+    body.append(input, err, confirmBtn, off);
+    return;
+  }
+
+  // status === 'signed-out' but enabled: ask for an email.
+  body.append(
+    el(`<h2>Cloud backup & sync</h2>`),
+    el(`<p>Enter the email you'd like to use. We'll send a 6-digit code — no password to remember, and your child never sees this screen.</p>`),
+  );
+  const input = el(`<input type="email" placeholder="you@example.com" style="font-size:16px;padding:10px 14px;border:1px solid #C5CDD4;border-radius:10px;background:#fff" aria-label="Email address">`);
+  const err = el(`<p style="color:#B3261E;display:none">Please enter a valid email address.</p>`);
+  const send = el(`<button class="primary-btn teal">Send code</button>`);
+  send.onclick = () => {
+    const next = LH.requestSignInCode(a, input.value);
+    if (next.status !== 'code-sent') { err.style.display = 'block'; return; }
+    save(next);
+  };
+  const off = el(`<button class="primary-btn danger">Turn off cloud backup & sync</button>`);
+  off.onclick = () => save(LH.disableCloudSync(a));
+  body.append(input, err, send, off);
 }
 
 /* artwork thumbnails + replay share the stroke renderer */
@@ -3162,6 +3256,7 @@ window.__lgTest = { navigate, getState: () => state, activateProfile };
         await activateProfile(active.id);
         state.screen = { name: 'home' };
       }
+      if (snap.account) { state.account = snap.account; await repos.account.save(snap.account); }
     }
   } catch (e) { /* fresh start */ }
   render();

@@ -20,6 +20,16 @@ All conclusions require sign-off by the Privacy Officer and qualified Australian
 
 Phase 2 (parent accounts/sync/CMS analytics) requires a new inventory + PIA revision before build.
 
+**Status update (July 2026):** the phase-2 parent-account UI/state-machine scaffold described in
+docs/04 §4.6 has been built (Parent → Cloud backup & sync) so the product experience can be
+demonstrated end-to-end, but it is **off by default** and has **no backend** - `requestSignInCode`
+shows the one-time code on-screen instead of emailing it, and "Sync now" only timestamps a local
+mock rather than talking to a server (see `packages/core/src/account/account.ts`). No account data
+leaves the device in this build. This row of the inventory stays intentionally blank until a real
+AU-region backend exists: **do not enable this for real users, and do not connect it to a live
+backend, without first revising this inventory and PIA and getting Privacy Officer/Legal sign-off**
+per the phase-2 gate above and the security review in docs/09 §9.3.
+
 ## 7.2 Privacy Impact Assessment (summary)
 
 1. **Scope & data flows:** as per inventory; MVP flow is device-internal; only parent-initiated flows touch the network (pack download — carries no personal data; store billing — handled by OS).

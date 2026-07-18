@@ -1,3 +1,4 @@
+import type { ParentAccountState } from '../account/account';
 import type { DrawingDocument } from '../drawing/drawing';
 import type { ChildProfile } from '../profiles/profile';
 import type { ProgressRecord } from '../progress/progress';
@@ -45,10 +46,18 @@ export interface ScreenTimeRepository {
   deleteForProfile(profileId: string): Promise<void>;
 }
 
+/** Singleton, not per-profile: one parent identity owns every local child profile. */
+export interface AccountRepository {
+  get(): Promise<ParentAccountState | null>;
+  save(state: ParentAccountState): Promise<void>;
+  clear(): Promise<void>;
+}
+
 export interface Repositories {
   profiles: ProfileRepository;
   progress: ProgressRepository;
   rewards: RewardsRepository;
   artwork: ArtworkRepository;
   screenTime: ScreenTimeRepository;
+  account: AccountRepository;
 }
