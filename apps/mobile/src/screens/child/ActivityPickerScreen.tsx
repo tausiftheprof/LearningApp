@@ -43,7 +43,9 @@ export function ActivityPickerScreen(props: { category: PickerCategory }): React
     : props.category === 'tracing-numbers' ? tracingOf('numbers')
     : props.category === 'tracing-shapes' ? tracingOf('shapes')
     : props.category === 'mazes'
-      ? playable
+      // The Mazes door lists every path-maze directly (its own player), so it
+      // is not gated by IMPLEMENTED_GAME_TEMPLATES the way category games are.
+      ? catalogue
           .filter((a) => a.type === 'game' && a.template === 'path-maze')
           .filter((a) => a.ageBands.includes(profile?.ageBand ?? '3-5'))
           .sort((a, b) => a.difficulty - b.difficulty)

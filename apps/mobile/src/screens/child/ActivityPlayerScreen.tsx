@@ -13,6 +13,7 @@ import { TracingPlayer } from './players/TracingPlayer';
 import { ColouringPlayer } from './players/ColouringPlayer';
 import { PuzzlePlayer } from './players/PuzzlePlayer';
 import { GamePlayer } from './players/GamePlayer';
+import { MazePlayer } from './players/MazePlayer';
 
 /**
  * Activity player shell (docs/03 S10-S14): instruction bar with replay,
@@ -112,7 +113,10 @@ export function ActivityPlayerScreen(props: { activity: Activity }): React.JSX.E
       {activity.type === 'jigsaw' && (
         <PuzzlePlayer activity={activity} theme={theme} onComplete={complete} onDone={goHome} />
       )}
-      {activity.type === 'game' && (
+      {activity.type === 'game' && activity.template === 'path-maze' && (
+        <MazePlayer activity={activity} theme={theme} onComplete={complete} onDone={goHome} />
+      )}
+      {activity.type === 'game' && activity.template !== 'path-maze' && (
         <GamePlayer activity={activity} theme={theme} onComplete={complete} onDone={goHome} />
       )}
     </View>

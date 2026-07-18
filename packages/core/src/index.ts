@@ -4,6 +4,7 @@ export * from './content/schema';
 export * from './content/starterPack';
 export * from './content/themes';
 export * from './tracing/tracingEngine';
+export * from './maze/mazeEngine';
 export * from './puzzles/puzzleEngine';
 export * from './rewards/rewardsEngine';
 export * from './screenTime/screenTime';
