@@ -59,10 +59,9 @@ describe('starter content pack', () => {
 
   it('ships a solid spread of toddler, preschool and logic games (PRD section 25)', () => {
     const count = (c: string) => pack.activities.filter((a) => a.category === c).length;
-    // NOTE: extracting the maze set to the little-grip-mazes repo removed 5
-    // toddler and 5 logic games, dropping toddler to 9 and logic to 8. Backfill
-    // both categories with non-maze games to restore the PRD-25 target of 10
-    // before ship. Preschool is unaffected.
+    // NOTE: a set of games was extracted to a separate project, dropping
+    // toddler to 9 and logic to 8. Backfill both categories to restore the
+    // PRD-25 target of 10 before ship. Preschool is unaffected.
     expect(count('toddler')).toBeGreaterThanOrEqual(9);
     expect(count('preschool')).toBeGreaterThanOrEqual(10);
     expect(count('logic')).toBeGreaterThanOrEqual(8);

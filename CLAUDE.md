@@ -97,13 +97,6 @@ gates — an activity whose template isn't listed is filtered out of pickers ent
 no broken screens) rather than shown half-working. Check these before assuming a game template
 "exists" on both surfaces.
 
-### Mazes (extracted)
-
-The maze activity — its collision engine, players, artwork and the `path-maze` template — was
-split out into a separate repository (`little-grip-mazes`) to be developed on its own, and is no
-longer part of Little Grip. Don't re-add a `path-maze` template or maze activities here without
-bringing the engine back first.
-
 ### Multi-child profiles, screen time, rewards
 
 `screenTime/screenTime.ts` and `rewards/rewardsEngine.ts` are daily-capped, ledger-based state
