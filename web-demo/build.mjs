@@ -8,8 +8,32 @@ import { build } from 'esbuild';
 import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import sharp from 'sharp';
 
 const here = dirname(fileURLToPath(import.meta.url));
+
+// The owner artwork in assets/images/ is stored full-resolution (1254px+), but
+// the demo never renders a raster larger than ~900px (maze/scene canvases cap at
+// MAXW=900) and home tiles show at ~112px. Inlining the originals as base64 made
+// index.html ~54MB. So for the *demo bundle only* we downsample each raster to
+// the size it is actually shown at and re-encode as WebP (keeps tile alpha,
+// far smaller for photos). Source files are untouched, so the mobile app and
+// any future print/CMS pipeline still use the originals. Maze photos feed the
+// collision engine, so they keep a generous cap + high quality.
+const RASTER_CAPS = [
+  { test: /^tile-/, max: 400, quality: 90 },
+  { test: /^maze-/, max: 1000, quality: 95 },
+  { test: /^scene-/, max: 1000, quality: 88 },
+  { test: /./, max: 700, quality: 88 },
+];
+async function encodeRaster(name, buf) {
+  const cap = RASTER_CAPS.find((c) => c.test.test(name));
+  const meta = await sharp(buf).metadata();
+  let pipe = sharp(buf);
+  if (meta.width && meta.width > cap.max) pipe = pipe.resize({ width: cap.max });
+  const out = await pipe.webp({ quality: cap.quality }).toBuffer();
+  return `data:image/webp;base64,${out.toString('base64')}`;
+}
 
 const result = await build({
   entryPoints: [join(here, '../packages/core/src/index.ts')],
@@ -30,17 +54,13 @@ const core = result.outputFiles[0].text;
 const imagesDir = join(here, '../assets/images');
 const images = {};
 const rasterImages = {};
-const RASTER_MIME = { '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg' };
+const RASTER_EXT = /\.(png|jpe?g)$/i;
 for (const f of readdirSync(imagesDir)) {
   if (f.endsWith('.svg')) {
     images[f.replace(/\.svg$/, '')] = readFileSync(join(imagesDir, f), 'utf8');
-  } else {
-    const ext = /\.[a-z]+$/i.exec(f)?.[0]?.toLowerCase();
-    const mime = ext && RASTER_MIME[ext];
-    if (mime) {
-      const b64 = readFileSync(join(imagesDir, f)).toString('base64');
-      rasterImages[f.slice(0, -ext.length)] = `data:${mime};base64,${b64}`;
-    }
+  } else if (RASTER_EXT.test(f)) {
+    const name = f.replace(RASTER_EXT, '');
+    rasterImages[name] = await encodeRaster(name, readFileSync(join(imagesDir, f)));
   }
 }
 const imagesJs = `window.LG_IMAGES = ${JSON.stringify(images)};\nwindow.LG_RASTER_IMAGES = ${JSON.stringify(rasterImages)};`;

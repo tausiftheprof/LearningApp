@@ -47,7 +47,10 @@ advertising-ID permissions.
 - **`apps/mobile`** — the real Expo/React Native product. Renders core state with Skia canvases
   and RN views.
 - **`web-demo`** — a single self-contained `index.html`, built by `web-demo/build.mjs`, which
-  esbuild-bundles `packages/core` inline and inlines `assets/images/*` as data. It is a full
+  esbuild-bundles `packages/core` inline and inlines `assets/images/*` as data (SVGs as markup;
+  raster PNG/JPG downsampled with `sharp` to the size the demo actually renders — tiles ≤400px,
+  maze/scene photos ≤1000px — and re-encoded as WebP, so `index.html` stays a few MB not ~50MB;
+  the `assets/images/` originals are left full-res for the mobile app and print/CMS). It is a full
   parallel implementation of the UI in vanilla JS/canvas (`demo-shell.html`), used to preview and
   test features against the *real* core engines without an Expo toolchain. **Any change to a core
   engine or to `demo-shell.html` requires re-running `node web-demo/build.mjs`** or the demo goes
