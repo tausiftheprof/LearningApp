@@ -4,54 +4,39 @@ import {
   dayKeyFrom,
   canStartNewActivity,
   defaultAccessibilitySettings,
-  HOME_TILE_SUBTITLES,
+  homeTilesForAge,
 } from '@littlegrip/core';
-import type { ActivityCategory } from '@littlegrip/core';
+import type { HomeTile, HomeTarget } from '@littlegrip/core';
 import { useAppStore } from '../../state/appStore';
 import { childTheme } from '../../ui/theme';
 import { BigTile } from '../../ui/components';
 import { audioService } from '../../services/audio';
 
 /**
- * Child Home — owner-approved design (July 2026): greeting card with mascot
- * and theme subtitle, star pill + Grown-ups lock on the right, eight tiles
- * with subtitles in two columns, and a full-width "My Rewards" banner.
+ * Child Home — age-adaptive design (Direction C, July 2026): greeting card with
+ * mascot and theme subtitle, star pill + Grown-ups lock on the right, then an
+ * icon+label tile grid whose doors are chosen by the profile's age band
+ * (`homeTilesForAge`), and a full-width "My Rewards" banner. The littlest band
+ * (2-3) gets fewer, larger tiles; older children get more doors.
  */
-const TILES: Array<{
-  label: string;
-  idx: number;
-  sub?: string;
-  icon?: string;
-  bigKidsOnly?: boolean;
-  target: { category?: ActivityCategory | 'mazes'; special?: 'daily' };
-}> = [
-  { label: 'Draw', idx: 0, target: { category: 'drawing' } },
-  { label: 'Colour', idx: 1, target: { category: 'colouring' } },
-  { label: 'Puzzles', idx: 2, target: { category: 'puzzles' } },
-  { label: 'Tracing', idx: 3, target: { category: 'tracing' } },
-  { label: 'Little Games', idx: 4, target: { category: 'toddler' } },
-  // Owner direction: Big Kid Games appears only on a 5-7 profile.
-  { label: 'Big Kid Games', idx: 5, bigKidsOnly: true, target: { category: 'preschool' } },
-  { label: 'Think & Solve', idx: 6, target: { category: 'logic' } },
-  { label: 'Mazes', idx: 2, sub: 'Find the way', icon: '🌀', target: { category: 'mazes' } },
-  { label: 'Daily Adventure', idx: 7, target: { special: 'daily' } },
-];
-
 export function HomeScreen(): React.JSX.Element {
   const { profile, screenTime, navigate, rewards } = useAppStore();
   const theme = childTheme(profile?.accessibility ?? defaultAccessibilitySettings(), profile?.themeId);
   const app = theme.app;
 
-  const visibleTiles = TILES.filter((t) => !t.bigKidsOnly || profile?.ageBand === '5-7');
+  const ageBand = profile?.ageBand ?? '3-5';
+  const visibleTiles = homeTilesForAge(ageBand);
+  const littlest = ageBand === '2-3';
 
-  function open(target: (typeof TILES)[number]['target'], label: string): void {
+  function open(target: HomeTarget, label: string): void {
     void audioService.playInstruction(`label/${label}`);
     if (!canStartNewActivity(screenTime, dayKeyFrom(new Date()))) {
       navigate({ name: 'times-up' });
       return;
     }
-    if (target.special === 'daily') navigate({ name: 'daily-adventure' });
-    else if (target.category) navigate({ name: 'picker', category: target.category });
+    if ('special' in target && target.special === 'daily') navigate({ name: 'daily-adventure' });
+    else if ('special' in target && target.special === 'maze') navigate({ name: 'picker', category: 'mazes' });
+    else if ('category' in target) navigate({ name: 'picker', category: target.category });
   }
 
   return (
@@ -87,13 +72,12 @@ export function HomeScreen(): React.JSX.Element {
         </View>
       </View>
       <ScrollView contentContainerStyle={styles.grid}>
-        {visibleTiles.map((tile) => (
-          <View key={tile.label} style={styles.cell}>
+        {visibleTiles.map((tile: HomeTile, i) => (
+          <View key={tile.label} style={[styles.cell, littlest && styles.cellLittlest]}>
             <BigTile
               label={tile.label}
-              subtitle={tile.sub ?? HOME_TILE_SUBTITLES[tile.idx] ?? ''}
               emoji={tile.icon ?? app.tileIcons[tile.idx] ?? '⭐'}
-              colour={theme.tileColours[tile.idx % theme.tileColours.length]!}
+              colour={theme.tileColours[i % theme.tileColours.length]!}
               theme={theme}
               onPress={() => open(tile.target, tile.label)}
             />
@@ -133,6 +117,8 @@ const styles = StyleSheet.create({
   grownUpsText: { fontSize: 11, marginTop: 2 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', padding: 8 },
   cell: { width: '50%', minHeight: 130 },
+  // Littlest band (2-3): fewer doors, so give each tile more room.
+  cellLittlest: { minHeight: 168 },
   rewardsBanner: {
     flexDirection: 'row',
     alignItems: 'center',

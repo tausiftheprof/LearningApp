@@ -3,6 +3,7 @@ export * from './account/account';
 export * from './content/schema';
 export * from './content/starterPack';
 export * from './content/themes';
+export * from './home/homeLayout';
 export * from './tracing/tracingEngine';
 export * from './maze/mazeEngine';
 export * from './puzzles/puzzleEngine';

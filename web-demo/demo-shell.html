@@ -129,6 +129,9 @@
   .tile-photo .lg-img, .tile-photo img { width: clamp(74px, 12vw, 112px) !important; height: clamp(74px, 12vw, 112px) !important; border-radius: 0 !important; }
   .home-grid .big-tile.has-photo { box-shadow: none; }
   .rewards-banner.has-photo .tile-photo .lg-img, .rewards-banner.has-photo .tile-photo img { width: clamp(60px, 8vw, 88px) !important; height: clamp(60px, 8vw, 88px) !important; }
+  /* Littlest band (2-3): fewer doors, so give each tile more room + bigger label. */
+  .home-grid.age-littlest .big-tile { min-height: clamp(112px, 15vw, 140px); }
+  .home-grid.age-littlest .label { font-size: clamp(19px, 2.9vw, 28px); }
 
   .starbar { text-align: center; font-size: 17px; font-weight: 800; padding: 6px; }
 
@@ -744,22 +747,17 @@ function renderOnboarding(step = 'welcome', draft = { nickname: '', ageBand: '3-
   function renderInto(node, fn) { app.innerHTML = ''; fn(); }
 }
 
-/* ---------- child home (owner-approved design, July 2026) ---------- */
-// idx picks the theme's tile colour/icon; Mazes is its own section (owner
-// direction) and Big Kid Games shows only on a 5-7 profile.
-const HOME_TILES = [
-  { label: 'Draw', category: 'drawing', idx: 0 },
-  { label: 'Colour', category: 'colouring', idx: 1 },
-  { label: 'Puzzles', category: 'puzzles', idx: 2 },
-  { label: 'Tracing', category: 'tracing', idx: 3 },
-  { label: 'Little Games', category: 'toddler', idx: 4 },
-  { label: 'Big Kid Games', category: 'preschool', idx: 5, bigKidsOnly: true },
-  { label: 'Think & Solve', category: 'logic', idx: 6 },
-  { label: 'Mazes', special: 'maze', idx: 2, sub: 'Find the way', icon: '🌀', image: 'maze' },
-  { label: 'Daily Adventure', special: 'daily', idx: 7 },
-];
-const visibleHomeTiles = () =>
-  HOME_TILES.filter((t) => !t.bigKidsOnly || state.profile?.ageBand === '5-7');
+/* ---------- child home (age-adaptive design, July 2026) ---------- */
+// Which doors appear (and their order) is chosen by the profile's age band in
+// core (LH.homeTilesForAge), shared with the mobile app; the littlest band gets
+// fewer, larger tiles. Tiles show icon + label only (no subtitle).
+const CANDY_TILE_PHOTOS = {
+  drawing: 'tile-draw', colouring: 'tile-colour', puzzles: 'tile-puzzles',
+  tracing: 'tile-tracing', toddler: 'tile-toddler', preschool: 'tile-preschool',
+  logic: 'tile-logic',
+};
+const homeTileCategory = (t) =>
+  t.target && 'category' in t.target ? t.target.category : undefined;
 
 function renderHome() {
   setStatus('Child Home', ['themes (core)', 'screenTime.canStartNewActivity', 'rewards state']);
@@ -798,17 +796,16 @@ function renderHome() {
   right.append(gate);
   top.append(greet, right);
 
-  // Owner-supplied home icons (July 2026): full illustrated tiles for Candy
-  // Clouds - each photo already contains its own coloured card + decoration,
-  // so it replaces the tile's background colour and icon medallion entirely.
-  const CANDY_TILE_PHOTOS = {
-    drawing: 'tile-draw', colouring: 'tile-colour', puzzles: 'tile-puzzles',
-    tracing: 'tile-tracing', toddler: 'tile-toddler', preschool: 'tile-preschool',
-    logic: 'tile-logic',
-  };
-  const grid = el(`<div class="tile-grid home-grid"></div>`);
-  visibleHomeTiles().forEach((t) => {
-    const photoName = candy ? (t.special === 'daily' ? 'tile-daily' : CANDY_TILE_PHOTOS[t.category]) : null;
+  // Age-adaptive doors from core; the littlest band (2-3) gets a roomier grid.
+  const ageBand = state.profile?.ageBand ?? '3-5';
+  const grid = el(`<div class="tile-grid home-grid${ageBand === '2-3' ? ' age-littlest' : ''}"></div>`);
+  // Candy Clouds ships full illustrated tile photos - each already contains its
+  // own coloured card + decoration, so it replaces the background + medallion.
+  LH.homeTilesForAge(ageBand).forEach((t, i) => {
+    const isDaily = t.target.special === 'daily';
+    const isMaze = t.target.special === 'maze';
+    const category = homeTileCategory(t);
+    const photoName = candy ? (isDaily ? 'tile-daily' : CANDY_TILE_PHOTOS[category]) : null;
     const usePhoto = photoName && RASTER_IMAGES[photoName];
     const imgName = t.image && IMAGES[t.image] ? t.image : th.tileImages?.[t.idx];
     const icon = t.icon ?? th.tileIcons[t.idx];
@@ -817,16 +814,16 @@ function renderHome() {
       : imgName && IMAGES[imgName] && !hc
       ? `<span class="tile-illo" aria-hidden="true">${imgHtml(imgName, 64)}</span>`
       : `<span class="medallion" style="background:${surface}" aria-hidden="true">${icon}</span>`;
-    const tile = el(`<button class="big-tile ${usePhoto ? 'has-photo' : ''}" style="background:${usePhoto ? 'none' : tiles()[t.idx % tiles().length]}">
+    const tile = el(`<button class="big-tile ${usePhoto ? 'has-photo' : ''}" style="background:${usePhoto ? 'none' : tiles()[i % tiles().length]}">
       ${iconHtml}
-      <span class="tile-text"><span class="label" style="${usePhoto ? `color:${th.text}` : ''}">${t.label}</span><span class="sublabel" style="${usePhoto ? `color:${th.text}` : ''}">${t.sub ?? LH.HOME_TILE_SUBTITLES[t.idx]}</span></span>
+      <span class="tile-text"><span class="label" style="${usePhoto ? `color:${th.text}` : ''}">${t.label}</span></span>
     </button>`);
     tile.onclick = () => {
       speak(t.label);
       if (!guardScreenTime()) return;
-      if (t.special === 'daily') navigate({ name: 'daily' });
-      else if (t.special === 'maze') navigate({ name: 'picker', category: 'mazes' });
-      else navigate({ name: 'picker', category: t.category });
+      if (isDaily) navigate({ name: 'daily' });
+      else if (isMaze) navigate({ name: 'picker', category: 'mazes' });
+      else navigate({ name: 'picker', category });
     };
     grid.append(tile);
   });
