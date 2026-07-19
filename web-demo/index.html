@@ -1481,19 +1481,44 @@ function renderTracing(firstActivity) {
     return seg.len === 0 ? { x: 1, y: 0 } : { x: seg.dx / seg.len, y: seg.dy / seg.len };
   }
 
-  // A friendly arrow just ahead of the mascot, pointing the way to trace.
-  function drawArrow(anchor, dir, mSize) {
-    const ah = Math.max(15, mSize * 0.34);
-    const bx = anchor.x + dir.x * (mSize * 0.5 + 6), by = anchor.y + dir.y * (mSize * 0.5 + 6);
-    const ex = bx + dir.x * ah, ey = by + dir.y * ah;
-    const ang = Math.atan2(dir.y, dir.x), wing = ah * 0.55;
-    ctx.strokeStyle = accent; ctx.lineWidth = Math.max(4, mSize * 0.1);
-    ctx.lineCap = ctx.lineJoin = 'round'; ctx.globalAlpha = 0.9;
-    ctx.beginPath(); ctx.moveTo(bx, by); ctx.lineTo(ex, ey); ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(ex, ey); ctx.lineTo(ex - Math.cos(ang - 0.5) * wing, ey - Math.sin(ang - 0.5) * wing);
-    ctx.moveTo(ex, ey); ctx.lineTo(ex - Math.cos(ang + 0.5) * wing, ey - Math.sin(ang + 0.5) * wing);
-    ctx.stroke(); ctx.globalAlpha = 1;
+  // Point (screen) + unit direction along the guide at arc-fraction `frac`.
+  function sampleAt(pathD, frac) {
+    let total = 0;
+    const segs = [];
+    for (let i = 0; i < pathD.length - 1; i++) {
+      const a = pathD[i], b = pathD[i + 1];
+      const dx = b.x - a.x, dy = b.y - a.y, len = Math.hypot(dx, dy);
+      segs.push({ ax: a.x, ay: a.y, dx, dy, len }); total += len;
+    }
+    if (!segs.length || total === 0) { const p = pathD[0]; return { x: p.x * scale + ox, y: p.y * scale + oy, dx: 1, dy: 0 }; }
+    const target = Math.max(0, Math.min(1, frac)) * total;
+    let acc = 0, seg = segs[0], t = 0;
+    for (const s of segs) { if (acc + s.len >= target) { seg = s; t = s.len ? (target - acc) / s.len : 0; break; } acc += s.len; }
+    const dl = seg.len || 1;
+    return { x: (seg.ax + seg.dx * t) * scale + ox, y: (seg.ay + seg.dy * t) * scale + oy, dx: seg.dx / dl, dy: seg.dy / dl };
+  }
+
+  // Chevron arrows spaced along a guide stroke, showing the way to trace a
+  // letter/number/shape (more for longer strokes). The traced fill is drawn on
+  // top, so each arrow is covered as the child passes it.
+  function drawArrows(pathD, opacity) {
+    let total = 0;
+    for (let i = 0; i < pathD.length - 1; i++) total += Math.hypot(pathD[i + 1].x - pathD[i].x, pathD[i + 1].y - pathD[i].y);
+    const count = Math.max(2, Math.min(7, Math.round(total / 180)));
+    const w = Math.max(9, config.corridorWidth * 0.6 * scale);
+    ctx.strokeStyle = accent; ctx.lineWidth = Math.max(3, w * 0.34);
+    ctx.lineCap = ctx.lineJoin = 'round'; ctx.globalAlpha = opacity;
+    for (let k = 0; k < count; k++) {
+      const s = sampleAt(pathD, (k + 0.5) / count);
+      const a = Math.atan2(s.dy, s.dx);
+      const tx = s.x + Math.cos(a) * w * 0.5, ty = s.y + Math.sin(a) * w * 0.5;
+      ctx.beginPath();
+      ctx.moveTo(tx - Math.cos(a - 0.6) * w, ty - Math.sin(a - 0.6) * w);
+      ctx.lineTo(tx, ty);
+      ctx.lineTo(tx - Math.cos(a + 0.6) * w, ty - Math.sin(a + 0.6) * w);
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
   }
 
   // Colour the corridor in behind the mascot: the child's on-path points are
@@ -1535,7 +1560,10 @@ function renderTracing(firstActivity) {
       else { ctx.strokeStyle = '#D7CCC8'; ctx.lineWidth = 4; } // strokes still to come
       ctx.stroke();
     });
-    // The traced fill sits above the guide but below the mascot.
+    // Direction arrows along each stroke still to trace (current stroke bold,
+    // upcoming strokes fainter); the traced fill is drawn over them next.
+    if (!done) strokes.forEach((path, i) => { if (i >= strokeIndex) drawArrows(path, i === strokeIndex ? 0.9 : 0.45); });
+    // The traced fill sits above the guide + arrows.
     drawFill();
     // Faint off-path breadcrumbs (gentle, never a red "wrong" mark).
     for (const d of dots) {
@@ -1543,22 +1571,11 @@ function renderTracing(firstActivity) {
       ctx.beginPath(); ctx.arc(d.x, d.y, 4, 0, Math.PI * 2);
       ctx.fillStyle = 'rgba(189,189,189,0.4)'; ctx.fill();
     }
-    // The mascot IS the cursor: it waits at the start point, then rides the
-    // finger tip and leads the trace. (No bare dot - the mascot marks the spot.)
+    // The guide dot: it marks the start point, then follows the finger tip.
     if (!done) {
       const sp = strokes[strokeIndex][0];
-      const anchor = dots.length ? dots[dots.length - 1] : { x: sp.x * scale + ox, y: sp.y * scale + oy };
-      const mSize = Math.max(56, Math.min(108, config.corridorWidth * 2.2 * scale));
-      // Arrow pointing the way to trace (drawn first, so the mascot sits over it).
-      drawArrow(anchor, dirAt(strokes[strokeIndex], lastPos), mSize);
-      // Soft accent halo so the target reads clearly (and covers image load).
-      ctx.beginPath(); ctx.arc(anchor.x, anchor.y, Math.max(11, mSize * 0.17), 0, Math.PI * 2);
-      ctx.globalAlpha = 0.3; ctx.fillStyle = accent; ctx.fill(); ctx.globalAlpha = 1;
-      if (mascotImg && mascotImg.complete && mascotImg.naturalWidth) {
-        ctx.drawImage(mascotImg, anchor.x - mSize / 2, anchor.y - mSize / 2, mSize, mSize);
-      } else {
-        ctx.beginPath(); ctx.arc(anchor.x, anchor.y, 13, 0, Math.PI * 2); ctx.fillStyle = accent; ctx.fill();
-      }
+      const cur = dots.length ? dots[dots.length - 1] : { x: sp.x * scale + ox, y: sp.y * scale + oy };
+      ctx.beginPath(); ctx.arc(cur.x, cur.y, 13, 0, Math.PI * 2); ctx.fillStyle = accent; ctx.fill();
     }
   }
 
@@ -1621,16 +1638,10 @@ function renderTracing(firstActivity) {
     const summary = session.endAttempt();
     if (!summary.completed) {
       const phrase = LH.pickFeedback(summary.showDemo ? 'hint' : summary.coverage > 0.4 ? 'almost' : 'try-again');
-      note.textContent = phrase + (summary.showDemo ? ' 👉 start where the mascot is!' : '');
+      note.textContent = phrase + (summary.showDemo ? ' 👉 start at the dot and follow the arrows!' : '');
       speak(phrase);
       dots = []; lastPos = 0; draw();
     }
-  }
-  // If the mascot art is still decoding when this screen opens, redraw once it
-  // lands so the idle start point shows the mascot, not the fallback dot.
-  if (!(mascotImg && mascotImg.complete && mascotImg.naturalWidth)) {
-    const src = RASTER_IMAGES['mascot'] || (IMAGES['mascot'] ? 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(IMAGES['mascot']) : '');
-    if (src) { const im = new Image(); im.onload = () => { mascotImg = im; draw(); }; im.src = src; }
   }
   requestAnimationFrame(fit);
   new ResizeObserver(fit).observe(stage);

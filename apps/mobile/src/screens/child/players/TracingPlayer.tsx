@@ -1,6 +1,6 @@
 import React, { useMemo, useRef, useState } from 'react';
 import { PanResponder, StyleSheet, Text, View } from 'react-native';
-import { Canvas, Circle, Image as SkiaImage, Path, Skia, useImage } from '@shopify/react-native-skia';
+import { Canvas, Circle, Path, Skia } from '@shopify/react-native-skia';
 import type { TracingActivity } from '@littlegrip/core';
 import {
   defaultAccessibilitySettings,
@@ -14,38 +14,55 @@ import { CompletionBanner } from '../ActivityPlayerScreen';
 
 const DESIGN = 1000; // activity design space (core engine coordinates)
 
+interface DesignPoint { x: number; y: number }
+
 /**
- * Unit direction of the guide path at arc-fraction `frac` (0..1). Scale is
- * uniform with no rotation, so a design-space direction is also the screen
- * direction — used to point the "go this way" arrow ahead of the mascot.
+ * Point (screen) + unit direction along a guide path at arc-fraction `frac`.
+ * Scale is uniform with no rotation, so a design-space direction is also the
+ * screen direction. `sc`/`ox`/`oy` map design space into the stage.
  */
-function dirAt(pathD: { x: number; y: number }[], frac: number): { x: number; y: number } {
+function sampleAt(pathD: DesignPoint[], frac: number, sc: number, ox: number, oy: number) {
   let total = 0;
-  const segs: { dx: number; dy: number; len: number }[] = [];
+  const segs: { ax: number; ay: number; dx: number; dy: number; len: number }[] = [];
   for (let i = 0; i < pathD.length - 1; i++) {
-    const dx = pathD[i + 1]!.x - pathD[i]!.x, dy = pathD[i + 1]!.y - pathD[i]!.y;
-    const len = Math.hypot(dx, dy);
-    segs.push({ dx, dy, len });
+    const a = pathD[i]!, b = pathD[i + 1]!;
+    const dx = b.x - a.x, dy = b.y - a.y, len = Math.hypot(dx, dy);
+    segs.push({ ax: a.x, ay: a.y, dx, dy, len });
     total += len;
   }
-  if (segs.length === 0 || total === 0) return { x: 1, y: 0 };
+  if (segs.length === 0 || total === 0) {
+    const p = pathD[0]!;
+    return { x: p.x * sc + ox, y: p.y * sc + oy, dx: 1, dy: 0 };
+  }
   const target = Math.max(0, Math.min(1, frac)) * total;
-  let acc = 0, seg = segs[0]!;
-  for (const s of segs) { if (acc + s.len >= target) { seg = s; break; } acc += s.len; }
-  return seg.len === 0 ? { x: 1, y: 0 } : { x: seg.dx / seg.len, y: seg.dy / seg.len };
+  let acc = 0, seg = segs[0]!, t = 0;
+  for (const s of segs) { if (acc + s.len >= target) { seg = s; t = s.len ? (target - acc) / s.len : 0; break; } acc += s.len; }
+  const dl = seg.len || 1;
+  return { x: (seg.ax + seg.dx * t) * sc + ox, y: (seg.ay + seg.dy * t) * sc + oy, dx: seg.dx / dl, dy: seg.dy / dl };
 }
 
-/** A friendly arrow just ahead of the mascot, pointing the way to trace. */
-function arrowPathFor(anchor: { x: number; y: number }, dir: { x: number; y: number }, mSize: number) {
-  const p = Skia.Path.Make();
-  const ah = Math.max(15, mSize * 0.34);
-  const bx = anchor.x + dir.x * (mSize * 0.5 + 6), by = anchor.y + dir.y * (mSize * 0.5 + 6);
-  const ex = bx + dir.x * ah, ey = by + dir.y * ah;
-  const ang = Math.atan2(dir.y, dir.x), wing = ah * 0.55;
-  p.moveTo(bx, by); p.lineTo(ex, ey);
-  p.moveTo(ex, ey); p.lineTo(ex - Math.cos(ang - 0.5) * wing, ey - Math.sin(ang - 0.5) * wing);
-  p.moveTo(ex, ey); p.lineTo(ex - Math.cos(ang + 0.5) * wing, ey - Math.sin(ang + 0.5) * wing);
-  return p;
+/**
+ * Chevron arrows spaced along the strokes still to trace (from `startIndex`),
+ * showing the way to trace a letter/number/shape — more for longer strokes.
+ */
+function arrowsPathFor(paths: DesignPoint[][], startIndex: number, sc: number, ox: number, oy: number, corridorWidth: number) {
+  const path = Skia.Path.Make();
+  const w = Math.max(9, corridorWidth * 0.6 * sc);
+  for (let i = startIndex; i < paths.length; i++) {
+    const pathD = paths[i]!;
+    let total = 0;
+    for (let j = 0; j < pathD.length - 1; j++) total += Math.hypot(pathD[j + 1]!.x - pathD[j]!.x, pathD[j + 1]!.y - pathD[j]!.y);
+    const count = Math.max(2, Math.min(7, Math.round(total / 180)));
+    for (let k = 0; k < count; k++) {
+      const s = sampleAt(pathD, (k + 0.5) / count, sc, ox, oy);
+      const a = Math.atan2(s.dy, s.dx);
+      const tx = s.x + Math.cos(a) * w * 0.5, ty = s.y + Math.sin(a) * w * 0.5;
+      path.moveTo(tx - Math.cos(a - 0.6) * w, ty - Math.sin(a - 0.6) * w);
+      path.lineTo(tx, ty);
+      path.lineTo(tx - Math.cos(a + 0.6) * w, ty - Math.sin(a + 0.6) * w);
+    }
+  }
+  return path;
 }
 
 /**
@@ -73,15 +90,11 @@ export function TracingPlayer(props: {
   const [strokeIndex, setStrokeIndex] = useState(0);
   const session = useRef(new TracingSession(props.activity.paths[0]!, config));
   const scores = useRef<number[]>([]);
-  // Latest on-path arc position (0..1) — aims the direction arrow.
-  const lastPos = useRef(0);
 
   const [size, setSize] = useState({ w: 1, h: 1 });
   const [childPoints, setChildPoints] = useState<{ x: number; y: number; onPath: boolean }[]>([]);
   const [done, setDone] = useState(false);
   const [encouragement, setEncouragement] = useState<string | null>(null);
-  // The brand mascot leads the trace (shared artwork in assets/images/).
-  const mascot = useImage(require('../../../../../../assets/images/mascot.png'));
 
   const side = Math.min(size.w, size.h);
   const scale = side / DESIGN;
@@ -105,7 +118,7 @@ export function TracingPlayer(props: {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [props.activity, scale]);
 
-  // Colour the corridor in behind the mascot: the child's on-path points are
+  // Colour the corridor in behind the dot: the child's on-path points are
   // stroked as one thick rounded trail in the theme accent, broken wherever the
   // finger strayed off-path, so the glyph visibly fills as it is traced.
   const fillPath = useMemo(() => {
@@ -119,8 +132,8 @@ export function TracingPlayer(props: {
     return path;
   }, [childPoints]);
   const fillWidth = Math.max(6, config.corridorWidth * 1.5 * scale);
-  const mascotSize = Math.max(56, Math.min(108, config.corridorWidth * 2.2 * scale));
   const tip = childPoints.length ? childPoints[childPoints.length - 1]! : null;
+  const arrowsPath = arrowsPathFor(props.activity.paths, strokeIndex, scale, ox, oy, config.corridorWidth);
 
   const pan = useMemo(
     () =>
@@ -130,7 +143,6 @@ export function TracingPlayer(props: {
         onPanResponderMove: (e) => {
           const { locationX, locationY } = e.nativeEvent;
           const result = session.current.addPoint(toDesign(locationX, locationY));
-          if (result.onPath) lastPos.current = result.pathPosition;
           setChildPoints((prev) => [...prev.slice(-400), { x: locationX, y: locationY, onPath: result.onPath }]);
           if (result.completed && !done) {
             const summary = session.current.endAttempt();
@@ -141,7 +153,6 @@ export function TracingPlayer(props: {
               session.current = new TracingSession(props.activity.paths[nextIndex]!, config);
               setStrokeIndex(nextIndex);
               setChildPoints([]);
-              lastPos.current = 0;
               setEncouragement(pickFeedback('completed') + ' Now the next one!');
             } else {
               setDone(true);
@@ -156,7 +167,6 @@ export function TracingPlayer(props: {
           if (!summary.completed) {
             setEncouragement(pickFeedback(summary.showDemo ? 'hint' : summary.coverage > 0.4 ? 'almost' : 'try-again'));
             setChildPoints([]);
-            lastPos.current = 0;
           }
         },
       }),
@@ -186,6 +196,19 @@ export function TracingPlayer(props: {
           />
           {/* Centre line */}
           <Path path={guidePath} color="#8D6E63" style="stroke" strokeWidth={4} strokeCap="round" />
+          {/* Direction arrows along the strokes still to trace (the fill is drawn
+              over them, so each arrow is covered as the child passes it) */}
+          {!done && (
+            <Path
+              path={arrowsPath}
+              color={props.theme.accent}
+              style="stroke"
+              strokeWidth={Math.max(3, config.corridorWidth * 0.6 * scale * 0.34)}
+              strokeCap="round"
+              strokeJoin="round"
+              opacity={0.9}
+            />
+          )}
           {/* Traced fill: the corridor colours in with the theme accent */}
           <Path
             path={fillPath}
@@ -198,40 +221,8 @@ export function TracingPlayer(props: {
           />
           {/* Faint off-path breadcrumbs (gentle, never a red "wrong" mark) */}
           {childPoints.map((p, i) => (p.onPath ? null : <Circle key={i} cx={p.x} cy={p.y} r={5} color="#BDBDBD" opacity={0.4} />))}
-          {/* The mascot IS the cursor: it waits at the start point, then rides
-              the finger tip and leads the trace (no bare dot), with an arrow
-              pointing the way to go. */}
-          {!done && (() => {
-            const anchor = tip ?? start;
-            const halo = Math.max(11, mascotSize * 0.17);
-            const dir = dirAt(props.activity.paths[Math.min(strokeIndex, props.activity.paths.length - 1)]!, lastPos.current);
-            return (
-              <React.Fragment>
-                <Path
-                  path={arrowPathFor(anchor, dir, mascotSize)}
-                  color={props.theme.accent}
-                  style="stroke"
-                  strokeWidth={Math.max(4, mascotSize * 0.1)}
-                  strokeCap="round"
-                  strokeJoin="round"
-                  opacity={0.9}
-                />
-                <Circle cx={anchor.x} cy={anchor.y} r={halo} color={props.theme.accent} opacity={0.3} />
-                {mascot ? (
-                  <SkiaImage
-                    image={mascot}
-                    x={anchor.x - mascotSize / 2}
-                    y={anchor.y - mascotSize / 2}
-                    width={mascotSize}
-                    height={mascotSize}
-                    fit="contain"
-                  />
-                ) : (
-                  <Circle cx={anchor.x} cy={anchor.y} r={13} color={props.theme.accent} />
-                )}
-              </React.Fragment>
-            );
-          })()}
+          {/* The guide dot: it marks the start point, then follows the finger tip */}
+          {!done && <Circle cx={(tip ?? start).x} cy={(tip ?? start).y} r={16} color={props.theme.accent} />}
         </Canvas>
       </View>
       {encouragement && !done && (
