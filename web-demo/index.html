@@ -237,6 +237,29 @@
   }
   .colour-actions { position: absolute; left: 10px; bottom: 10px; display: flex; gap: 8px; }
 
+  /* ---- Tracing controls: colour panel on the right, undo/trash on the left ---- */
+  .trace-panel {
+    position: absolute; top: 50%; right: 10px; transform: translateY(-50%);
+    display: flex; flex-direction: column; align-items: center; gap: 12px;
+    padding: 12px 10px; background: rgba(255, 255, 255, 0.94);
+    border-radius: 26px; box-shadow: 0 4px 14px rgba(69, 61, 91, 0.16);
+  }
+  .trace-swatch {
+    width: 46px; height: 46px; border-radius: 50%; border: none; cursor: pointer; padding: 0;
+    box-shadow: 0 2px 6px rgba(74, 59, 50, 0.22); transition: transform 0.12s;
+  }
+  .trace-swatch.active {
+    transform: scale(1.16);
+    box-shadow: 0 0 0 3px #fff, 0 0 0 6px var(--accent, #FF8A65), 0 3px 10px rgba(74, 59, 50, 0.3);
+  }
+  .trace-caps {
+    width: 46px; height: 46px; border-radius: 14px; border: none; cursor: pointer;
+    background: #FFFFFF; font-weight: 800; font-size: 15px; letter-spacing: 1px; font-family: inherit;
+    box-shadow: 0 2px 6px rgba(74, 59, 50, 0.2); color: #4A3B32;
+  }
+  .trace-caps.active { background: var(--accent, #FF8A65); color: #fff; }
+  .trace-actions { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; gap: 12px; }
+
   .instruction-bar {
     flex: 1; display: flex; align-items: center; gap: 8px;
     background: #FFFFFF; border-radius: 16px; padding: 6px 12px; margin-right: 8px;
@@ -278,6 +301,12 @@
     margin-top: 8px; background: rgba(255,255,255,0.25); color: #fff; border: none;
     border-radius: 14px; padding: 10px 22px; font-size: 17px; font-weight: 800; cursor: pointer; font-family: inherit;
   }
+  .name-done { background: var(--accent, #FF8A65); }
+  .name-done-btns { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+  .name-done-btns button { margin-top: 8px; }
+  .name-done .big { animation: pop-in 0.4s ease; }
+  @keyframes pop-in { from { transform: scale(0.7); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+  #app.reduced-motion .name-done .big { animation: none; }
 
   .center-col { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; text-align: center; gap: 8px; }
   .center-col .giant { font-size: 64px; }
@@ -1500,10 +1529,13 @@ function renderTracing(firstActivity) {
     const r = stage.getBoundingClientRect();
     canvas.width = r.width * devicePixelRatio; canvas.height = r.height * devicePixelRatio;
     ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
-    const side = Math.min(r.width, r.height);
+    // Leave room for the left actions and the right colour panel so the glyph
+    // is never hidden under them.
+    const padL = 76, padR = 84;
+    const availW = Math.max(60, r.width - padL - padR);
+    const side = Math.min(availW, r.height);
     scale = side / 1000;
-    // Centre the square design space in the stage (letters were left-aligned).
-    ox = (r.width - side) / 2;
+    ox = padL + (availW - side) / 2;
     oy = (r.height - side) / 2;
     draw();
   }
@@ -1685,6 +1717,9 @@ function renderTracing(firstActivity) {
     if (next) {
       note.textContent = '🎉 ' + LH.pickFeedback('completed') + ' Next: ' + next.title;
       setTimeout(() => loadActivity(next), 1300);
+    } else if (activity.id === 'trace-name') {
+      speak('Hooray! You wrote your name! Amazing job!');
+      stage.append(nameDoneCard());
     } else {
       stage.append(completionBanner(onDone));
     }
@@ -1726,9 +1761,49 @@ function renderTracing(firstActivity) {
       dots = []; lastPos = 0; draw();
     }
   }
-  // Colour picker (Rainbow default, Black, Grey, Glitter, Colour-blind) + a CAPS
-  // toggle for the name — a small toolbar under the stage.
-  const toolbar = el(`<div class="toolbar" role="group" aria-label="Tracing colour"></div>`);
+  // Undo the most recent ink (the current stroke, else step back one stroke).
+  function undo() {
+    if (done) return;
+    if (dots.some((d) => d.on)) { dots = []; lastPos = 0; }
+    else if (filledStrokes.length) {
+      filledStrokes.pop();
+      strokeIndex = Math.max(0, strokeIndex - 1);
+      session = new LH.TracingSession(strokes[strokeIndex], config);
+      dots = []; lastPos = 0;
+    }
+    draw();
+  }
+  // Trash: clear everything and start this glyph/name over.
+  function trash() {
+    if (done) return;
+    strokeIndex = 0; session = new LH.TracingSession(strokes[0], config);
+    dots = []; filledStrokes = []; lastPos = 0; scores = [];
+    note.textContent = ''; draw();
+  }
+
+  // Fun finish for the name: celebrate + offer to practise it again.
+  function nameDoneCard() {
+    const nick = state.profile?.nickname || 'friend';
+    const card = el(`<div class="banner name-done" role="status">
+      <div class="big">🎉 Hooray, ${nick}! You wrote your name! 🌟</div>
+      <div class="name-done-btns">
+        <button data-a="again">✏️ Practise again</button>
+        <button data-a="home">🏠 Home</button>
+      </div>
+    </div>`);
+    card.querySelector('[data-a="again"]').onclick = () => {
+      card.remove();
+      const nm = state.traceCaps ? nick.toUpperCase() : nick;
+      loadActivity({ ...activity, title: 'My name: ' + nm, paths: LH.nameStrokes(nm) });
+    };
+    card.querySelector('[data-a="home"]').onclick = onDone;
+    return card;
+  }
+
+  // Colour panel on the RIGHT (rainbow default · black · grey · glitter ·
+  // colour-blind), plus a CAPS toggle for the name. Selected swatch is
+  // highlighted with a ring (no dark border).
+  const panel = el(`<div class="trace-panel" role="group" aria-label="Tracing colour"></div>`);
   const COLOURS = [
     { k: 'rainbow', label: 'Rainbow', css: 'conic-gradient(from 90deg, #FF6B6B, #FFD93D, #6BCB77, #4D96FF, #B983FF, #FF6B6B)' },
     { k: 'black', label: 'Black', css: '#333333' },
@@ -1737,27 +1812,34 @@ function renderTracing(firstActivity) {
     { k: 'cb', label: 'Colour-blind friendly', css: 'linear-gradient(90deg, #E69F00, #56B4E9, #009E73, #0072B2, #D55E00)' },
   ];
   COLOURS.forEach((c) => {
-    const sw = el(`<button class="swatch ${traceColor() === c.k ? 'active' : ''}" style="background:${c.css}" aria-label="Trace in ${c.label}"></button>`);
+    const sw = el(`<button class="trace-swatch ${traceColor() === c.k ? 'active' : ''}" style="background:${c.css}" aria-label="Trace in ${c.label}"></button>`);
     sw.onclick = () => {
       state.traceColor = c.k;
-      toolbar.querySelectorAll('.swatch').forEach((s) => s.classList.remove('active'));
+      panel.querySelectorAll('.trace-swatch').forEach((s) => s.classList.remove('active'));
       sw.classList.add('active');
       draw();
     };
-    toolbar.append(sw);
+    panel.append(sw);
   });
   if (activity.id === 'trace-name') {
     const nick = state.profile?.nickname || '';
-    const capsBtn = el(`<button class="tool ${state.traceCaps ? 'active' : ''}" aria-label="Capital letters" style="font-weight:800;letter-spacing:1px">ABC</button>`);
+    const capsBtn = el(`<button class="trace-caps ${state.traceCaps ? 'active' : ''}" aria-label="Capital letters">ABC</button>`);
     capsBtn.onclick = () => {
       state.traceCaps = !state.traceCaps;
       capsBtn.classList.toggle('active', state.traceCaps);
       const nm = state.traceCaps ? nick.toUpperCase() : nick;
       loadActivity({ ...activity, title: 'My name: ' + nm, paths: LH.nameStrokes(nm) });
     };
-    toolbar.append(capsBtn);
+    panel.append(capsBtn);
   }
-  app.append(toolbar);
+  // Undo + Trash on the LEFT.
+  const actions = el(`<div class="trace-actions"></div>`);
+  const undoBtn = el(`<button class="icon-btn" aria-label="Undo">↩️</button>`);
+  undoBtn.onclick = undo;
+  const trashBtn = el(`<button class="icon-btn" aria-label="Start this one over">🗑️</button>`);
+  trashBtn.onclick = trash;
+  actions.append(undoBtn, trashBtn);
+  stage.append(panel, actions);
 
   requestAnimationFrame(fit);
   new ResizeObserver(fit).observe(stage);
