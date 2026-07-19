@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import {
   dayKeyFrom,
   canStartNewActivity,
@@ -11,6 +11,11 @@ import { useAppStore } from '../../state/appStore';
 import { childTheme } from '../../ui/theme';
 import { BigTile } from '../../ui/components';
 import { audioService } from '../../services/audio';
+
+// The brand mascot (shared artwork in assets/images/). Metro resolves only
+// literal require paths, and there is a single mascot across all themes, so it
+// is required once here; themes opt in via `greeting.mascotImage`.
+const MASCOT_IMAGE = require('../../../../../assets/images/mascot.png');
 
 /**
  * Child Home — age-adaptive design (Direction C, July 2026): greeting card with
@@ -48,9 +53,13 @@ export function HomeScreen(): React.JSX.Element {
             </Text>
             <Text style={[styles.subtitle, { color: theme.text }]}>{app.greeting.subtitle}</Text>
           </View>
-          <Text style={styles.mascot} accessibilityElementsHidden>
-            {app.greeting.mascot}
-          </Text>
+          {app.greeting.mascotImage ? (
+            <Image source={MASCOT_IMAGE} style={styles.mascotImg} resizeMode="contain" accessibilityElementsHidden />
+          ) : (
+            <Text style={styles.mascot} accessibilityElementsHidden>
+              {app.greeting.mascot}
+            </Text>
+          )}
         </View>
         <View style={styles.topRight}>
           <View
@@ -108,6 +117,7 @@ const styles = StyleSheet.create({
   hello: { fontSize: 24, fontWeight: '800' },
   subtitle: { fontSize: 14, opacity: 0.8, marginTop: 2 },
   mascot: { fontSize: 40, marginLeft: 8 },
+  mascotImg: { width: 60, height: 60, marginLeft: 8 },
   topRight: { alignItems: 'center', justifyContent: 'space-between', gap: 8 },
   starPill: { borderRadius: 999, paddingHorizontal: 14, paddingVertical: 6, elevation: 1 },
   starPillText: { fontSize: 16, fontWeight: '800' },

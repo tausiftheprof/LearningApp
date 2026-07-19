@@ -762,8 +762,8 @@ function renderHome() {
   }
 
   const top = el(`<div class="home-top"></div>`);
-  const mascotHtml = th.greeting.mascotImage && IMAGES[th.greeting.mascotImage]
-    ? imgHtml(th.greeting.mascotImage, 54)
+  const mascotHtml = th.greeting.mascotImage && (IMAGES[th.greeting.mascotImage] || RASTER_IMAGES[th.greeting.mascotImage])
+    ? imgHtml(th.greeting.mascotImage, 64)
     : `<span class="mascot" aria-hidden="true">${th.greeting.mascot}</span>`;
   const greet = el(`<div class="greeting-card" style="background:${hc ? '#FFFFFF' : th.greeting.background};${hc ? 'border:2px solid #000' : ''}">
     <div><div class="hi" style="${!hc && th.greeting.titleColor ? `color:${th.greeting.titleColor}` : ''}">Hi, ${state.profile?.nickname ?? 'friend'}!</div><div class="sub">${th.greeting.subtitle}</div></div>
