@@ -108,8 +108,11 @@ authored as polylines in `content/glyphs.ts` (`digitStrokes`/`letterStrokes`), s
 tangents, chevrons pointing the trace direction), earlier steps glow "done", later steps stay
 greyed until their turn. On completion the player **auto-advances to the next item in the same
 section** (letters / numbers / shapes), wrapping after the last, with no "Home" prompt between
-them (the top-bar home button is the exit). The `tracingConfigFor` widths above control how thick
-the traceable band is. Any glyph/shape edit must keep every stroke completable — the
+them (the top-bar home button is the exit). Behind letters/numbers/name the player draws ruled
+"notebook" lines (`tracingGuideLines` returns the top/mid/base y in design space). **Trace-name**
+is a runtime-built activity (`nameStrokes(nickname)` lays the child's own name out on the baseline)
+— it is not in the static pack, so each renderer builds it from the active profile. The
+`tracingConfigFor` widths above control how thick the traceable band is. Any glyph/shape edit must keep every stroke completable — the
 `packages/core/__tests__/tracing.test.ts` "every glyph is completable" test simulates a finger
 following each stroke and is the guard.
 

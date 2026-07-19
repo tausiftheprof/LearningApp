@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Canvas, Path, Skia } from '@shopify/react-native-skia';
 import type { Activity, ActivityCategory, Point } from '@littlegrip/core';
-import { defaultAccessibilitySettings, recommendActivities, ACTIVITY_CATEGORIES } from '@littlegrip/core';
+import { defaultAccessibilitySettings, recommendActivities, ACTIVITY_CATEGORIES, nameStrokes } from '@littlegrip/core';
 import { useAppStore } from '../../state/appStore';
 import { childTheme } from '../../ui/theme';
 import { BigTile, HoldToHomeButton } from '../../ui/components';
@@ -87,13 +87,22 @@ export function ActivityPickerScreen(props: { category: PickerCategory }): React
     return num ? num[1]! : undefined;
   }
 
-  // The Tracing door shows a three-section chooser first (owner direction).
+  // The Tracing door shows a section chooser first (owner direction).
   if (props.category === 'tracing') {
     const sections = [
       { key: 'tracing-letters' as const, label: 'Letters', sub: 'A to Z, big and small', glyph: 'A a' },
       { key: 'tracing-numbers' as const, label: 'Numbers', sub: '0 to 10', glyph: '1 2 3' },
       { key: 'tracing-shapes' as const, label: 'Shapes', sub: 'Circles, squares and more', glyph: '○ △ □' },
     ];
+    // "My Name" traces the child's own name (from their profile), if it has letters.
+    const nick = profile?.nickname ?? '';
+    const nameActivity =
+      nameStrokes(nick).length > 0
+        ? (() => {
+            const template = catalogue.find((a): a is Extract<Activity, { type: 'tracing' }> => a.type === 'tracing');
+            return template ? { ...template, id: 'trace-name', title: `My name: ${nick}`, paths: nameStrokes(nick) } : null;
+          })()
+        : null;
     return (
       <View style={styles.root}>
         <View style={styles.topBar}>
@@ -114,6 +123,18 @@ export function ActivityPickerScreen(props: { category: PickerCategory }): React
               />
             </View>
           ))}
+          {nameActivity && (
+            <View key="tracing-name" style={styles.cell}>
+              <BigTile
+                label="My Name"
+                subtitle="Trace your own name"
+                emoji="✍️"
+                colour={theme.tileColours[5 % theme.tileColours.length]!}
+                theme={theme}
+                onPress={() => navigate({ name: 'activity', activity: nameActivity })}
+              />
+            </View>
+          )}
         </ScrollView>
       </View>
     );

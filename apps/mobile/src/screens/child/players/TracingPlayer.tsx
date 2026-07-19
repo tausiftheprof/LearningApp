@@ -1,12 +1,13 @@
 import React, { useMemo, useRef, useState } from 'react';
 import { PanResponder, StyleSheet, Text, View } from 'react-native';
-import { Canvas, Circle, Path, Skia } from '@shopify/react-native-skia';
+import { Canvas, Circle, DashPathEffect, Path, Skia } from '@shopify/react-native-skia';
 import type { TracingActivity } from '@littlegrip/core';
 import {
   defaultAccessibilitySettings,
   pickFeedback,
   TracingSession,
   tracingConfigFor,
+  tracingGuideLines,
 } from '@littlegrip/core';
 import type { Theme } from '../../../ui/theme';
 import { useAppStore } from '../../../state/appStore';
@@ -138,6 +139,19 @@ export function TracingPlayer(props: {
   const currentStroke = props.activity.paths[Math.min(strokeIndex, props.activity.paths.length - 1)]!;
   const arrowsPath = arrowsPathFor([currentStroke], 0, scale, ox, oy, config.corridorWidth);
 
+  // Ruled "notebook" lines behind letters/numbers/name (top + dashed mid + base).
+  const guides = tracingGuideLines(props.activity.id);
+  const ruled = useMemo(() => {
+    if (!guides) return null;
+    const yAt = (dy: number) => dy * scale + oy;
+    const x0 = ox + 40 * scale, x1 = ox + (1000 - 40) * scale;
+    const solid = Skia.Path.Make();
+    for (const k of ['top', 'base'] as const) { solid.moveTo(x0, yAt(guides[k])); solid.lineTo(x1, yAt(guides[k])); }
+    const dash = Skia.Path.Make();
+    dash.moveTo(x0, yAt(guides.mid)); dash.lineTo(x1, yAt(guides.mid));
+    return { solid, dash };
+  }, [guides, scale, ox, oy]);
+
   const pan = useMemo(
     () =>
       PanResponder.create({
@@ -189,6 +203,15 @@ export function TracingPlayer(props: {
         {...pan.panHandlers}
       >
         <Canvas style={styles.canvas}>
+          {/* Ruled "notebook" lines so the child writes between the lines. */}
+          {ruled && (
+            <>
+              <Path path={ruled.solid} color="rgba(120, 150, 200, 0.45)" style="stroke" strokeWidth={2} />
+              <Path path={ruled.dash} color="rgba(120, 150, 200, 0.4)" style="stroke" strokeWidth={2}>
+                <DashPathEffect intervals={[10, 10]} />
+              </Path>
+            </>
+          )}
           {/* Corridor halo behind the CURRENT stroke only (the highlighted step). */}
           {!done && strokePaths[strokeIndex] && (
             <Path

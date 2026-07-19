@@ -27,7 +27,7 @@ export function ActivityPlayerScreen(props: { activity: Activity }): React.JSX.E
   // after the last — so a finished tracing activity flows into the next with no
   // "Home" prompt (owner direction).
   const nextTracing = (): Activity | null => {
-    if (activity.type !== 'tracing') return null;
+    if (activity.type !== 'tracing' || activity.id === 'trace-name') return null;
     const isLetter = /^trace-letter-/.test(activity.id);
     const isNumber = /^trace-number-/.test(activity.id);
     const inSection = (id: string) =>

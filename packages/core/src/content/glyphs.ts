@@ -187,3 +187,48 @@ export function digitStrokes(digit: string): Point[][] {
   const k = 0.66;
   return mapStrokes(widen(glyph, 1.2), k, (1000 - 1000 * k) / 2, k, (1000 - 1000 * k) / 2);
 }
+
+/**
+ * Ruled "notebook" guide-line positions (design space 0..1000) for a tracing
+ * activity, or null for shapes. The y-values match the letterStrokes /
+ * digitStrokes vertical mapping so the lines sit at the real top / mid / base.
+ */
+export function tracingGuideLines(activityId: string): { top: number; mid: number; base: number } | null {
+  if (/^trace-number-/.test(activityId)) return { top: 302, mid: 500, base: 698 };
+  if (/^trace-letter-/.test(activityId) || activityId === 'trace-name') return { top: 340, mid: 465, base: 660 };
+  return null;
+}
+
+/**
+ * Strokes for tracing a child's name: each letter's authored strokes, scaled
+ * uniformly and packed left-to-right, sitting on the same baseline (660) as the
+ * letter activities so the ruled lines line up. Case is preserved (a capital
+ * first letter stays a capital). Non-letters are skipped.
+ */
+export function nameStrokes(name: string): Point[][] {
+  const chars = [...name].filter((c) => /[A-Za-z]/.test(c));
+  if (chars.length === 0) return [];
+  const glyphs = chars.map((c) => {
+    const isLower = c === c.toLowerCase();
+    return (isLower ? LOWER[c] : UPPER[c.toUpperCase()]) ?? UPPER[c.toUpperCase()] ?? LOWER[c.toLowerCase()]!;
+  });
+  const bounds = glyphs.map((g) => {
+    let minx = Infinity, maxx = -Infinity;
+    for (const s of g) for (const p of s) { minx = Math.min(minx, p.x); maxx = Math.max(maxx, p.x); }
+    return { minx, w: maxx - minx };
+  });
+  const GAP = 70; // authored-space gap between letters
+  const totalW = bounds.reduce((a, b) => a + b.w, 0) + GAP * (glyphs.length - 1);
+  const AVAIL_W = 900;
+  const s = Math.min(0.5, AVAIL_W / totalW); // never larger than the letter activities
+  const base = 660;
+  let x = 500 - (totalW * s) / 2; // centre the whole name
+  const out: Point[][] = [];
+  glyphs.forEach((g, i) => {
+    const b = bounds[i]!;
+    const offX = x - b.minx * s;
+    for (const stroke of g) out.push(stroke.map((p) => ({ x: offX + p.x * s, y: base + (p.y - 820) * s })));
+    x += b.w * s + (i < glyphs.length - 1 ? GAP * s : 0);
+  });
+  return out;
+}

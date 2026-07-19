@@ -826,9 +826,13 @@ function renderHome() {
   </div>`);
   const right = el(`<div class="home-topright"></div>`);
   right.append(el(`<div class="star-pill" style="background:${hc ? '#FFFFFF' : th.starPill};${hc ? 'border:2px solid #000' : ''}" aria-label="${state.rewards.totalStars} stars earned">⭐ ${state.rewards.totalStars}</div>`));
+  // My Rewards: a small button in the top bar, next to Grown-ups (owner direction).
+  const rewardsBtn = el(`<button class="lock-btn" style="background:${hc ? HC_COLOURS[0] : th.rewards.background}" aria-label="My Rewards: stickers, badges and stars"><span class="ic" aria-hidden="true">${th.rewards.icon}</span>Rewards</button>`);
+  rewardsBtn.style.color = hc ? '#fff' : th.text;
+  rewardsBtn.onclick = () => { speak('My rewards'); navigate({ name: 'rewards' }); };
   const gate = el(`<button class="lock-btn" style="background:${candy ? '#F7CFE4' : surface}" aria-label="For grown-ups: open parent settings"><span class="ic" aria-hidden="true">🔒</span>Grown-ups</button>`);
   gate.onclick = () => navigate({ name: 'gate' });
-  right.append(gate);
+  right.append(rewardsBtn, gate);
   top.append(greet, right);
 
   // Age-adaptive doors from core; the littlest band (2-3) gets a roomier grid.
@@ -860,21 +864,7 @@ function renderHome() {
     };
     grid.append(tile);
   });
-  const rewardsPhoto = candy && RASTER_IMAGES['tile-rewards'];
-  const chestHtml = rewardsPhoto
-    ? `<span class="tile-photo" aria-hidden="true">${imgHtml('tile-rewards', 84)}</span>`
-    : th.rewards.iconImage && IMAGES[th.rewards.iconImage]
-    ? imgHtml(th.rewards.iconImage, 56)
-    : `<span class="ic">${th.rewards.icon}</span>`;
-  const rewardsBanner = el(`<button class="rewards-banner ${rewardsPhoto ? 'has-photo' : ''}" style="background:${rewardsPhoto ? 'none' : hc ? HC_COLOURS[0] : th.rewards.background}">
-    <span aria-hidden="true">${chestHtml}</span>
-    <span><span class="t" style="display:block">My Rewards</span><span class="s">Stickers, badges and stars!</span></span>
-    <span class="chev ${th.rewards.chevron && !hc ? 'chev-circle' : ''}" style="${th.rewards.chevron && !hc ? `background:${th.rewards.chevron};color:#fff` : ''}" aria-hidden="true">›</span>
-  </button>`);
-  rewardsBanner.style.color = hc ? '#fff' : th.text;
-  rewardsBanner.onclick = () => { speak('My rewards'); navigate({ name: 'rewards' }); };
-  grid.append(rewardsBanner);
-
+  // (My Rewards now lives in the top bar next to Grown-ups.)
   app.append(top, grid);
 }
 
@@ -885,17 +875,31 @@ function renderTracingSections() {
   const top = el(`<div class="topbar"></div>`);
   top.append(holdToHomeButton(() => navigate({ name: 'home' })), el(`<div class="hello">What shall we trace?</div>`));
   const grid = el(`<div class="tile-grid home-grid"></div>`);
+  const nick = state.profile?.nickname || '';
   const sections = [
     { key: 'tracing-letters', label: 'Letters', sub: 'A to Z, big and small', glyph: 'A a' },
     { key: 'tracing-numbers', label: 'Numbers', sub: '0 to 10', glyph: '1 2 3' },
     { key: 'tracing-shapes', label: 'Shapes', sub: 'Circles, squares and more', glyph: '○ △ □' },
   ];
+  // "My Name" traces the child's own name (from their profile), if it has letters.
+  if (LH.nameStrokes(nick).length) {
+    sections.push({ key: 'tracing-name', label: 'My Name', sub: 'Trace your own name', glyph: '✍️' });
+  }
   sections.forEach((sct, i) => {
     const tile = el(`<button class="big-tile" style="background:${tiles()[(i + 2) % tiles().length]}">
       <span class="glyph-big" aria-hidden="true">${sct.glyph}</span>
       <span class="tile-text"><span class="label">${sct.label}</span><span class="sublabel">${sct.sub}</span></span>
     </button>`);
-    tile.onclick = () => { speak(sct.label); navigate({ name: 'picker', category: sct.key }); };
+    tile.onclick = () => {
+      speak(sct.label);
+      if (sct.key === 'tracing-name') {
+        if (!guardScreenTime()) return;
+        const activity = { type: 'tracing', id: 'trace-name', title: 'My name: ' + nick, category: 'tracing', paths: LH.nameStrokes(nick), closed: false };
+        navigate({ name: 'activity', activity, from: 'picker', pickerCategory: 'tracing' });
+      } else {
+        navigate({ name: 'picker', category: sct.key });
+      }
+    };
     grid.append(tile);
   });
   app.append(top, grid);
@@ -1078,6 +1082,7 @@ function letterQueue(activityId) {
   // numbers 0..10, or shapes — and wrap back to the first after the last, so a
   // finished shape/letter/number always flows into the next one (owner: no
   // "Home" prompt between them). Numeric compare so 10 follows 9, not 1.
+  if (activityId === 'trace-name') return null; // one-off, not part of a section
   const isLetter = /^trace-letter-/.test(activityId);
   const isNumber = /^trace-number-/.test(activityId);
   const inSection = (id) => (isLetter ? /^trace-letter-/.test(id) : isNumber ? /^trace-number-/.test(id) : !/^trace-(letter|number)-/.test(id));
@@ -1227,6 +1232,22 @@ function renderTracing(firstActivity) {
     const r = stage.getBoundingClientRect();
     ctx.clearRect(0, 0, r.width, r.height);
     ctx.lineCap = ctx.lineJoin = 'round';
+    // Ruled "notebook" lines behind letters/numbers/name (top + dashed middle +
+    // baseline), so the child writes between the lines like in a book.
+    const guides = LH.tracingGuideLines(activity.id);
+    if (guides) {
+      const lineX0 = ox + 40 * scale, lineX1 = ox + (1000 - 40) * scale;
+      const yAt = (dy) => dy * scale + oy;
+      ctx.strokeStyle = 'rgba(120, 150, 200, 0.45)';
+      ctx.lineWidth = 2;
+      for (const key of ['top', 'base']) {
+        ctx.setLineDash([]); ctx.beginPath();
+        ctx.moveTo(lineX0, yAt(guides[key])); ctx.lineTo(lineX1, yAt(guides[key])); ctx.stroke();
+      }
+      ctx.setLineDash([10, 10]); ctx.beginPath();
+      ctx.moveTo(lineX0, yAt(guides.mid)); ctx.lineTo(lineX1, yAt(guides.mid)); ctx.stroke();
+      ctx.setLineDash([]);
+    }
     strokes.forEach((path, i) => {
       // corridor for the current stroke only; others shown as guides
       if (i === strokeIndex && !done) {

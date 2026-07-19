@@ -70,6 +70,15 @@ export function HomeScreen(): React.JSX.Element {
           </View>
           <Pressable
             accessibilityRole="button"
+            accessibilityLabel="My Rewards. Stickers, badges and stars!"
+            onPress={() => navigate({ name: 'rewards' })}
+            style={[styles.grownUpsButton, { backgroundColor: app.rewards.background }]}
+          >
+            <Text style={styles.grownUpsIcon}>{app.rewards.icon}</Text>
+            <Text style={[styles.grownUpsText, { color: theme.text }]}>Rewards</Text>
+          </Pressable>
+          <Pressable
+            accessibilityRole="button"
             accessibilityLabel="For grown-ups: open parent settings"
             onPress={() => navigate({ name: 'gate' })}
             style={[styles.grownUpsButton, { backgroundColor: theme.surface }]}
@@ -91,19 +100,7 @@ export function HomeScreen(): React.JSX.Element {
             />
           </View>
         ))}
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="My Rewards. Stickers, badges and stars!"
-          onPress={() => navigate({ name: 'rewards' })}
-          style={[styles.rewardsBanner, { backgroundColor: app.rewards.background, borderRadius: theme.radius }]}
-        >
-          <Text style={styles.rewardsIcon}>{app.rewards.icon}</Text>
-          <View style={styles.rewardsText}>
-            <Text style={[styles.rewardsTitle, { color: theme.text }]}>My Rewards</Text>
-            <Text style={[styles.rewardsSubtitle, { color: theme.text }]}>Stickers, badges and stars!</Text>
-          </View>
-          <Text style={[styles.rewardsChevron, { color: theme.text }]}>›</Text>
-        </Pressable>
+        {/* My Rewards now lives in the top bar next to Grown-ups. */}
       </ScrollView>
     </View>
   );

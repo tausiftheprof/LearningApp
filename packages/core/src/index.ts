@@ -2,6 +2,7 @@ export * from './types';
 export * from './account/account';
 export * from './content/schema';
 export * from './content/starterPack';
+export * from './content/glyphs';
 export * from './content/themes';
 export * from './home/homeLayout';
 export * from './tracing/tracingEngine';
