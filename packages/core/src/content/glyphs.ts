@@ -217,9 +217,9 @@ export function nameStrokes(name: string): Point[][] {
     for (const s of g) for (const p of s) { minx = Math.min(minx, p.x); maxx = Math.max(maxx, p.x); }
     return { minx, w: maxx - minx };
   });
-  const GAP = 70; // authored-space gap between letters
+  const GAP = 170; // authored-space gap between letters (roomy, for chunky fingers)
   const totalW = bounds.reduce((a, b) => a + b.w, 0) + GAP * (glyphs.length - 1);
-  const AVAIL_W = 900;
+  const AVAIL_W = 940;
   const s = Math.min(0.5, AVAIL_W / totalW); // never larger than the letter activities
   const base = 660;
   let x = 500 - (totalW * s) / 2; // centre the whole name

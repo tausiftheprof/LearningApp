@@ -112,7 +112,10 @@ them (the top-bar home button is the exit). Behind letters/numbers/name the play
 "notebook" lines (`tracingGuideLines` returns the top/mid/base y in design space). **Trace-name**
 is a runtime-built activity (`nameStrokes(nickname)` lays the child's own name out on the baseline)
 — it is not in the static pack, so each renderer builds it from the active profile. The
-`tracingConfigFor` widths above control how thick the traceable band is. Any glyph/shape edit must keep every stroke completable — the
+`tracingConfigFor` widths above control how thick the traceable *band* is; the trail the finger
+leaves ("ink") is drawn thinner than that band. The web demo's tracing screen also has a
+trace-colour picker (rainbow default · black · grey · glitter · colour-blind-safe) and, on the
+name, a CAPS toggle (these UI controls are demo-first; mobile shares the core + widths). Any glyph/shape edit must keep every stroke completable — the
 `packages/core/__tests__/tracing.test.ts` "every glyph is completable" test simulates a finger
 following each stroke and is the guard.
 

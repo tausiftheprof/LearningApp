@@ -133,7 +133,9 @@ export function TracingPlayer(props: {
     }
     return path;
   }, [childPoints]);
-  const fillWidth = Math.max(6, config.corridorWidth * 1.5 * scale);
+  // The traced "ink" is a slim line within the (thick) corridor — thinner than
+  // the traceable band so it reads like a pen, not a fill.
+  const fillWidth = Math.max(5, config.corridorWidth * 0.75 * scale);
   const tip = childPoints.length ? childPoints[childPoints.length - 1]! : null;
   // Direction arrows on the current stroke only (the highlighted step).
   const currentStroke = props.activity.paths[Math.min(strokeIndex, props.activity.paths.length - 1)]!;

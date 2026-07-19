@@ -596,8 +596,8 @@ l(400,200,400,585,5),l(400,585,720,585,4)),l(610,200,610,845,6)],5:[S(l(370,210,
 18),x(500,350,150,-270,-450,14))],9:[x(490,405,170,-90,270,18),l(655,435,640,820,4)]},Ee=(t,e,r,n,a)=>t.map(i=>i.map(s=>({x:r+s.x*e,y:a+s.y*n}))),nt=Object.keys(Le),at=Object.keys(je),Me=(t,e)=>t.map(r=>r.map(n=>({x:(n.x-500)*e+500,y:n.y})));function it(t){let e=Le[t.toUpperCase()],r=rt[t.toLowerCase()];
 if(!e||!r)throw new Error(`no glyph for letter ${t}`);let n=.5,a=(1e3-1e3*n)/2;return[...Ee(Me(e,1.35),n,0,n,a),...Ee(Me(r,1.35),n,500,n,a)]}function st(t){if(t==="10")return[...Ee(Me(je[1],1.1),.55,300-500*.55,.55,225),...Ee(Me(je[0],1.1),.55,700-500*.55,.55,225)];let e=je[t];if(!e)throw new Error(
 `no glyph for digit ${t}`);let r=.66;return Ee(Me(e,1.2),r,(1e3-1e3*r)/2,r,(1e3-1e3*r)/2)}function $n(t){return/^trace-number-/.test(t)?{top:302,mid:500,base:698}:/^trace-letter-/.test(t)||t==="trace-name"?{top:340,mid:465,base:660}:null}function Un(t){let e=[...t].filter(y=>/[A-Za-z]/.test(y));if(e.
-length===0)return[];let r=e.map(y=>(y===y.toLowerCase()?rt[y]:Le[y.toUpperCase()])??Le[y.toUpperCase()]??rt[y.toLowerCase()]),n=r.map(y=>{let A=1/0,I=-1/0;for(let we of y)for(let me of we)A=Math.min(A,me.x),I=Math.max(I,me.x);return{minx:A,w:I-A}}),a=70,i=n.reduce((y,A)=>y+A.w,0)+a*(r.length-1),o=Math.
-min(.5,900/i),d=660,c=500-i*o/2,p=[];return r.forEach((y,A)=>{let I=n[A],we=c-I.minx*o;for(let me of y)p.push(me.map(fe=>({x:we+fe.x*o,y:d+(fe.y-820)*o})));c+=I.w*o+(A<r.length-1?a*o:0)}),p}var T=t=>`audio/en-AU/${t}.mp3`;function P(t,e,r,n,a=8){let i=[];for(let s=0;s<=a;s++)i.push({x:t+(r-t)*s/a,y:e+(n-e)*s/a});return i}function Se(t,e,r,n,a,i=24){let s=[];for(let o=0;o<=i;o++){let d=(n+(a-n)*o/i)*Math.PI/180;s.push({x:t+r*Math.cos(d),y:e+r*Math.sin(d)})}return s}function Vn(){let t=[];
+length===0)return[];let r=e.map(y=>(y===y.toLowerCase()?rt[y]:Le[y.toUpperCase()])??Le[y.toUpperCase()]??rt[y.toLowerCase()]),n=r.map(y=>{let A=1/0,I=-1/0;for(let we of y)for(let me of we)A=Math.min(A,me.x),I=Math.max(I,me.x);return{minx:A,w:I-A}}),a=170,i=n.reduce((y,A)=>y+A.w,0)+a*(r.length-1),o=Math.
+min(.5,940/i),d=660,c=500-i*o/2,p=[];return r.forEach((y,A)=>{let I=n[A],we=c-I.minx*o;for(let me of y)p.push(me.map(fe=>({x:we+fe.x*o,y:d+(fe.y-820)*o})));c+=I.w*o+(A<r.length-1?a*o:0)}),p}var T=t=>`audio/en-AU/${t}.mp3`;function P(t,e,r,n,a=8){let i=[];for(let s=0;s<=a;s++)i.push({x:t+(r-t)*s/a,y:e+(n-e)*s/a});return i}function Se(t,e,r,n,a,i=24){let s=[];for(let o=0;o<=i;o++){let d=(n+(a-n)*o/i)*Math.PI/180;s.push({x:t+r*Math.cos(d),y:e+r*Math.sin(d)})}return s}function Vn(){let t=[];
 for(let e=0;e<=6;e++)t.push({x:100+e*130,y:e%2===0?300:650});return t}function Gt(t,e){let r=[];for(let n=0;n<=t;n++){let a=-Math.PI/2+n/t*Math.PI*2,i={x:500+e*Math.cos(a),y:500+e*Math.sin(a)};if(n===0){r.push(i);continue}let s=r[r.length-1];for(let o=1;o<=4;o++)r.push({x:s.x+(i.x-s.x)*o/4,y:s.y+(i.
 y-s.y)*o/4})}return r}var ot=[{type:"tracing",id:"trace-line-straight",title:"Straight line",category:"tracing",ageBands:["2-3","3-5"],difficulty:1,motorSkills:["tracing","controlled-movement"],estimatedMinutes:1,theme:"shapes-patterns",locale:"en-AU",instructionAudio:T("trace-line"),demoAnimation:"\
 demo/trace-line.json",paths:[P(150,500,850,500)],closed:!1},{type:"tracing",id:"trace-curve",title:"Big curve",category:"tracing",ageBands:["2-3","3-5"],difficulty:1,motorSkills:["tracing","controlled-movement"],estimatedMinutes:1,theme:"shapes-patterns",locale:"en-AU",instructionAudio:T("trace-curv\
@@ -1457,10 +1457,26 @@ function renderTracing(firstActivity) {
   let strokeIndex = 0;
   let session = new LH.TracingSession(strokes[0], config);
   let scores = [];
-  let scale = 1, ox = 0, oy = 0, dots = [], done = false, tracing = false, lastPos = 0;
-  // Inside-screen accent follows the active theme (start affordance, the
-  // corridor fill left behind the mascot, and the finished-stroke glow).
+  let scale = 1, ox = 0, oy = 0, dots = [], filledStrokes = [], done = false, tracing = false, lastPos = 0;
+  // Inside-screen accent follows the active theme (start affordance, arrows).
   const accent = highContrast() ? '#0000CC' : theme().accent;
+
+  // Tracing-colour options (owner direction). Rainbow is the default; the trail
+  // the child leaves is painted in the chosen colour.
+  if (!state.traceColor) state.traceColor = 'rainbow';
+  const CB_PALETTE = ['#E69F00', '#56B4E9', '#009E73', '#0072B2', '#D55E00', '#CC79A7']; // Okabe-Ito, colour-blind safe
+  const GLITTER_PALETTE = ['#F7A8D8', '#C9A7F0', '#A7D8F0', '#F6C177', '#B7F0C0'];
+  const traceColor = () => state.traceColor || 'rainbow';
+  function fillPaint(k) {
+    const m = traceColor();
+    if (m === 'black') return '#333333';
+    if (m === 'grey') return '#9AA3AD';
+    if (m === 'cb') return CB_PALETTE[Math.floor(k / 9) % CB_PALETTE.length];
+    if (m === 'glitter') return GLITTER_PALETTE[Math.floor(k / 5) % GLITTER_PALETTE.length];
+    return `hsl(${(k * 7) % 360} 85% 58%)`; // rainbow
+  }
+  // Representative solid for the start dot + finished-stroke glow.
+  const tracePrimary = () => ({ rainbow: '#E24AA0', cb: '#0072B2', glitter: '#EC7FB4', black: '#333333', grey: '#9AA3AD' }[traceColor()] || accent);
 
   function loadActivity(next) {
     activity = next;
@@ -1469,6 +1485,7 @@ function renderTracing(firstActivity) {
     session = new LH.TracingSession(strokes[0], config);
     scores = [];
     dots = [];
+    filledStrokes = [];
     lastPos = 0;
     done = false;
     const bar = document.querySelector('.instruction-bar .txt');
@@ -1557,18 +1574,34 @@ function renderTracing(firstActivity) {
   // broken wherever the finger strayed off the path, so the letter visibly
   // fills as it is traced.
   function drawFill() {
-    const w = Math.max(6, config.corridorWidth * 1.5 * scale);
+    // The "ink" the finger leaves is a slim line within the (thick) corridor —
+    // thinner than the traceable band so it reads like a pen, not a fill.
+    const w = Math.max(5, config.corridorWidth * 0.75 * scale);
     ctx.lineWidth = w;
-    ctx.strokeStyle = accent;
-    ctx.globalAlpha = 0.85;
-    let started = false;
-    for (const d of dots) {
-      if (!d.on) { started = false; continue; }
-      if (!started) { ctx.beginPath(); ctx.moveTo(d.x, d.y); started = true; }
-      else ctx.lineTo(d.x, d.y);
-      // Dab a rounded cap at each on-path point so short/sparse trails still
-      // read as a filled corridor rather than a thin line.
-      ctx.stroke();
+    ctx.lineCap = ctx.lineJoin = 'round';
+    ctx.globalAlpha = 0.95;
+    let hue = 0;
+    const drawTrail = (pts) => {
+      let prev = null;
+      for (const d of pts) {
+        const c = fillPaint(hue++);
+        if (prev) { ctx.strokeStyle = c; ctx.beginPath(); ctx.moveTo(prev.x, prev.y); ctx.lineTo(d.x, d.y); ctx.stroke(); }
+        else { ctx.fillStyle = c; ctx.beginPath(); ctx.arc(d.x, d.y, w / 2, 0, Math.PI * 2); ctx.fill(); }
+        prev = d;
+      }
+    };
+    // Earlier finished strokes stay painted; the current stroke breaks on off-path.
+    for (const trail of filledStrokes) drawTrail(trail);
+    let seg = [];
+    for (const d of dots) { if (d.on) seg.push(d); else { if (seg.length) drawTrail(seg); seg = []; } }
+    if (seg.length) drawTrail(seg);
+    // Glitter: scatter a few white sparkles along the ink.
+    if (traceColor() === 'glitter') {
+      ctx.fillStyle = 'rgba(255,255,255,0.9)';
+      let n = 0;
+      const spark = (pts) => { for (const d of pts) { if (n++ % 6 === 0) { ctx.beginPath(); ctx.arc(d.x, d.y, w * 0.18, 0, Math.PI * 2); ctx.fill(); } } };
+      for (const t of filledStrokes) spark(t);
+      spark(dots.filter((d) => d.on));
     }
     ctx.globalAlpha = 1;
   }
@@ -1602,7 +1635,7 @@ function renderTracing(firstActivity) {
         ctx.stroke();
       }
       strokePath(path);
-      if (i < strokeIndex || done) { ctx.strokeStyle = accent; ctx.lineWidth = 9; } // finished strokes glow in the theme accent
+      if (i < strokeIndex || done) { ctx.strokeStyle = tracePrimary(); ctx.lineWidth = 8; } // finished strokes glow in the trace colour
       else if (i === strokeIndex) { ctx.strokeStyle = '#8D6E63'; ctx.lineWidth = 6; }
       else { ctx.strokeStyle = '#D7CCC8'; ctx.lineWidth = 5; } // strokes still to come
       ctx.stroke();
@@ -1623,13 +1656,14 @@ function renderTracing(firstActivity) {
     if (!done) {
       const sp = strokes[strokeIndex][0];
       const cur = dots.length ? dots[dots.length - 1] : { x: sp.x * scale + ox, y: sp.y * scale + oy };
-      ctx.beginPath(); ctx.arc(cur.x, cur.y, 13, 0, Math.PI * 2); ctx.fillStyle = accent; ctx.fill();
+      ctx.beginPath(); ctx.arc(cur.x, cur.y, 11, 0, Math.PI * 2); ctx.fillStyle = tracePrimary(); ctx.fill();
     }
   }
 
   function strokeDone(summary) {
     scores.push(summary.accuracyScore);
     if (strokeIndex + 1 < strokes.length) {
+      filledStrokes.push(dots.filter((d) => d.on)); // keep the finished stroke painted
       strokeIndex++;
       session = new LH.TracingSession(strokes[strokeIndex], config);
       dots = [];
@@ -1692,6 +1726,39 @@ function renderTracing(firstActivity) {
       dots = []; lastPos = 0; draw();
     }
   }
+  // Colour picker (Rainbow default, Black, Grey, Glitter, Colour-blind) + a CAPS
+  // toggle for the name — a small toolbar under the stage.
+  const toolbar = el(`<div class="toolbar" role="group" aria-label="Tracing colour"></div>`);
+  const COLOURS = [
+    { k: 'rainbow', label: 'Rainbow', css: 'conic-gradient(from 90deg, #FF6B6B, #FFD93D, #6BCB77, #4D96FF, #B983FF, #FF6B6B)' },
+    { k: 'black', label: 'Black', css: '#333333' },
+    { k: 'grey', label: 'Grey', css: '#9AA3AD' },
+    { k: 'glitter', label: 'Glitter', css: 'radial-gradient(circle at 32% 30%, #FFFFFF, #F5C8DF 55%, #C9A7F0)' },
+    { k: 'cb', label: 'Colour-blind friendly', css: 'linear-gradient(90deg, #E69F00, #56B4E9, #009E73, #0072B2, #D55E00)' },
+  ];
+  COLOURS.forEach((c) => {
+    const sw = el(`<button class="swatch ${traceColor() === c.k ? 'active' : ''}" style="background:${c.css}" aria-label="Trace in ${c.label}"></button>`);
+    sw.onclick = () => {
+      state.traceColor = c.k;
+      toolbar.querySelectorAll('.swatch').forEach((s) => s.classList.remove('active'));
+      sw.classList.add('active');
+      draw();
+    };
+    toolbar.append(sw);
+  });
+  if (activity.id === 'trace-name') {
+    const nick = state.profile?.nickname || '';
+    const capsBtn = el(`<button class="tool ${state.traceCaps ? 'active' : ''}" aria-label="Capital letters" style="font-weight:800;letter-spacing:1px">ABC</button>`);
+    capsBtn.onclick = () => {
+      state.traceCaps = !state.traceCaps;
+      capsBtn.classList.toggle('active', state.traceCaps);
+      const nm = state.traceCaps ? nick.toUpperCase() : nick;
+      loadActivity({ ...activity, title: 'My name: ' + nm, paths: LH.nameStrokes(nm) });
+    };
+    toolbar.append(capsBtn);
+  }
+  app.append(toolbar);
+
   requestAnimationFrame(fit);
   new ResizeObserver(fit).observe(stage);
   speak(activity.title.replace('·', 'and little'));
