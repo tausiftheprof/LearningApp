@@ -46,7 +46,7 @@ export function OnboardingScreen(): React.JSX.Element {
         <View>
           <Text style={styles.h1}>Welcome to Little Grip 🖐️</Text>
           <Text style={styles.body}>
-            Playful drawing, tracing, puzzles and games that help little hands grow strong -
+            Playful drawing, tracing, puzzles and games that help build fine-motor skills -
             for children aged 2 to 7.
           </Text>
           <Text style={[styles.body, styles.grownUps]}>
