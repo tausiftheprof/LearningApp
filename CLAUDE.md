@@ -51,7 +51,10 @@ advertising-ID permissions.
   `deletion`, and `content` (the zod-validated content-pack schema + the bundled illustrative
   starter pack).
 - **`apps/mobile`** — the real Expo/React Native product. Renders core state with Skia canvases
-  and RN views.
+  and RN views. `metro.config.js` adds the workspace root to Metro's `watchFolders`, so the app
+  resolves both `@littlegrip/core` and shared repo-root artwork (e.g. the mascot `HomeScreen`
+  `require`s from `assets/images/`). The launcher icon + web favicon live in `apps/mobile/assets/`
+  (`icon.png`, `adaptive-icon.png`, `favicon.png`), wired through `app.json`.
 - **`web-demo`** — a single self-contained `index.html`, built by `web-demo/build.mjs`, which
   esbuild-bundles `packages/core` inline and inlines `assets/images/*` as data (SVGs as markup;
   raster PNG/JPG downsampled with `sharp` to the size the demo actually renders — tiles ≤400px,
@@ -125,8 +128,11 @@ renderers consume it, so the home content always matches the profile. Tiles are 
   backend exists when it doesn't.
 - `strict: true`, `noUncheckedIndexedAccess`, and `exactOptionalPropertyTypes` are on
   (`tsconfig.base.json`) — array/object indexing needs explicit narrowing or `!`.
-- Artwork lives only in `assets/images/` (`README.md` there documents which filename maps to which
-  feature). Replacing a same-named file and rebuilding swaps it everywhere; don't hardcode image
-  paths elsewhere.
+- Shared content artwork lives in `assets/images/` (`README.md` there documents which filename
+  maps to which feature); replacing a same-named file and rebuilding swaps it everywhere, so don't
+  hardcode image paths elsewhere. The one exception is the app's launcher icon / web favicon, which
+  are Expo-project files in `apps/mobile/assets/`. Full-page scene artwork (e.g. the flood-fill
+  Colour line-art) is square and is drawn *contain*-fitted (letterboxed), never stretched to the
+  stage — keep that when touching any renderer that blits a whole image to a canvas.
 - After touching `packages/core` or `web-demo/demo-shell.html`, rebuild with
   `node web-demo/build.mjs` before considering the change done.
