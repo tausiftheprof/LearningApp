@@ -1985,15 +1985,23 @@ function renderColouringLineArt(activity) {
   img.crossOrigin = 'anonymous';
   img.src = RASTER_IMAGES[imgName] || ('data:image/svg+xml;charset=utf-8,' + encodeURIComponent(IMAGES[imgName] || ''));
 
-  function draw() {
+  // Fit the square artwork inside the stage without stretching (contain /
+  // letterbox), so it stays 1:1 on any screen shape - never wide or long.
+  function fitRect() {
     const r = stage.getBoundingClientRect();
-    if (!r.width || !canvas.width) return;
-    ctx.clearRect(0, 0, r.width, r.height);
+    const side = Math.min(r.width, r.height);
+    return { w: r.width, h: r.height, side, ox: (r.width - side) / 2, oy: (r.height - side) / 2 };
+  }
+
+  function draw() {
+    const f = fitRect();
+    if (!f.w || !canvas.width) return;
+    ctx.clearRect(0, 0, f.w, f.h);
     ctx.fillStyle = '#FFFFFF';
-    ctx.fillRect(0, 0, r.width, r.height);
+    ctx.fillRect(0, 0, f.w, f.h);
     if (ready) {
-      ctx.drawImage(paintCv, 0, 0, r.width, r.height);
-      ctx.drawImage(lineCv, 0, 0, r.width, r.height);
+      ctx.drawImage(paintCv, 0, 0, RES, RES, f.ox, f.oy, f.side, f.side);
+      ctx.drawImage(lineCv, 0, 0, RES, RES, f.ox, f.oy, f.side, f.side);
     }
   }
 
@@ -2070,7 +2078,8 @@ function renderColouringLineArt(activity) {
 
   function toRes(e) {
     const r = canvas.getBoundingClientRect();
-    return { x: Math.round(((e.clientX - r.left) / r.width) * RES), y: Math.round(((e.clientY - r.top) / r.height) * RES) };
+    const f = fitRect();
+    return { x: Math.round(((e.clientX - r.left - f.ox) / f.side) * RES), y: Math.round(((e.clientY - r.top - f.oy) / f.side) * RES) };
   }
 
   let brushing = false;
