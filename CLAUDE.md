@@ -27,6 +27,11 @@ cd apps/mobile && npx expo start     # run the Expo app (Expo Go / dev client)
 node web-demo/build.mjs              # rebuild web-demo/index.html after ANY core or demo-shell change
 ```
 
+Installable Android/iOS test builds are produced with EAS or a local native toolchain — see
+`apps/mobile/BUILD.md` (build profiles in `apps/mobile/eas.json`). They can't be built in a
+locked-down sandbox that blocks Google's Android download hosts; run them on a normal machine or
+on EAS cloud.
+
 CI (`.github/workflows/ci.yml`) runs, in order: strict typecheck, core unit tests, `npm audit
 --audit-level=high`, a gitleaks secret scan, and a **child-safety manifest audit** that fails the
 build if `apps/mobile/app.json` ever requests location, contacts, microphone, camera, or
@@ -40,8 +45,9 @@ advertising-ID permissions.
   TypeScript (no React/RN imports). Runs in Node, the Expo app, and (bundled via esbuild) the
   browser. Everything is exported flat from `src/index.ts`. Each concern is a self-contained
   module under `src/<domain>/`: `tracing` (corridor-following engine), `puzzles`, `rewards`,
-  `screenTime`, `parentalGate`, `recommendation`, `dailyPlan`,
-  `drawing`, `progress`, `profiles`, `settings`, `account` (parent cloud-sync, off by default),
+  `screenTime`, `parentalGate`, `recommendation`, `dailyPlan`, `drawing`, `feedback`,
+  `home` (`homeTilesForAge` — the age-adaptive set of home-screen doors, shared by both
+  renderers), `progress`, `profiles`, `settings`, `account` (parent cloud-sync, off by default),
   `deletion`, and `content` (the zod-validated content-pack schema + the bundled illustrative
   starter pack).
 - **`apps/mobile`** — the real Expo/React Native product. Renders core state with Skia canvases
@@ -104,6 +110,11 @@ machines (not wall-clock timers) so they're deterministic and unit-testable. `pa
 word-form-arithmetic gate with lockouts and auto-relock, gating the entire parent area
 (`apps/mobile/src/screens/parent/`), which itself provides screen-time controls, the deletion
 flow, and the optional (off-by-default) cloud-sync account settings.
+
+The child Home is **age-adaptive**: `home/homeLayout.ts`'s `homeTilesForAge(ageBand)` returns the
+ordered set of doors for a band (fewest, largest tiles for `2-3`; more for `3-5`/`5-7`), and both
+renderers consume it, so the home content always matches the profile. Tiles are icon + label only
+(no per-tile subtitle) to keep reading load off pre-readers.
 
 ## Key constraints when changing things
 
