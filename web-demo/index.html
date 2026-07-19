@@ -1426,7 +1426,7 @@ function renderTracing(firstActivity) {
   let strokeIndex = 0;
   let session = new LH.TracingSession(strokes[0], config);
   let scores = [];
-  let scale = 1, ox = 0, oy = 0, dots = [], done = false, tracing = false;
+  let scale = 1, ox = 0, oy = 0, dots = [], done = false, tracing = false, lastPos = 0;
   // Inside-screen accent follows the active theme (start affordance, the
   // corridor fill left behind the mascot, and the finished-stroke glow).
   const accent = highContrast() ? '#0000CC' : theme().accent;
@@ -1438,6 +1438,7 @@ function renderTracing(firstActivity) {
     session = new LH.TracingSession(strokes[0], config);
     scores = [];
     dots = [];
+    lastPos = 0;
     done = false;
     const bar = document.querySelector('.instruction-bar .txt');
     if (bar) bar.textContent = next.title;
@@ -1462,6 +1463,37 @@ function renderTracing(firstActivity) {
   function strokePath(path) {
     ctx.beginPath();
     path.forEach((p, i) => (i ? ctx.lineTo(p.x * scale + ox, p.y * scale + oy) : ctx.moveTo(p.x * scale + ox, p.y * scale + oy)));
+  }
+
+  // Unit direction of the guide path at arc-fraction `frac` (0..1). Scale is
+  // uniform with no rotation, so a design-space direction is also the screen
+  // direction. Used to point the "go this way" arrow ahead of the mascot.
+  function dirAt(pathD, frac) {
+    let total = 0;
+    const segs = [];
+    for (let i = 0; i < pathD.length - 1; i++) {
+      const dx = pathD[i + 1].x - pathD[i].x, dy = pathD[i + 1].y - pathD[i].y;
+      const len = Math.hypot(dx, dy); segs.push({ dx, dy, len }); total += len;
+    }
+    if (!segs.length || total === 0) return { x: 1, y: 0 };
+    let target = Math.max(0, Math.min(1, frac)) * total, acc = 0, seg = segs[0];
+    for (const s of segs) { if (acc + s.len >= target) { seg = s; break; } acc += s.len; }
+    return seg.len === 0 ? { x: 1, y: 0 } : { x: seg.dx / seg.len, y: seg.dy / seg.len };
+  }
+
+  // A friendly arrow just ahead of the mascot, pointing the way to trace.
+  function drawArrow(anchor, dir, mSize) {
+    const ah = Math.max(15, mSize * 0.34);
+    const bx = anchor.x + dir.x * (mSize * 0.5 + 6), by = anchor.y + dir.y * (mSize * 0.5 + 6);
+    const ex = bx + dir.x * ah, ey = by + dir.y * ah;
+    const ang = Math.atan2(dir.y, dir.x), wing = ah * 0.55;
+    ctx.strokeStyle = accent; ctx.lineWidth = Math.max(4, mSize * 0.1);
+    ctx.lineCap = ctx.lineJoin = 'round'; ctx.globalAlpha = 0.9;
+    ctx.beginPath(); ctx.moveTo(bx, by); ctx.lineTo(ex, ey); ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(ex, ey); ctx.lineTo(ex - Math.cos(ang - 0.5) * wing, ey - Math.sin(ang - 0.5) * wing);
+    ctx.moveTo(ex, ey); ctx.lineTo(ex - Math.cos(ang + 0.5) * wing, ey - Math.sin(ang + 0.5) * wing);
+    ctx.stroke(); ctx.globalAlpha = 1;
   }
 
   // Colour the corridor in behind the mascot: the child's on-path points are
@@ -1503,25 +1535,30 @@ function renderTracing(firstActivity) {
       else { ctx.strokeStyle = '#D7CCC8'; ctx.lineWidth = 4; } // strokes still to come
       ctx.stroke();
     });
-    // The traced fill sits above the guide but below the start dot + mascot.
+    // The traced fill sits above the guide but below the mascot.
     drawFill();
-    if (!done) {
-      const start = strokes[strokeIndex][0];
-      ctx.beginPath(); ctx.arc(start.x * scale + ox, start.y * scale + oy, 13, 0, Math.PI * 2);
-      ctx.fillStyle = accent; ctx.fill();
-    }
     // Faint off-path breadcrumbs (gentle, never a red "wrong" mark).
     for (const d of dots) {
       if (d.on) continue;
       ctx.beginPath(); ctx.arc(d.x, d.y, 4, 0, Math.PI * 2);
       ctx.fillStyle = 'rgba(189,189,189,0.4)'; ctx.fill();
     }
-    // The mascot rides the finger tip and leads the trace.
-    if (!done && dots.length) {
-      const tip = dots[dots.length - 1];
-      const mSize = Math.max(46, Math.min(96, config.corridorWidth * 2 * scale));
-      if (mascotImg) ctx.drawImage(mascotImg, tip.x - mSize / 2, tip.y - mSize / 2, mSize, mSize);
-      else { ctx.beginPath(); ctx.arc(tip.x, tip.y, mSize / 3, 0, Math.PI * 2); ctx.fillStyle = accent; ctx.fill(); }
+    // The mascot IS the cursor: it waits at the start point, then rides the
+    // finger tip and leads the trace. (No bare dot - the mascot marks the spot.)
+    if (!done) {
+      const sp = strokes[strokeIndex][0];
+      const anchor = dots.length ? dots[dots.length - 1] : { x: sp.x * scale + ox, y: sp.y * scale + oy };
+      const mSize = Math.max(56, Math.min(108, config.corridorWidth * 2.2 * scale));
+      // Arrow pointing the way to trace (drawn first, so the mascot sits over it).
+      drawArrow(anchor, dirAt(strokes[strokeIndex], lastPos), mSize);
+      // Soft accent halo so the target reads clearly (and covers image load).
+      ctx.beginPath(); ctx.arc(anchor.x, anchor.y, Math.max(11, mSize * 0.17), 0, Math.PI * 2);
+      ctx.globalAlpha = 0.3; ctx.fillStyle = accent; ctx.fill(); ctx.globalAlpha = 1;
+      if (mascotImg && mascotImg.complete && mascotImg.naturalWidth) {
+        ctx.drawImage(mascotImg, anchor.x - mSize / 2, anchor.y - mSize / 2, mSize, mSize);
+      } else {
+        ctx.beginPath(); ctx.arc(anchor.x, anchor.y, 13, 0, Math.PI * 2); ctx.fillStyle = accent; ctx.fill();
+      }
     }
   }
 
@@ -1531,6 +1568,7 @@ function renderTracing(firstActivity) {
       strokeIndex++;
       session = new LH.TracingSession(strokes[strokeIndex], config);
       dots = [];
+      lastPos = 0;
       const msg = LH.pickFeedback('completed') + ' Now the next one!';
       note.textContent = msg; speak(msg);
       draw();
@@ -1568,6 +1606,7 @@ function renderTracing(firstActivity) {
     const r = canvas.getBoundingClientRect();
     const x = e.clientX - r.left, y = e.clientY - r.top;
     const result = session.addPoint({ x: (x - ox) / scale, y: (y - oy) / scale });
+    if (result.onPath) lastPos = result.pathPosition;
     dots.push({ x, y, on: result.onPath });
     if (dots.length > 500) dots.shift();
     draw();
@@ -1582,10 +1621,16 @@ function renderTracing(firstActivity) {
     const summary = session.endAttempt();
     if (!summary.completed) {
       const phrase = LH.pickFeedback(summary.showDemo ? 'hint' : summary.coverage > 0.4 ? 'almost' : 'try-again');
-      note.textContent = phrase + (summary.showDemo ? ' 👉 start at the orange dot!' : '');
+      note.textContent = phrase + (summary.showDemo ? ' 👉 start where the mascot is!' : '');
       speak(phrase);
-      dots = []; draw();
+      dots = []; lastPos = 0; draw();
     }
+  }
+  // If the mascot art is still decoding when this screen opens, redraw once it
+  // lands so the idle start point shows the mascot, not the fallback dot.
+  if (!(mascotImg && mascotImg.complete && mascotImg.naturalWidth)) {
+    const src = RASTER_IMAGES['mascot'] || (IMAGES['mascot'] ? 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(IMAGES['mascot']) : '');
+    if (src) { const im = new Image(); im.onload = () => { mascotImg = im; draw(); }; im.src = src; }
   }
   requestAnimationFrame(fit);
   new ResizeObserver(fit).observe(stage);
