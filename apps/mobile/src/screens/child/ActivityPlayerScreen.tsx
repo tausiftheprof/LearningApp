@@ -21,7 +21,25 @@ import { GamePlayer } from './players/GamePlayer';
  */
 export function ActivityPlayerScreen(props: { activity: Activity }): React.JSX.Element {
   const { activity } = props;
-  const { profile, navigate, recordPlaySeconds, applyReward } = useAppStore();
+  const { profile, navigate, recordPlaySeconds, applyReward, catalogue } = useAppStore();
+
+  // Next item in the same tracing section (letters / numbers / shapes), wrapping
+  // after the last — so a finished tracing activity flows into the next with no
+  // "Home" prompt (owner direction).
+  const nextTracing = (): Activity | null => {
+    if (activity.type !== 'tracing') return null;
+    const isLetter = /^trace-letter-/.test(activity.id);
+    const isNumber = /^trace-number-/.test(activity.id);
+    const inSection = (id: string) =>
+      isLetter ? /^trace-letter-/.test(id) : isNumber ? /^trace-number-/.test(id) : !/^trace-(letter|number)-/.test(id);
+    const seq = catalogue
+      .filter((x) => x.type === 'tracing' && inSection(x.id))
+      .sort((x, y) => x.id.localeCompare(y.id, undefined, { numeric: true }));
+    if (seq.length <= 1) return null;
+    const idx = seq.findIndex((x) => x.id === activity.id);
+    return idx >= 0 ? seq[(idx + 1) % seq.length]! : null;
+  };
+  const nextT = nextTracing();
   const theme = childTheme(profile?.accessibility ?? defaultAccessibilitySettings(), profile?.themeId);
   const startedAt = useRef(Date.now());
   const finished = useRef(false);
@@ -105,7 +123,13 @@ export function ActivityPlayerScreen(props: { activity: Activity }): React.JSX.E
         <DrawingBoard activity={activity} theme={theme} onComplete={complete} onDone={goHome} />
       )}
       {activity.type === 'tracing' && (
-        <TracingPlayer activity={activity} theme={theme} onComplete={complete} onDone={goHome} />
+        <TracingPlayer
+          activity={activity}
+          theme={theme}
+          onComplete={complete}
+          onDone={goHome}
+          onAdvance={nextT ? () => navigate({ name: 'activity', activity: nextT }) : undefined}
+        />
       )}
       {activity.type === 'colouring' && (
         <ColouringPlayer activity={activity} theme={theme} onComplete={complete} onDone={goHome} />

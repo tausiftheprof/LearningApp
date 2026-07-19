@@ -48,7 +48,7 @@ export function AppRoot(): React.JSX.Element {
       {screen.name === 'onboarding' && <OnboardingScreen />}
       {screen.name === 'home' && <HomeScreen />}
       {screen.name === 'picker' && <ActivityPickerScreen category={screen.category} />}
-      {screen.name === 'activity' && <ActivityPlayerScreen activity={screen.activity} />}
+      {screen.name === 'activity' && <ActivityPlayerScreen key={screen.activity.id} activity={screen.activity} />}
       {screen.name === 'rewards' && <RewardsScreen />}
       {screen.name === 'daily-adventure' && <DailyAdventureScreen />}
       {screen.name === 'times-up' && <TimesUpScreen />}

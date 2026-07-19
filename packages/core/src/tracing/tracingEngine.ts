@@ -30,7 +30,9 @@ export function tracingConfigFor(
   level: DifficultyLevel,
   options?: { accessibilityWiderCorridor?: boolean },
 ): TracingConfig {
-  const widths: Record<DifficultyLevel, number> = { 1: 96, 2: 64, 3: 44 };
+  // Wider corridors (owner request) so the traceable band is thick enough for
+  // small/chunky fingers; also widens the drawn guide on both renderers.
+  const widths: Record<DifficultyLevel, number> = { 1: 120, 2: 92, 3: 68 };
   const widen = options?.accessibilityWiderCorridor ? 1.5 : 1;
   return {
     corridorWidth: widths[level] * widen,

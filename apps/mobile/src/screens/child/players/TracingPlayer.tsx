@@ -75,6 +75,8 @@ export function TracingPlayer(props: {
   theme: Theme;
   onComplete: (r: { attempts: number; hintCount: number; accuracyScore: number | null }) => void;
   onDone: () => void;
+  /** If set, auto-advance to the next tracing item instead of a Home banner. */
+  onAdvance?: (() => void) | undefined;
 }): React.JSX.Element {
   const { profile } = useAppStore();
   const accessibility = profile?.accessibility ?? defaultAccessibilitySettings();
@@ -159,6 +161,8 @@ export function TracingPlayer(props: {
               setDone(true);
               const avg = Math.round(scores.current.reduce((a, b) => a + b, 0) / scores.current.length);
               props.onComplete({ attempts: summary.attemptNumber, hintCount: 0, accuracyScore: avg });
+              // Flow straight into the next item in the section (no Home prompt).
+              if (props.onAdvance) setTimeout(props.onAdvance, 1300);
             }
           }
         },
@@ -248,7 +252,7 @@ export function TracingPlayer(props: {
           {encouragement}
         </Text>
       )}
-      <CompletionBanner visible={done} onDone={props.onDone} colour={props.theme.success} />
+      <CompletionBanner visible={done && !props.onAdvance} onDone={props.onDone} colour={props.theme.success} />
     </View>
   );
 }

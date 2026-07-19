@@ -44,7 +44,9 @@ advertising-ID permissions.
 - **`packages/core`** (`@littlegrip/core`) — all domain logic as pure, framework-agnostic
   TypeScript (no React/RN imports). Runs in Node, the Expo app, and (bundled via esbuild) the
   browser. Everything is exported flat from `src/index.ts`. Each concern is a self-contained
-  module under `src/<domain>/`: `tracing` (corridor-following engine), `puzzles`, `rewards`,
+  module under `src/<domain>/`: `tracing` (corridor-following engine; corridor widths per
+  difficulty live in `tracingConfigFor` and set both the tolerance AND the drawn band thickness),
+  `puzzles`, `rewards`,
   `screenTime`, `parentalGate`, `recommendation`, `dailyPlan`, `drawing`, `feedback`,
   `home` (`homeTilesForAge` — the age-adaptive set of home-screen doors, shared by both
   renderers), `progress`, `profiles`, `settings`, `account` (parent cloud-sync, off by default),
@@ -98,6 +100,18 @@ a shared 0..1000 design space, since production illustrations arrive later via t
 (docs/12). A content pack is hash-verified and revocable; the schema is structurally incapable of
 expressing link-outs, chat, or free-text collection — that's a deliberate safety property, not an
 oversight, so don't loosen the schema to "just add a field" without checking docs/07-09.
+
+**Tracing glyphs & flow**: letter (A-Z capital+small pair) and number (0-10) stroke skeletons are
+authored as polylines in `content/glyphs.ts` (`digitStrokes`/`letterStrokes`), shape strokes in
+`content/starterPack.ts`; both feed the same corridor engine. Strokes render one at a time — the
+**current** step is highlighted (bold guide + direction arrows drawn from the stroke's own
+tangents, chevrons pointing the trace direction), earlier steps glow "done", later steps stay
+greyed until their turn. On completion the player **auto-advances to the next item in the same
+section** (letters / numbers / shapes), wrapping after the last, with no "Home" prompt between
+them (the top-bar home button is the exit). The `tracingConfigFor` widths above control how thick
+the traceable band is. Any glyph/shape edit must keep every stroke completable — the
+`packages/core/__tests__/tracing.test.ts` "every glyph is completable" test simulates a finger
+following each stroke and is the guard.
 
 **Feature gating**: a template/mechanic can exist in the schema and starter pack while being
 unimplemented on one surface. `apps/mobile/src/screens/child/games/registry.ts`

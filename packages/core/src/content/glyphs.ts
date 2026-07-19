@@ -54,7 +54,9 @@ const UPPER: Record<string, Point[][]> = {
   D: [line(330, 180, 330, 820), join(line(330, 200, 450, 200, 2), arc(450, 500, 300, -76, 76), line(450, 800, 330, 800, 2))],
   E: [line(330, 180, 330, 820), line(330, 200, 700, 200, 4), line(330, 500, 650, 500, 4), line(330, 800, 700, 800, 4)],
   F: [line(330, 180, 330, 820), line(330, 200, 700, 200, 4), line(330, 500, 640, 500, 4)],
-  G: [arc(540, 500, 310, -50, -310, 22), line(740, 560, 520, 560, 3)],
+  // Complete G: a near-closed curve (opening at the upper right) plus the
+  // crossbar coming in from the right — not a bare C.
+  G: [arc(520, 500, 300, -60, -360, 26), line(815, 500, 545, 500, 3)],
   H: [line(320, 180, 320, 820), line(680, 180, 680, 820), line(320, 500, 680, 500, 4)],
   I: [line(500, 180, 500, 820)],
   J: [join(line(640, 180, 640, 630, 4), arc(495, 630, 145, 0, 180, 12))],
@@ -62,9 +64,11 @@ const UPPER: Record<string, Point[][]> = {
   L: [join(line(350, 180, 350, 800, 6), line(350, 800, 700, 800, 4))],
   M: [join(line(290, 820, 290, 200, 4), line(290, 200, 500, 560, 3), line(500, 560, 710, 200, 3), line(710, 200, 710, 820, 4))],
   N: [join(line(320, 820, 320, 200, 4), line(320, 200, 680, 800, 4), line(680, 800, 680, 180, 4))],
-  O: [arc(500, 500, 300, -90, 270, 26)],
+  // O/Q start on the LEFT and sweep clockwise up and over the top, so the
+  // arrows read left-to-right (owner direction).
+  O: [arc(500, 500, 300, 180, 540, 26)],
   P: [line(330, 180, 330, 820), join(line(330, 200, 520, 200, 2), arc(520, 360, 160, -90, 90), line(520, 520, 330, 520, 2))],
-  Q: [arc(500, 500, 290, -90, 270, 26), line(600, 630, 770, 820, 3)],
+  Q: [arc(500, 500, 290, 180, 540, 26), line(600, 630, 770, 820, 3)],
   R: [
     line(330, 180, 330, 820),
     join(line(330, 200, 520, 200, 2), arc(520, 360, 160, -90, 90), line(520, 520, 330, 520, 2)),
@@ -86,12 +90,15 @@ const LOWER: Record<string, Point[][]> = {
   b: [line(350, 180, 350, 820), arc(515, 640, 175, -90, 270, 20)],
   c: [arc(520, 625, 200, -50, -310, 18)],
   d: [line(650, 180, 650, 820), arc(485, 640, 175, -90, 270, 20)],
-  e: [arc(495, 625, 195, -90, -335, 18), line(310, 590, 680, 590, 4)],
+  // e: the eye-bar first (left-to-right), then the round body curving up and
+  // around anti-clockwise — one continuous stroke, not a detached line.
+  e: [join(line(320, 600, 675, 600, 4), arc(500, 625, 185, -12, -300, 20))],
   f: [join(arc(610, 330, 150, 270, 180, 8), line(460, 330, 460, 820, 5)), line(330, 490, 620, 490, 4)],
   g: [arc(480, 610, 180, -90, 270, 20), join(line(660, 430, 660, 870, 4), arc(505, 870, 155, 0, 140, 10))],
   h: [line(350, 180, 350, 820), join(arc(500, 620, 150, 180, 360, 10), line(650, 620, 650, 820, 2))],
-  i: [line(500, 430, 500, 820, 4), line(500, 290, 500, 320, 1)],
-  j: [join(line(560, 430, 560, 870, 4), arc(420, 870, 140, 0, 140, 10)), line(560, 290, 560, 320, 1)],
+  // Bigger round dots for i and j (a small circle instead of a near-invisible tick).
+  i: [line(500, 430, 500, 820, 4), arc(500, 300, 46, 180, 540, 10)],
+  j: [join(line(560, 430, 560, 870, 4), arc(420, 870, 140, 0, 140, 10)), arc(560, 300, 46, 180, 540, 10)],
   k: [line(350, 180, 350, 820), join(line(650, 430, 360, 640, 3), line(360, 640, 660, 820, 3))],
   l: [line(500, 180, 500, 820)],
   m: [
@@ -100,9 +107,9 @@ const LOWER: Record<string, Point[][]> = {
     join(arc(600, 590, 100, 180, 360, 8), line(700, 590, 700, 820, 2)),
   ],
   n: [line(350, 430, 350, 820, 3), join(arc(500, 615, 150, 180, 360, 10), line(650, 615, 650, 820, 2))],
-  o: [arc(500, 625, 195, -90, 270, 20)],
+  o: [arc(500, 625, 195, 180, 540, 20)],
   p: [line(350, 430, 350, 980, 4), arc(520, 620, 170, -90, 270, 20)],
-  q: [arc(480, 620, 170, -90, 270, 20), line(650, 430, 650, 980, 4)],
+  q: [arc(480, 620, 170, 180, 540, 20), line(650, 430, 650, 980, 4)],
   r: [line(400, 430, 400, 820, 3), arc(545, 595, 145, 180, 305, 8)],
   s: [join(arc(500, 530, 100, -50, -267, 12), arc(500, 727, 100, -93, 130, 12))],
   t: [line(480, 260, 480, 820, 5), line(340, 470, 660, 470, 4)],
@@ -116,9 +123,9 @@ const LOWER: Record<string, Point[][]> = {
 
 /* Digits, authored in 0..1000. */
 const DIGITS: Record<string, Point[][]> = {
-  // Tall, narrow oval so the digit reads as 0, not the letter O. One stroke,
-  // starting at the top and going anti-clockwise (down the left side first).
-  '0': [oval(500, 500, 200, 300, -90, -450, 30)],
+  // Tall, narrow oval so the digit reads as 0, not the letter O. Starts on the
+  // LEFT and sweeps clockwise up over the top (left-to-right, matching letter O).
+  '0': [oval(500, 500, 200, 300, 180, 540, 30)],
   '1': [line(500, 200, 500, 800)],
   '2': [join(arc(500, 380, 180, 180, 380, 12), line(640, 490, 320, 800, 5), line(320, 800, 720, 800, 4))],
   '3': [join(arc(500, 350, 155, -150, 90, 12), arc(500, 655, 160, -90, 145, 12))],
