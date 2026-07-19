@@ -30,6 +30,16 @@ function arc(cx: number, cy: number, r: number, startDeg: number, endDeg: number
   return pts;
 }
 
+/** Elliptical arc (rx != ry) — used for the tall, narrow number zero. */
+function oval(cx: number, cy: number, rx: number, ry: number, startDeg: number, endDeg: number, steps = 26): Point[] {
+  const pts: Point[] = [];
+  for (let i = 0; i <= steps; i++) {
+    const a = ((startDeg + ((endDeg - startDeg) * i) / steps) * Math.PI) / 180;
+    pts.push({ x: cx + rx * Math.cos(a), y: cy + ry * Math.sin(a) });
+  }
+  return pts;
+}
+
 const join = (...parts: Point[][]): Point[] => parts.flat();
 
 /* Capitals, authored in 0..1000 (baseline ~ y 820, cap height ~ y 180). */
@@ -106,15 +116,23 @@ const LOWER: Record<string, Point[][]> = {
 
 /* Digits, authored in 0..1000. */
 const DIGITS: Record<string, Point[][]> = {
-  '0': [arc(500, 500, 280, -90, 270, 24)],
+  // Tall, narrow oval so the digit reads as 0, not the letter O. One stroke,
+  // starting at the top and going anti-clockwise (down the left side first).
+  '0': [oval(500, 500, 200, 300, -90, -450, 30)],
   '1': [line(500, 200, 500, 800)],
   '2': [join(arc(500, 380, 180, 180, 380, 12), line(640, 490, 320, 800, 5), line(320, 800, 720, 800, 4))],
   '3': [join(arc(500, 350, 155, -150, 90, 12), arc(500, 655, 160, -90, 145, 12))],
-  '4': [join(line(620, 200, 300, 610, 4), line(300, 610, 750, 610, 4)), line(620, 330, 620, 820, 4)],
-  '5': [join(line(700, 220, 350, 220, 3), line(350, 220, 350, 470, 3), arc(495, 615, 175, -125, 125, 14))],
-  '6': [join(line(615, 210, 435, 505, 3), arc(510, 640, 170, -140, 220, 18))],
+  // Straight (vertical) first line + foot, then the tall right line through it
+  // (LCD-style 4) — no steep slant.
+  '4': [join(line(400, 200, 400, 585, 5), line(400, 585, 720, 585, 4)), line(610, 200, 610, 845, 6)],
+  // Stroke 1: line straight down + the round belly. Stroke 2: the top hat,
+  // traced left-to-right — so the arrows teach "down and around, then the hat".
+  '5': [join(line(370, 210, 370, 490, 3), arc(455, 610, 150, -125, 140, 16)), line(370, 210, 690, 210, 4)],
+  // Curve down from the top-right, then a full loop at the bottom.
+  '6': [join(line(650, 240, 430, 470, 4), arc(490, 640, 190, -110, -470, 24))],
   '7': [join(line(280, 220, 720, 220, 4), line(720, 220, 450, 800, 5))],
-  '8': [arc(500, 370, 150, -90, 270, 18), arc(500, 665, 165, -90, 270, 18)],
+  // One continuous figure-eight that crosses in the middle (not two circles).
+  '8': [join(arc(500, 350, 150, -90, -270, 14), arc(500, 675, 175, -90, 270, 18), arc(500, 350, 150, -270, -450, 14))],
   '9': [arc(490, 405, 170, -90, 270, 18), line(655, 435, 640, 820, 4)],
 };
 

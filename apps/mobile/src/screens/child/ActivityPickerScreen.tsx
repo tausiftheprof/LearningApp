@@ -1,11 +1,35 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import type { Activity, ActivityCategory } from '@littlegrip/core';
+import { Canvas, Path, Skia } from '@shopify/react-native-skia';
+import type { Activity, ActivityCategory, Point } from '@littlegrip/core';
 import { defaultAccessibilitySettings, recommendActivities, ACTIVITY_CATEGORIES } from '@littlegrip/core';
 import { useAppStore } from '../../state/appStore';
 import { childTheme } from '../../ui/theme';
 import { BigTile, HoldToHomeButton } from '../../ui/components';
 import { IMPLEMENTED_GAME_TEMPLATES } from './games/registry';
+
+/** A tiny outline of a shape-tracing activity, drawn from its own guide paths. */
+function ShapeIcon({ paths, size, color }: { paths: Point[][]; size: number; color: string }): React.JSX.Element {
+  const skPath = useMemo(() => {
+    let minx = 1e9, miny = 1e9, maxx = -1e9, maxy = -1e9;
+    for (const s of paths) for (const p of s) { minx = Math.min(minx, p.x); miny = Math.min(miny, p.y); maxx = Math.max(maxx, p.x); maxy = Math.max(maxy, p.y); }
+    const pad = 90, w = (maxx - minx || 1) + 2 * pad, h = (maxy - miny || 1) + 2 * pad;
+    const sc = size / Math.max(w, h);
+    const offx = (size - w * sc) / 2, offy = (size - h * sc) / 2;
+    const map = (p: Point) => ({ x: offx + (p.x - (minx - pad)) * sc, y: offy + (p.y - (miny - pad)) * sc });
+    const path = Skia.Path.Make();
+    for (const s of paths) {
+      const f = map(s[0]!); path.moveTo(f.x, f.y);
+      for (const p of s.slice(1)) { const m = map(p); path.lineTo(m.x, m.y); }
+    }
+    return path;
+  }, [paths, size]);
+  return (
+    <Canvas style={{ width: size, height: size }}>
+      <Path path={skPath} color={color} style="stroke" strokeWidth={Math.max(3, size * 0.08)} strokeCap="round" strokeJoin="round" />
+    </Canvas>
+  );
+}
 
 /**
  * Activity picker (docs/03 S09). Only playable content is shown: game
@@ -113,18 +137,24 @@ export function ActivityPickerScreen(props: { category: PickerCategory }): React
         <Text style={[styles.title, { color: theme.text }]}>Pick one!</Text>
       </View>
       <ScrollView contentContainerStyle={styles.grid}>
-        {ranked.map((activity, i) => (
-          <View key={activity.id} style={styles.cell}>
-            <BigTile
-              label={activity.title}
-              emoji={emojiFor(activity)}
-              glyph={glyphFor(activity.id) ?? ''}
-              colour={theme.tileColours[i % theme.tileColours.length]!}
-              theme={theme}
-              onPress={() => navigate({ name: 'activity', activity })}
-            />
-          </View>
-        ))}
+        {ranked.map((activity, i) => {
+          // Shape-tracing tiles show a tiny outline of the shape, not the pencil.
+          const shapePaths =
+            activity.type === 'tracing' && !/^trace-(letter|number)-/.test(activity.id) ? activity.paths : null;
+          return (
+            <View key={activity.id} style={styles.cell}>
+              <BigTile
+                label={activity.title}
+                emoji={emojiFor(activity)}
+                glyph={glyphFor(activity.id) ?? ''}
+                iconNode={shapePaths ? <ShapeIcon paths={shapePaths} size={46} color={theme.text} /> : undefined}
+                colour={theme.tileColours[i % theme.tileColours.length]!}
+                theme={theme}
+                onPress={() => navigate({ name: 'activity', activity })}
+              />
+            </View>
+          );
+        })}
         {ranked.length === 0 && (
           <Text style={[styles.empty, { color: theme.text }]}>
             New activities are on their way! Try another door on the home screen. 🏠

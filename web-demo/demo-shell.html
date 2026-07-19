@@ -924,6 +924,21 @@ function renderDrawSections() {
   app.append(top, grid);
 }
 
+// A tiny outline of a shape-tracing activity, drawn from its own guide paths
+// (so the icon always matches what the child will trace). Replaces the generic
+// pencil for the Shapes section.
+function shapeIconSvg(activity, sizePx) {
+  const strokes = activity.paths || [];
+  let minx = 1e9, miny = 1e9, maxx = -1e9, maxy = -1e9;
+  for (const s of strokes) for (const p of s) { minx = Math.min(minx, p.x); miny = Math.min(miny, p.y); maxx = Math.max(maxx, p.x); maxy = Math.max(maxy, p.y); }
+  if (!isFinite(minx)) return '';
+  const w = maxx - minx || 1, h = maxy - miny || 1, pad = 90;
+  const paths = strokes
+    .map((s) => `<polyline points="${s.map((p) => `${p.x.toFixed(0)},${p.y.toFixed(0)}`).join(' ')}" fill="none" stroke="currentColor" stroke-width="80" stroke-linecap="round" stroke-linejoin="round"/>`)
+    .join('');
+  return `<svg viewBox="${minx - pad} ${miny - pad} ${w + 2 * pad} ${h + 2 * pad}" width="${sizePx}" height="${sizePx}" style="display:block;color:var(--tile-ink,#4A3B32)" aria-hidden="true">${paths}</svg>`;
+}
+
 function renderPicker(category) {
   setStatus('Activity Picker — ' + category, ['recommendation.recommendActivities']);
   // Tracing splits into three sections (owner direction): Letters, Numbers,
@@ -992,8 +1007,12 @@ function renderPicker(category) {
     const letterM = /^trace-letter-(.)$/.exec(a.id);
     const numberM = /^trace-number-(\d+)$/.exec(a.id);
     const glyph = letterM ? `${letterM[1].toUpperCase()} ${letterM[1]}` : numberM ? numberM[1] : null;
+    // Shape-tracing tiles show a tiny outline of the shape itself, not a pencil.
+    const isShape = a.type === 'tracing' && !letterM && !numberM;
     const inner = glyph
       ? `<span class="glyph-big" aria-hidden="true">${glyph}</span>`
+      : isShape
+        ? `<span class="tile-illo" aria-hidden="true">${shapeIconSvg(a, 52)}</span><span class="label picker-label">${a.title}</span>`
       : (hasPicture(imgName) && !highContrast()
         ? `<span class="tile-illo" aria-hidden="true">${imgHtml(imgName, 52)}</span>`
         : `<span class="emoji">${emojiFor[a.category]}</span>`) + `<span class="label picker-label">${a.title}</span>`;
@@ -1219,9 +1238,10 @@ function renderTracing(firstActivity) {
       else { ctx.strokeStyle = '#D7CCC8'; ctx.lineWidth = 4; } // strokes still to come
       ctx.stroke();
     });
-    // Direction arrows along each stroke still to trace (current stroke bold,
-    // upcoming strokes fainter); the traced fill is drawn over them next.
-    if (!done) strokes.forEach((path, i) => { if (i >= strokeIndex) drawArrows(path, i === strokeIndex ? 0.9 : 0.45); });
+    // Direction arrows along the CURRENT stroke only — the step in progress is
+    // highlighted; upcoming strokes stay greyed until it is their turn. The
+    // traced fill is drawn over the arrows next, covering each as it is passed.
+    if (!done) drawArrows(strokes[strokeIndex], 0.95);
     // The traced fill sits above the guide + arrows.
     drawFill();
     // Faint off-path breadcrumbs (gentle, never a red "wrong" mark).

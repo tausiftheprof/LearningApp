@@ -104,19 +104,18 @@ export function TracingPlayer(props: {
   const toDesign = (x: number, y: number) => ({ x: (x - ox) / scale, y: (y - oy) / scale });
   const fromDesign = (p: { x: number; y: number }) => ({ x: p.x * scale + ox, y: p.y * scale + oy });
 
-  const guidePath = useMemo(() => {
-    const path = Skia.Path.Make();
-    for (const polyline of props.activity.paths) {
+  // One Skia path per stroke, so each can be styled by step (done / current /
+  // upcoming) — the current step is highlighted and later steps stay greyed.
+  const strokePaths = useMemo(() => {
+    return props.activity.paths.map((polyline) => {
+      const path = Skia.Path.Make();
       const first = fromDesign(polyline[0]!);
       path.moveTo(first.x, first.y);
-      for (const p of polyline.slice(1)) {
-        const s = fromDesign(p);
-        path.lineTo(s.x, s.y);
-      }
-    }
-    return path;
+      for (const p of polyline.slice(1)) { const s = fromDesign(p); path.lineTo(s.x, s.y); }
+      return path;
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [props.activity, scale]);
+  }, [props.activity, scale, ox, oy]);
 
   // Colour the corridor in behind the dot: the child's on-path points are
   // stroked as one thick rounded trail in the theme accent, broken wherever the
@@ -133,7 +132,9 @@ export function TracingPlayer(props: {
   }, [childPoints]);
   const fillWidth = Math.max(6, config.corridorWidth * 1.5 * scale);
   const tip = childPoints.length ? childPoints[childPoints.length - 1]! : null;
-  const arrowsPath = arrowsPathFor(props.activity.paths, strokeIndex, scale, ox, oy, config.corridorWidth);
+  // Direction arrows on the current stroke only (the highlighted step).
+  const currentStroke = props.activity.paths[Math.min(strokeIndex, props.activity.paths.length - 1)]!;
+  const arrowsPath = arrowsPathFor([currentStroke], 0, scale, ox, oy, config.corridorWidth);
 
   const pan = useMemo(
     () =>
@@ -184,20 +185,37 @@ export function TracingPlayer(props: {
         {...pan.panHandlers}
       >
         <Canvas style={styles.canvas}>
-          {/* Corridor guide */}
-          <Path
-            path={guidePath}
-            color="#D7CCC8"
-            style="stroke"
-            strokeWidth={config.corridorWidth * 2 * scale}
-            strokeCap="round"
-            strokeJoin="round"
-            opacity={0.5}
-          />
-          {/* Centre line */}
-          <Path path={guidePath} color="#8D6E63" style="stroke" strokeWidth={4} strokeCap="round" />
-          {/* Direction arrows along the strokes still to trace (the fill is drawn
-              over them, so each arrow is covered as the child passes it) */}
+          {/* Corridor halo behind the CURRENT stroke only (the highlighted step). */}
+          {!done && strokePaths[strokeIndex] && (
+            <Path
+              path={strokePaths[strokeIndex]!}
+              color="#D7CCC8"
+              style="stroke"
+              strokeWidth={config.corridorWidth * 2 * scale}
+              strokeCap="round"
+              strokeJoin="round"
+              opacity={0.5}
+            />
+          )}
+          {/* Per-stroke centre line: done strokes glow accent, the current step
+              is bold brown, upcoming steps stay greyed until their turn. */}
+          {strokePaths.map((p, i) => {
+            const finished = done || i < strokeIndex;
+            const current = !done && i === strokeIndex;
+            return (
+              <Path
+                key={i}
+                path={p}
+                color={finished ? props.theme.accent : current ? '#8D6E63' : '#D7CCC8'}
+                style="stroke"
+                strokeWidth={finished ? 6 : current ? 4 : 3}
+                strokeCap="round"
+                strokeJoin="round"
+              />
+            );
+          })}
+          {/* Direction arrows along the current stroke (covered by the fill as
+              the child passes each one) */}
           {!done && (
             <Path
               path={arrowsPath}

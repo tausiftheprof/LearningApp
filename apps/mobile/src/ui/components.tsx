@@ -18,8 +18,10 @@ export function BigTile(props: {
   subtitle?: string;
   /** Letter/number tracing tiles: show just this big glyph pair ("A a"). */
   glyph?: string;
+  /** Custom medallion content (e.g. a drawn shape outline) instead of an emoji. */
+  iconNode?: React.ReactNode;
 }): React.JSX.Element {
-  const { label, emoji, colour, theme, onPress, subtitle, glyph } = props;
+  const { label, emoji, colour, theme, onPress, subtitle, glyph, iconNode } = props;
   return (
     <Pressable
       accessibilityRole="button"
@@ -43,7 +45,7 @@ export function BigTile(props: {
       ) : (
         <>
           <View style={[styles.tileMedallion, { backgroundColor: theme.surface }]} accessibilityElementsHidden>
-            <Text style={styles.tileEmoji}>{emoji}</Text>
+            {iconNode ?? <Text style={styles.tileEmoji}>{emoji}</Text>}
           </View>
           <Text style={[styles.tileLabel, { color: theme.textOnTile }]}>{label}</Text>
           {subtitle ? (
