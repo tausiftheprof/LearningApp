@@ -123,9 +123,12 @@ renderers consume it, so the home content always matches the profile. Tiles are 
 
 - No child accounts, credentials, or login of any kind, ever — the parent `account` module is
   email + one-time-code, and children never authenticate.
-- Any new backend-shaped feature must be built as an honestly-labelled scaffold (see
-  `apps/mobile/src/services/audio.ts`'s "MOCK/ILLUSTRATIVE" pattern) — never silently imply a real
-  backend exists when it doesn't.
+- Any new backend-shaped feature must be built as an honestly-labelled scaffold — never silently
+  imply a real backend/asset exists when it doesn't. `apps/mobile/src/services/audio.ts` is the
+  reference: sound **effects** are real (procedurally-generated `assets/sounds/*.wav` played via
+  `expo-audio` — no plugin, so no mic/RECORD_AUDIO permission), while instruction **voice**
+  (`playInstruction`) stays a documented silent no-op until the CMS ships the soft-female-voice
+  recordings (docs/12).
 - `strict: true`, `noUncheckedIndexedAccess`, and `exactOptionalPropertyTypes` are on
   (`tsconfig.base.json`) — array/object indexing needs explicit narrowing or `!`.
 - Shared content artwork lives in `assets/images/` (`README.md` there documents which filename
