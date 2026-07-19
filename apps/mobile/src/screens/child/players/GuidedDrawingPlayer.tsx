@@ -177,7 +177,7 @@ export function GuidedDrawingPlayer(props: {
               )}
               <Path
                 path={p}
-                color={i < guideIndex || done ? '#81C784' : i === guideIndex ? '#BCAAA4' : 'rgba(215, 204, 200, 0.5)'}
+                color={i < guideIndex || done ? props.theme.accent : i === guideIndex ? '#BCAAA4' : 'rgba(215, 204, 200, 0.5)'}
                 style="stroke"
                 strokeWidth={i < guideIndex || done ? 5 : i === guideIndex ? 4 : 3}
                 strokeCap="round"
@@ -185,7 +185,7 @@ export function GuidedDrawingPlayer(props: {
               />
             </React.Fragment>
           ))}
-          {!done && <Circle cx={startDot.x} cy={startDot.y} r={12} color="#FF8A65" />}
+          {!done && <Circle cx={startDot.x} cy={startDot.y} r={12} color={props.theme.accent} />}
           {[...strokes, ...(livePoints.length > 1 ? [{ brush: { kind: brush, colour, size }, points: livePoints }] : [])].map(
             (stroke, i) => (
               <Path

@@ -66,6 +66,10 @@ export function ActivityPlayerScreen(props: { activity: Activity }): React.JSX.E
         previousBestAccuracy: previousBest,
       });
       void audioService.playEffect('celebrate');
+      // Soft completion chime (celebratory arpeggio). audioService is the
+      // documented MOCK/ILLUSTRATIVE scaffold, so this is silent until real
+      // audio assets ship via the CMS pipeline (docs/12).
+      void audioService.playEffect('soft-chime');
     },
     [activity, profile, applyReward],
   );

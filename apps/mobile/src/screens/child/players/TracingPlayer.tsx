@@ -1,6 +1,6 @@
 import React, { useMemo, useRef, useState } from 'react';
 import { PanResponder, StyleSheet, Text, View } from 'react-native';
-import { Canvas, Circle, Path, Skia } from '@shopify/react-native-skia';
+import { Canvas, Circle, Image as SkiaImage, Path, Skia, useImage } from '@shopify/react-native-skia';
 import type { TracingActivity } from '@littlegrip/core';
 import {
   defaultAccessibilitySettings,
@@ -44,6 +44,8 @@ export function TracingPlayer(props: {
   const [childPoints, setChildPoints] = useState<{ x: number; y: number; onPath: boolean }[]>([]);
   const [done, setDone] = useState(false);
   const [encouragement, setEncouragement] = useState<string | null>(null);
+  // The brand mascot leads the trace (shared artwork in assets/images/).
+  const mascot = useImage(require('../../../../../../assets/images/mascot.png'));
 
   const side = Math.min(size.w, size.h);
   const scale = side / DESIGN;
@@ -66,6 +68,23 @@ export function TracingPlayer(props: {
     return path;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [props.activity, scale]);
+
+  // Colour the corridor in behind the mascot: the child's on-path points are
+  // stroked as one thick rounded trail in the theme accent, broken wherever the
+  // finger strayed off-path, so the glyph visibly fills as it is traced.
+  const fillPath = useMemo(() => {
+    const path = Skia.Path.Make();
+    let started = false;
+    for (const p of childPoints) {
+      if (!p.onPath) { started = false; continue; }
+      if (!started) { path.moveTo(p.x, p.y); started = true; }
+      else path.lineTo(p.x, p.y);
+    }
+    return path;
+  }, [childPoints]);
+  const fillWidth = Math.max(6, config.corridorWidth * 1.5 * scale);
+  const mascotSize = Math.max(46, Math.min(96, config.corridorWidth * 2 * scale));
+  const tip = childPoints.length ? childPoints[childPoints.length - 1]! : null;
 
   const pan = useMemo(
     () =>
@@ -128,12 +147,31 @@ export function TracingPlayer(props: {
           />
           {/* Centre line */}
           <Path path={guidePath} color="#8D6E63" style="stroke" strokeWidth={4} strokeCap="round" />
+          {/* Traced fill: the corridor colours in with the theme accent */}
+          <Path
+            path={fillPath}
+            color={props.theme.accent}
+            style="stroke"
+            strokeWidth={fillWidth}
+            strokeCap="round"
+            strokeJoin="round"
+            opacity={0.85}
+          />
           {/* Start dot */}
-          <Circle cx={start.x} cy={start.y} r={16} color={props.theme.accent} />
-          {/* Child's trace: sparkle on path, soft fade off path */}
-          {childPoints.map((p, i) => (
-            <Circle key={i} cx={p.x} cy={p.y} r={p.onPath ? 8 : 5} color={p.onPath ? '#FFB300' : '#BDBDBD'} opacity={p.onPath ? 0.95 : 0.4} />
-          ))}
+          {!done && <Circle cx={start.x} cy={start.y} r={16} color={props.theme.accent} />}
+          {/* Faint off-path breadcrumbs (gentle, never a red "wrong" mark) */}
+          {childPoints.map((p, i) => (p.onPath ? null : <Circle key={i} cx={p.x} cy={p.y} r={5} color="#BDBDBD" opacity={0.4} />))}
+          {/* The mascot rides the finger tip and leads the trace */}
+          {!done && tip && mascot && (
+            <SkiaImage
+              image={mascot}
+              x={tip.x - mascotSize / 2}
+              y={tip.y - mascotSize / 2}
+              width={mascotSize}
+              height={mascotSize}
+              fit="contain"
+            />
+          )}
         </Canvas>
       </View>
       {encouragement && !done && (

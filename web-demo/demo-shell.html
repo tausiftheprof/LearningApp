@@ -247,8 +247,9 @@
     min-width: 52px; min-height: 52px; font-size: 24px; cursor: pointer;
     box-shadow: 0 2px 5px rgba(74, 59, 50, 0.15);
   }
-  .icon-btn.holding { background: #FF8A65; }
+  .icon-btn.holding { background: var(--accent, #FF8A65); }
 
+  .instruction-bar, .play-stage { border: 2px solid color-mix(in srgb, var(--accent, #FF8A65) 22%, transparent); }
   .play-stage { flex: 1; position: relative; margin: 8px 14px 12px; border-radius: 16px; background: #fff; overflow: hidden; }
   canvas.stage { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; }
 
@@ -260,7 +261,7 @@
     min-width: 52px; min-height: 52px; font-size: 20px; cursor: pointer; flex-shrink: 0;
     font-family: inherit;
   }
-  .tool.active { background: #FFE0B2; }
+  .tool.active { background: color-mix(in srgb, var(--accent, #FF8A65) 30%, #fff); }
   .swatch { min-width: 44px; min-height: 44px; border-radius: 999px; border: 2px solid #4A3B32; cursor: pointer; flex-shrink: 0; position: relative; }
   .swatch.active { border-width: 5px; }
   .swatch .num { position: absolute; inset: 0; display: grid; place-items: center; color: #fff; font-weight: 800; text-shadow: 0 1px 2px rgba(0,0,0,0.6); }
@@ -269,7 +270,7 @@
 
   .banner {
     position: absolute; left: 8%; right: 8%; bottom: 6%;
-    background: #81C784; border-radius: 24px; padding: 16px; text-align: center;
+    background: var(--success, #81C784); border-radius: 24px; padding: 16px; text-align: center;
     box-shadow: 0 8px 24px rgba(74,59,50,0.25);
   }
   .banner .big { font-size: clamp(18px, 3vw, 26px); font-weight: 800; color: #fff; }
@@ -284,9 +285,10 @@
   .center-col p { margin: 0; font-size: 16px; max-width: 46ch; }
 
   .primary-btn {
-    background: #FF8A65; color: #fff; border: none; border-radius: 20px;
+    background: var(--accent, #FF8A65); color: #fff; border: none; border-radius: 20px;
     min-height: 56px; padding: 10px 28px; font-size: 18px; font-weight: 800; cursor: pointer; font-family: inherit;
   }
+  /* Destructive + parent-area buttons stay distinct from the child theme accent. */
   .primary-btn.danger { background: #B3261E; }
   .primary-btn.teal { background: #2F6F62; border-radius: 12px; font-weight: 700; }
 
@@ -523,10 +525,10 @@ function speak(text) {
   } catch (e) { /* stand-in only */ }
 }
 
-function celebrate() {
+function celebrate(count = 14) {
   if (state.profile?.accessibility.reducedMotion) return;
   const glyphs = ['⭐', '🎉', '✨', '🌟'];
-  for (let i = 0; i < 14; i++) {
+  for (let i = 0; i < count; i++) {
     const s = document.createElement('span');
     s.className = 'confetti';
     s.textContent = glyphs[i % glyphs.length];
@@ -536,6 +538,49 @@ function celebrate() {
     app.appendChild(s);
     setTimeout(() => s.remove(), 2200);
   }
+}
+
+// The brand mascot, loaded once as an <img> so canvas renderers (e.g. the
+// tracing cursor) can drawImage it. Uses the same inlined raster as the home
+// greeting card; stays null until decoded, so callers must guard on it.
+let mascotImg = null;
+(function loadMascot() {
+  const src = RASTER_IMAGES['mascot'] || (IMAGES['mascot'] ? 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(IMAGES['mascot']) : '');
+  if (!src) return;
+  const im = new Image();
+  im.onload = () => { mascotImg = im; };
+  im.src = src;
+})();
+
+// Soft celebratory chime (WebAudio) — a gentle ascending arpeggio. Effects are
+// synthesised here rather than shipped as an audio file; gated on the profile's
+// effects toggle and scaled by its volume, mirroring how speak() honours the
+// voice toggle. A no-op where WebAudio is unavailable or effects are off.
+let chimeCtx = null;
+function playChime() {
+  if (!state.profile || state.profile.sound.effects === false) return;
+  try {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return;
+    chimeCtx = chimeCtx || new AC();
+    if (chimeCtx.state === 'suspended') chimeCtx.resume();
+    const now = chimeCtx.currentTime;
+    const vol = Math.max(0, Math.min(1, state.profile.sound.volume ?? 0.7)) * 0.22;
+    // C5 · E5 · G5 · C6 — a bright, friendly major arpeggio.
+    [523.25, 659.25, 783.99, 1046.5].forEach((freq, i) => {
+      const t0 = now + i * 0.12;
+      const osc = chimeCtx.createOscillator();
+      const gain = chimeCtx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0, t0);
+      gain.gain.linearRampToValueAtTime(vol, t0 + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.5);
+      osc.connect(gain).connect(chimeCtx.destination);
+      osc.start(t0);
+      osc.stop(t0 + 0.55);
+    });
+  } catch (e) { /* stand-in only */ }
 }
 
 /* ---------- profile activation (multi-profile, FR-001/C-01 full scope) ---------- */
@@ -599,6 +644,7 @@ async function completeActivity(activity, { attempts = 1, hintCount = 0, accurac
   await repos.rewards.save(p.id, state.rewards);
   await stopActivityClock();
   celebrate();
+  playChime();
   speak(LH.pickFeedback('completed'));
   persistSoon();
 }
@@ -642,11 +688,19 @@ function render() {
   if (parentish) {
     app.style.background = ''; app.style.color = ''; app.style.backgroundImage = '';
     app.style.setProperty('--tile-ink', '#fff');
+    app.style.removeProperty('--accent');
+    app.style.removeProperty('--success');
   } else {
     app.style.background = highContrast() ? '#FFFFFF' : t.background;
     app.style.backgroundImage = highContrast() ? '' : (t.backgroundGradient || '');
     app.style.color = highContrast() ? '#000000' : t.text;
     app.style.setProperty('--tile-ink', highContrast() ? '#FFFFFF' : t.text);
+    // Inside-screen chrome (start affordance, banner, tool highlight, buttons)
+    // adopts the active theme's accent so a game feels part of the home theme.
+    // Success/celebration keeps a warm green but leans toward the theme accent
+    // in high-contrast; both fall back to the historical colours in the CSS.
+    app.style.setProperty('--accent', highContrast() ? '#0000CC' : t.accent);
+    app.style.setProperty('--success', highContrast() ? '#006600' : t.accent);
   }
   const s = state.screen;
   if (s.name === 'onboarding') renderOnboarding();
@@ -1032,6 +1086,9 @@ function renderTracing(firstActivity) {
   let session = new LH.TracingSession(strokes[0], config);
   let scores = [];
   let scale = 1, ox = 0, oy = 0, dots = [], done = false, tracing = false;
+  // Inside-screen accent follows the active theme (start affordance, the
+  // corridor fill left behind the mascot, and the finished-stroke glow).
+  const accent = highContrast() ? '#0000CC' : theme().accent;
 
   function loadActivity(next) {
     activity = next;
@@ -1066,6 +1123,27 @@ function renderTracing(firstActivity) {
     path.forEach((p, i) => (i ? ctx.lineTo(p.x * scale + ox, p.y * scale + oy) : ctx.moveTo(p.x * scale + ox, p.y * scale + oy)));
   }
 
+  // Colour the corridor in behind the mascot: the child's on-path points are
+  // stroked as one thick rounded trail (~corridor width) in the theme accent,
+  // broken wherever the finger strayed off the path, so the letter visibly
+  // fills as it is traced.
+  function drawFill() {
+    const w = Math.max(6, config.corridorWidth * 1.5 * scale);
+    ctx.lineWidth = w;
+    ctx.strokeStyle = accent;
+    ctx.globalAlpha = 0.85;
+    let started = false;
+    for (const d of dots) {
+      if (!d.on) { started = false; continue; }
+      if (!started) { ctx.beginPath(); ctx.moveTo(d.x, d.y); started = true; }
+      else ctx.lineTo(d.x, d.y);
+      // Dab a rounded cap at each on-path point so short/sparse trails still
+      // read as a filled corridor rather than a thin line.
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+  }
+
   function draw() {
     const r = stage.getBoundingClientRect();
     ctx.clearRect(0, 0, r.width, r.height);
@@ -1079,20 +1157,30 @@ function renderTracing(firstActivity) {
         ctx.stroke();
       }
       strokePath(path);
-      if (i < strokeIndex || done) { ctx.strokeStyle = '#81C784'; ctx.lineWidth = 7; } // finished strokes glow green
+      if (i < strokeIndex || done) { ctx.strokeStyle = accent; ctx.lineWidth = 7; } // finished strokes glow in the theme accent
       else if (i === strokeIndex) { ctx.strokeStyle = '#8D6E63'; ctx.lineWidth = 4; }
       else { ctx.strokeStyle = '#D7CCC8'; ctx.lineWidth = 4; } // strokes still to come
       ctx.stroke();
     });
+    // The traced fill sits above the guide but below the start dot + mascot.
+    drawFill();
     if (!done) {
       const start = strokes[strokeIndex][0];
       ctx.beginPath(); ctx.arc(start.x * scale + ox, start.y * scale + oy, 13, 0, Math.PI * 2);
-      ctx.fillStyle = '#FF8A65'; ctx.fill();
+      ctx.fillStyle = accent; ctx.fill();
     }
+    // Faint off-path breadcrumbs (gentle, never a red "wrong" mark).
     for (const d of dots) {
-      ctx.beginPath(); ctx.arc(d.x, d.y, d.on ? 7 : 4, 0, Math.PI * 2);
-      ctx.fillStyle = d.on ? 'rgba(255,179,0,0.95)' : 'rgba(189,189,189,0.4)';
-      ctx.fill();
+      if (d.on) continue;
+      ctx.beginPath(); ctx.arc(d.x, d.y, 4, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(189,189,189,0.4)'; ctx.fill();
+    }
+    // The mascot rides the finger tip and leads the trace.
+    if (!done && dots.length) {
+      const tip = dots[dots.length - 1];
+      const mSize = Math.max(46, Math.min(96, config.corridorWidth * 2 * scale));
+      if (mascotImg) ctx.drawImage(mascotImg, tip.x - mSize / 2, tip.y - mSize / 2, mSize, mSize);
+      else { ctx.beginPath(); ctx.arc(tip.x, tip.y, mSize / 3, 0, Math.PI * 2); ctx.fillStyle = accent; ctx.fill(); }
     }
   }
 
@@ -1107,8 +1195,10 @@ function renderTracing(firstActivity) {
       draw();
       return;
     }
-    // Whole glyph/shape finished.
+    // Whole glyph/shape finished: fill the whole path and burst extra stars
+    // (completeActivity handles the base confetti + chime).
     done = true; draw();
+    celebrate(24);
     const avg = Math.round(scores.reduce((x, y) => x + y, 0) / scores.length);
     completeActivity(activity, { attempts: 1, hintCount: 0, accuracyScore: avg });
     const next = letterQueue(activity.id);
