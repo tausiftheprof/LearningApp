@@ -49,6 +49,12 @@ built: **Feed the Animal** ✅ (built with real art), **Pop the Bubbles** ✅ (e
 - [ ] **Number Path Hop** — tap stepping stones 1→2→3 in order. Needs: 1 stone/lilypad
   (+ optional hopping character).
 
+- [ ] **Feed the Animal — layout tweaks.** The character is too small. Make the animal **big in
+  the centre** of the stage, move the **foods to a right-hand column** (instead of along the
+  bottom), and make the whole layout **auto-adjust to screen size** (character + food scale and
+  reposition responsively; mouth hotspot follows). Demo `renderGame` feed-animal + mobile
+  `FeedAnimalGame`.
+
 - [ ] **Verify the mobile app is adaptive across device sizes.** The web demo was audited and
   fixed for 320-1366px (July 2026); the Expo app's layouts (`HomeScreen`, players, pickers)
   haven't been checked on small phones vs. large tablets — best done on a device/emulator.
