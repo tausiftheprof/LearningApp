@@ -43,8 +43,13 @@ per the agreed one-game-at-a-time flow. The other four the owner picked already 
 built: **Feed the Animal** ✅ (built with real art), **Pop the Bubbles** ✅ (exists),
 **Sorting Bins** ✅ (exists as `drag-sort`), **Count & Tap** ✅ (exists as `counting`).
 
-- [ ] **Cutting Practice** — drag "scissors" along a dotted line. Reuses the tracing corridor
-  engine. Needs: 1 scissors sprite (+ optional fun paper shapes).
+- [ ] **Cutting Practice** — drag "scissors" along a dotted line; the scissors snip as they go.
+  Reuses the tracing corridor engine. **Art received** (July 2026, in `assets/images/`, to be
+  renamed to clean asset keys when building): `Cutting Practice - scissor open.png`,
+  `Cutting Practice- Scissor closed.png` (open/closed pair → snip animation), `Cutting practice -
+  Car.png`, `Cutting Practice - cake.png` (two things to cut). **Open decision:** cut path style —
+  (A) straight/wavy dotted line *across* the shape, splits in two [recommended]; (B) cut *around*
+  the outline; (C) a standalone snip line with the shapes as decoration.
 - [ ] **Number Path Hop** — tap stepping stones 1→2→3 in order. Needs: 1 stone/lilypad
   (+ optional hopping character).
 - ~~**Build a Face** — drag eyes/nose/mouth onto a blank head.~~ **Parked** at owner's request
