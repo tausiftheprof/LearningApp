@@ -10,6 +10,27 @@ start. There are no child accounts, no child email, no third-party SDKs that tou
 network calls in the child experience — the bundled starter content pack lets it run fully
 offline. Compliance conclusions in `docs/` are engineering-informed, not legal advice.
 
+## Working efficiently with the owner (token-frugal iteration)
+
+Most of this app's work is iterative UI polish on the tracing/child screens, where each
+round re-reads large files (`web-demo/index.html`, `web-demo/demo-shell.html`,
+`packages/core/src/content/starterPack.ts`) and re-runs the rebuild + headless verify. To
+keep that cheap:
+
+- **Batch related tweaks.** Ten fixes in one request ≈ one read + one `node web-demo/build.mjs`
+  + one verify pass. The same ten fixes split across ten requests multiplies all three. When
+  the owner sends a list, do the whole list before rebuilding/verifying once.
+- **Prefer a visual reference over prose for shape/direction work.** "Left to right" was
+  ambiguous enough to cause several wrong-direction rebuilds; a marked-up screenshot or "like a
+  school handwriting worksheet" resolves it in one pass. When a request is visual and the
+  wording is ambiguous, ask for a reference (or offer a quick either/or mock) *before* building
+  the real thing — cheaper than build → reject → rebuild.
+- **Honour the owner's stated definition of done.** If the owner says they'll check the demo
+  themselves, skip the headless screenshot verify and just make the change + rebuild. Only run
+  the full verify pass when correctness isn't otherwise being confirmed.
+- **Collect half-formed ideas as a backlog** and knock them out in one focused pass rather than
+  interrupting a build mid-stream.
+
 ## Commands
 
 ```bash
