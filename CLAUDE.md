@@ -114,7 +114,12 @@ demo is the practical way to exercise a feature end-to-end. `demo-shell.html` ex
 test seam — `window.__lgTest` (`{ navigate, getState, activateProfile }`) drives/reads any screen.
 Drive `web-demo/index.html`
 (after rebuilding it) with headless Chromium via these hooks. Onboarding path in the demo:
-"Set up (for grown-ups)" → fill `#nick` → pick an age → "Next" → "Agree and start playing".
+"Set up (for grown-ups)" → fill `#nick` → pick an age (the `.choice-row` buttons; default 3-5) →
+"Next" → "Agree and start playing". When the owner says they'll check visually, verify with
+**assertion-based headless checks instead of screenshots** — simulate the child's flow (drag foods
+to the mouth, tap every colour-by-number target in order, drag the full cut line) and assert DOM
+outcomes + zero console errors. This also validates hand-authored coordinate data (e.g. a CBN
+target placed on ink stalls the simulated flow and fails loudly).
 
 ### Storage: repository interfaces are the seam
 
@@ -148,7 +153,24 @@ board's controls follow the owner-approved "Magic drawer" layout (right colour r
 selected ring, slim bar of crayon/paint/eraser/🪄 wand, floating size pod, wand-opened drawer with
 rainbow/glitter/glow/stamp brushes, undo-redo + start-over/save in the corners). **Big Kid Games
 is retired** — the former `preschool` games are all `category: 'toddler'` ("Little Games") and no
-activity uses `preschool`; 5-7 gets Little Games + Think & Solve.
+activity uses `preschool`; 5-7 gets Little Games + Think & Solve. **Tracing shows for every band**,
+but both pickers route the 2-3 band **straight to the Shapes list** (no chooser, no back button —
+back would loop); Letters/Numbers/My Name are 3-5+.
+
+**Colour by Numbers is number-locked**: each `colour-cbn-*` activity carries a `byNumberPlan`
+(schema field) — `[{ number, colour, targets }]` where `targets` is **one point per numbered
+region as fractions (0..1) of the square artwork**. The child is locked to colour 1 until every
+region marked 1 is filled, then 1 retires and 2 activates; the last number completes the page.
+When authoring targets, put each point on/near the printed digit — the fill check samples a
+~4.5% neighbourhood around the target (the digit itself is ink and never flooded), and taps on
+ink hop to the nearest open pixel. Wrong-number/background taps are spoken-rejected, never filled.
+
+**Game-completion pattern** (owner direction): games end with a two-button card — **play again +
+back one screen** — not a Home prompt (Feed the Animal is the reference; tracing's name-finish
+card is the same idea). The generic `completionBanner` (with Home) survives on non-game flows.
+**Picker icons**: game tiles never use the category illustration or the old 🐣 chick — each
+template resolves its own art (feed → `params.open` character, cut → scissors, hop → lily-pad)
+or a per-template emoji (`GAME_EMOJI` maps in both pickers).
 
 **Tracing glyphs & flow**: letter (A-Z capital+small pair) and number (0-10) stroke skeletons are
 authored as polylines in `content/glyphs.ts` (`digitStrokes`/`letterStrokes`), shape strokes in
@@ -212,5 +234,13 @@ renderers consume it, so the home content always matches the profile. Tiles are 
   are Expo-project files in `apps/mobile/assets/`. Full-page scene artwork (e.g. the flood-fill
   Colour line-art) is square and is drawn *contain*-fitted (letterboxed), never stretched to the
   stage — keep that when touching any renderer that blits a whole image to a canvas.
+- **Pointer-input house rules** (stylus support, July 2026) — any new canvas/drag surface must
+  follow the patterns already in `demo-shell.html`: **pen-first palm rejection** (one active
+  pointer, but a `pointerType === 'pen'` pointerdown always takes over from a resting palm/finger,
+  committing any in-flight stroke — never the other way round); consume
+  **`getCoalescedEvents()`** in pointermove so fast stylus strokes stay continuous; treat
+  **`pointercancel` as "commit/return", never "discard"** (strokes are kept, dragged items spring
+  home); and interpolate between samples where the engine needs dense points. Misses/returns
+  animate (spring home), they don't teleport.
 - After touching `packages/core` or `web-demo/demo-shell.html`, rebuild with
   `node web-demo/build.mjs` before considering the change done.
