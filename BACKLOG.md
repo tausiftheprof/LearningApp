@@ -28,6 +28,15 @@ Status key: `[ ]` open · `[~]` in progress · `[x]` done (move to the bottom or
     Only offer **"one screen back"** and **"play again / have fun again"**. (Mirror the fun
     name-completion card from tracing.) Demo `renderGame` feed-animal + mobile `FeedAnimalGame`.
 
+- [ ] **Per-game tile icons (drop the generic chick).** Owner chose Option A (July 2026): every
+  game in the Little Games picker currently falls back to the same 🐣 category emoji — give each
+  game its own icon instead. Use the real art where we have it, a fitting emoji otherwise:
+  Feed the Mascot → mascot art · Feed the Kangaroo → kangaroo art · Cutting Practice → ✂️ (or
+  scissors art) · Number Path Hop → lily-pad art · Pop the Bubbles → 🫧 · Sorting Bins → 🧺 ·
+  Count & Tap → 🔢 · Memory/Match → 🃏 · Tap the Animal → 🐶. Add a per-activity icon field/map
+  so the picker (`renderPicker` in demo, `ActivityPickerScreen` on mobile) shows it instead of
+  `emojiFor[category]`. Keeps pre-readers able to tell games apart at a glance.
+
 - [ ] **Verify the mobile app is adaptive across device sizes.** The web demo was audited and
   fixed for 320-1366px; the Expo app's layouts (`HomeScreen`, players, pickers) haven't been
   checked on small phones vs. large tablets — best done on a device/emulator.
