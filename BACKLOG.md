@@ -9,88 +9,53 @@ Status key: `[ ]` open · `[~]` in progress · `[x]` done (move to the bottom or
 
 ## Open
 
-- [ ] **Redesign the Draw colour & brush panel → "Magic Playground, Layout 2 (Magic drawer)".**
-  Owner reviewed market patterns + interactive mockups and chose this. Build it into the real
-  Draw section (demo `renderGuidedDrawing`/free-board toolbar first, then mobile `DrawingBoard`).
-  Spec (mockup: artifact a7c3865a-883b-4539-b7ca-50031849b293):
-  - **White paper canvas** — drawing sheet is white (matches the real play-stage); the eraser
-    rubs back to white, no background bleed-through.
-  - **Colours on a right-side rail** (big round dots, scrollable). Selected dot gets a **white**
-    ring (with a soft drop shadow for definition) — not the pink ring.
-  - **Slim bottom bar, 4 items only:** 🖍️ crayon · 🖌️ paint · eraser · 🪄 **magic** (wand).
-  - **🪄 wand opens a "magic drawer"** popover above the bar with the playful brushes:
-    🌈 rainbow · ✨ glitter · 🔆 glow · ⭐/💖 **stamps**. (Wand icon is distinct from the ✨
-    glitter brush — that clash was fixed.)
-  - **Brush size floats** in its own small pod bottom-left, over the paper (keeps the bar slim).
-  - **Corners:** undo/redo top-left; 🗑️ **Start over** (whole-page wipe) + 💾 save top-right.
-    Note: eraser = rub out *part*; Start over = wipe *all* — deliberately different.
-  - Big thumb-friendly targets; fully responsive (per the adaptive audit).
-  - **Two decisions still open before/at build:** (1) keep the eraser, or drop it and rely on
-    Undo + Start over? (2) magic set = rainbow/glitter/glow/stamps, or swap any?
-  - **Art needed:** stamp images (star, heart, an animal or two) — can ship emoji stamps first
-    and swap in the owner's cute art later. Everyday brushes/rainbow/glitter/glow need no art.
+- [ ] **Port the recent demo-first work to the mobile app.** These all shipped and are verified in
+  the web demo but are not yet in the Expo app (mobile needs a device/emulator to drive + verify):
+  - The two new games — **Cutting Practice** (`cut-along`) and **Number Path Hop** (`number-hop`)
+    — are demo-only; add them to `apps/mobile/.../games/registry.ts` + `GamePlayer`/new players.
+  - **Feed the Animal layout tweaks** (big centre animal + right food column, responsive) — the
+    demo has them; the mobile `FeedAnimalGame` still uses the old bottom row.
+  - **Draw panel redesign** (Magic drawer) — demo `renderDrawing` is done; port to mobile
+    `DrawingBoard` (colour rail, slim bar, wand drawer, floating size, stamps/glow brushes).
+  - **Tracing controls** (colour picker / CAPS / undo-trash / name-finish) — still demo-only.
 
-- [ ] **Port the demo-first tracing controls to the mobile app.** The colour picker
-  (rainbow/black/grey/glitter/colour-blind), CAPS toggle, right-side panel, left undo/trash,
-  and the fun name-completion card currently exist and are verified only in the web demo.
-  Porting them to `apps/mobile/.../players/TracingPlayer.tsx` is best paired with a
-  device/emulator run so the touch UI can actually be driven.
+- [ ] **Verify the mobile app is adaptive across device sizes.** The web demo was audited and
+  fixed for 320-1366px; the Expo app's layouts (`HomeScreen`, players, pickers) haven't been
+  checked on small phones vs. large tablets — best done on a device/emulator.
 
-### New little games still to build (need the owner's cute/funny art, ages 2-5)
-
-These three are genuinely new mechanics (not yet in the app) and each needs its own art set,
-per the agreed one-game-at-a-time flow. The other four the owner picked already exist or are
-built: **Feed the Animal** ✅ (built with real art), **Pop the Bubbles** ✅ (exists),
-**Sorting Bins** ✅ (exists as `drag-sort`), **Count & Tap** ✅ (exists as `counting`).
-
-- [ ] **Cutting Practice** — drag "scissors" along a dotted line; the scissors snip as they go.
-  Reuses the tracing corridor engine. **Art received** (July 2026, in `assets/images/`, to be
-  renamed to clean asset keys when building): `Cutting Practice - scissor open.png`,
-  `Cutting Practice- Scissor closed.png` (open/closed pair → snip animation), `Cutting practice -
-  Car.png`, `Cutting Practice - cake.png` (two things to cut). **Cut path (owner chose):** a
-  dotted line runs **across** the shape — straight (easy) → wavy → zigzag (harder) by difficulty —
-  and the shape **splits into two halves** with a celebration at the end. Scissors rotate to
-  follow the line and alternate open/closed to "snip". Ready to build — no open questions.
-  - **Animations (owner asked, July 2026):** snip rhythm (open↔closed timed to drag speed);
-    scissors rotate/tilt to follow the line; the cut edges ease apart behind the blades to show
-    progress; little paper flecks flutter at the blade tip; soft synced "snip-snip" sound; idle
-    wiggle at the start to invite the drag; gentle rubber-band nudge back when off the line (no
-    fail state); on finish the two halves slide apart + bounce, then stars burst + happy chime.
-  - **General polish note:** carry this level of animation/juice across the other new games too
-    (Number Path Hop, etc.) unless told otherwise.
-- [ ] **Number Path Hop** — tap stepping stones 1→2→3 in order; the **mascot** hops stone to
-  stone (reuses existing mascot art, squash/bounce on each hop — no character art needed).
-  **Art received** (July 2026): `Hopping Stone - Number path Hop.png` (isometric lily-pad-on-stone;
-  rename to `hop-stone.png` when building). Number label sits on the flat green top; mascot lands
-  on the pad. Ready to build — no open questions. Carry the same animation juice as Cutting Practice.
 - ~~**Build a Face** — drag eyes/nose/mouth onto a blank head.~~ **Parked** at owner's request
   (July 2026) — revisit later. No art needed for now.
 
-- [ ] **Feed the Animal — layout tweaks.** The character is too small. Make the animal **big in
-  the centre** of the stage, move the **foods to a right-hand column** (instead of along the
-  bottom), and make the whole layout **auto-adjust to screen size** (character + food scale and
-  reposition responsively; mouth hotspot follows). Demo `renderGame` feed-animal + mobile
-  `FeedAnimalGame`.
-
-- [ ] **Verify the mobile app is adaptive across device sizes.** The web demo was audited and
-  fixed for 320-1366px (July 2026); the Expo app's layouts (`HomeScreen`, players, pickers)
-  haven't been checked on small phones vs. large tablets — best done on a device/emulator.
+### Draw panel — two small decisions still open (defaults shipped)
+Built with sensible defaults; change any time: (1) the **eraser** is kept (rubs out part; "Start
+over" wipes all) — say if you'd rather drop it; (2) the **magic set** is rainbow/glitter/glow/star
++ heart stamps — stamps are emoji for now, swap in cute art whenever ready.
 
 ## Done
 
+- [x] **Draw panel redesign (Magic drawer, Layout 2)** — free Draw board reworked: white paper
+  canvas, colours on a right rail (white selected ring), slim bottom bar (crayon · paint · eraser
+  · 🪄 wand), floating size pod, undo/redo + start-over/save in the corners, and a wand-opened
+  magic drawer with rainbow / glitter / glow / star + heart stamp brushes. **Demo done + verified.**
+- [x] **Cutting Practice** (`cut-along`) — drag the scissors along a dotted line across the car/cake
+  (tracing corridor engine); scissors snip (open↔closed), rotate to the line, paper flecks, and on
+  ~full traversal the shape splits into two halves + celebration. Owner art cut out to clean assets.
+  Two pages (car = straight, cake = wavy). **Demo done + verified.**
+- [x] **Number Path Hop** (`number-hop`) — tap the lily-pad stones in number order; the mascot hops
+  pad to pad (squash/bounce), wrong taps nudge, last stone celebrates. Two levels (to 5, to 10).
+  **Demo done + verified.**
+- [x] **Feed the Animal — layout tweaks** — big centred character + foods in a responsive
+  right-hand column that recompacts as they're eaten; layout recomputed on resize. **Demo done.**
 - [x] **Feed the Animal** (2 characters) — drag food into a hungry mouth; it chomps (image swap
-  + bounce), soft "nom" per bite, stars + chime on finish. Built with the owner's real art:
-  **Mascot** eats treats (strawberry, cupcake, watermelon, ice cream); **Kangaroo** eats plants
-  (2 plants + grass). Cut out from the uploads (background removed, interior whites kept). Demo +
-  mobile + core content + test.
-- [x] **Top bar layout** — star + rewards total now sit next to the child's name; Grown-ups and
-  Rewards icons share one row, top-right.
-- [x] **Blank Canvas → straight to canvas** — the intermediate picker is skipped; tapping Blank
-  Canvas opens the drawing canvas immediately.
+  + bounce), soft "nom" per bite, stars + chime on finish. Mascot eats treats; Kangaroo eats
+  plants. Cut out from the uploads. Demo + mobile + core content + test.
+- [x] **Top bar layout** — star + rewards total sit next to the child's name; Grown-ups and
+  Rewards icons share one row, top-right. Fully adaptive across screen sizes (320-1366px).
+- [x] **Blank Canvas → straight to canvas** — the intermediate picker is skipped.
 - [x] **Colour: removed 3 pages** — "Fish by Numbers", "Pack of Balloons", "Rocket" dropped.
 - [x] **Colour split into two sections** — **"Colour by Numbers"** (owner's 4 uploaded pages:
-  Bunny, Car, Flower, Puppy — processed into `assets/images/scene-cbn-*.png`, flood-fill with the
-  number key printed in the art) and **"Colour Your Way"** (the 6 free scenes). Two-door chooser
-  with back navigation.
+  Bunny, Car, Flower, Puppy) and **"Colour Your Way"** (the 6 free scenes), with a two-door chooser.
 - [x] **"Big Kid Games" retired** — the preschool games moved into "Little Games" (toddler); the
-  5-7 home band now shows Little Games + Think & Solve. A genuine big-kid set to be designed later.
+  5-7 home band now shows Little Games + Think & Solve.
+- [x] **Responsive audit + fixes** — home/section tiles no longer clip on narrow phones; the
+  drawing toolbar wraps so every tool stays visible; verified 320-1366px (web demo).
