@@ -45,6 +45,34 @@ Status key: `[ ]` open · `[~]` in progress · `[x]` done (move to the bottom or
   renderers: demo `renderTracingSections`/picker + mobile), and update `homeLayout.test.ts`
   (2-3 now contains 'Tracing') + the "hides advanced doors from 2-3" test.
 
+- [ ] **Cutting Practice — rework the split (Option A: halves tip & fall apart).** Owner
+  feedback (July 2026): the current end-of-cut animation slides the top/bottom halves straight
+  up/down, which reads as the picture "breaking" (floating roof, dropping wheels, diamond gap),
+  not as cutting. Rework so the two pieces **rotate slightly and slide outward** — like two
+  halves flopping open on a table — then stars + chime. While in there:
+  - Tune the dotted line position / wavy amplitude per picture so the cut sits nicely on the
+    car and cake.
+  - Close the shipped-spec gaps: cut edges should **ease apart progressively during** the cut
+    (not only at the end), and add the **rubber-band nudge** back onto the line when the child
+    drifts off-path (currently the corridor just stops advancing with no visual cue).
+
+- [ ] **Stylus support everywhere.** Owner tested with a stylus (July 2026) and lines **break up
+  instead of drawing continuously**. Audit every pointer surface — drawing board, tracing,
+  colouring, cutting, games — for stylus quirks: likely causes are palm-rejection logic dropping
+  the pen pointer, `pointerId` churn between pen strokes, missing `touch-action:none`, coalesced/
+  high-frequency pen events being dropped, or pressure `0` samples ending strokes early. Use
+  `getCoalescedEvents()` where available and treat `pointerType === 'pen'` as first-class on both
+  demo and mobile (Skia touch handling).
+
+- [ ] **Colour by Numbers — real number-locked flow.** Owner spec (July 2026): each page's
+  palette is **tagged to numbers** (colour 1, colour 2, …). The child starts with **colour 1
+  selected and it's the only active choice**; they tap every region marked "1" — when all the 1s
+  are filled, colour 1 **disappears from the palette** and colour 2 becomes the active colour;
+  repeat until the last number finishes the page (then celebration). Needs per-region number
+  data for the 4 CBN pages (bunny/car/flower/puppy currently run through the generic flood-fill
+  with a free palette), progress tracking per number, and the sequenced palette UI on both
+  renderers.
+
 - [ ] **Verify the mobile app is adaptive across device sizes.** The web demo was audited and
   fixed for 320-1366px; the Expo app's layouts (`HomeScreen`, players, pickers) haven't been
   checked on small phones vs. large tablets — best done on a device/emulator.

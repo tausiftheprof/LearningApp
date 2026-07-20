@@ -28,8 +28,23 @@ keep that cheap:
 - **Honour the owner's stated definition of done.** If the owner says they'll check the demo
   themselves, skip the headless screenshot verify and just make the change + rebuild. Only run
   the full verify pass when correctness isn't otherwise being confirmed.
-- **Collect half-formed ideas as a backlog** and knock them out in one focused pass rather than
-  interrupting a build mid-stream.
+- **`BACKLOG.md` (repo root) is the owner's working queue.** A message starting "backlog:" (or
+  "record feedback in the backlog") means *record it there and push — do not build yet*; the owner
+  batches items and later says "build everything from the backlog". Design decisions reached in
+  conversation (chosen mockup, icon mapping, mechanic details) get written into the item as a
+  build-ready spec so a future session needs no archaeology. Done items move to the file's Done
+  section.
+- **Mock before building visual redesigns.** For layout/panel redesigns the owner likes to pick
+  from 2-3 interactive HTML mockups (published as a scratchpad artifact) and iterate on the mock
+  (icons, rings, canvas colour) *before* any real code is touched — far cheaper than reworking the
+  live renderers.
+- **Owner-supplied art pipeline.** The owner uploads cute 3D-clay-style PNGs (white/cream
+  backgrounds, messy filenames) via GitHub — often mid-conversation, so `git pull --rebase` before
+  looking. Process each batch with a throwaway sharp script: flood-fill transparency inward from
+  the borders (tolerance ~42-44, corners as the background seed, feather edge pixels) so interior
+  whites survive, trim, cap width ~560px, and save under a clean `assets/images/` key (e.g.
+  `feed-mascot-open`, `cut-scissors-open`, `hop-stone`). Then view the result to confirm the
+  cutout is clean before wiring it in.
 
 ## Commands
 
@@ -115,12 +130,25 @@ child's data in one orchestrated, testable path (docs/07 §7.4).
 
 `content/schema.ts` defines a zod `activitySchema` (discriminated union on `type`) and
 `gameTemplateIds` (the closed set of mini-game templates: `dot-to-dot`,
-`match-pairs`, `counting`, …). `content/starterPack.ts` builds the bundled `ContentPack` — every
-activity's geometry is procedurally generated (helpers like `arc()`, `line()`, `polygonPath()`) in
-a shared 0..1000 design space, since production illustrations arrive later via the CMS pipeline
-(docs/12). A content pack is hash-verified and revocable; the schema is structurally incapable of
+`match-pairs`, `counting`, …, plus the owner-art games `feed-animal`, `cut-along`, `number-hop`).
+`content/starterPack.ts` builds the bundled `ContentPack` — most
+activity geometry is procedurally generated (helpers like `arc()`, `line()`, `polygonPath()`) in
+a shared 0..1000 design space, but a growing set of activities now uses **real owner artwork**
+referenced by pack-relative `images/...` paths: the Feed the Animal characters/foods, the cutting
+scissors/pictures, the hop lily-pad, and the `scene-cbn-*` Colour-by-Numbers pages. A content pack
+is hash-verified and revocable; the schema is structurally incapable of
 expressing link-outs, chat, or free-text collection — that's a deliberate safety property, not an
 oversight, so don't loosen the schema to "just add a field" without checking docs/07-09.
+
+**Section structure inside doors** (owner direction, July 2026): **Colour** opens a two-door
+chooser — "Colour by Numbers" (`colour-cbn-*`, owner pages with the number key printed in the art)
+vs "Colour Your Way" (the free flood-fill scenes) — split by id prefix in the picker. **Draw**'s
+"Blank Canvas" tile skips the intermediate picker and opens `draw-free-board` directly; the free
+board's controls follow the owner-approved "Magic drawer" layout (right colour rail with a white
+selected ring, slim bar of crayon/paint/eraser/🪄 wand, floating size pod, wand-opened drawer with
+rainbow/glitter/glow/stamp brushes, undo-redo + start-over/save in the corners). **Big Kid Games
+is retired** — the former `preschool` games are all `category: 'toddler'` ("Little Games") and no
+activity uses `preschool`; 5-7 gets Little Games + Think & Solve.
 
 **Tracing glyphs & flow**: letter (A-Z capital+small pair) and number (0-10) stroke skeletons are
 authored as polylines in `content/glyphs.ts` (`digitStrokes`/`letterStrokes`), shape strokes in
@@ -148,7 +176,10 @@ unimplemented on one surface. `apps/mobile/src/screens/child/games/registry.ts`
 (`IMPLEMENTED_GAME_TEMPLATES`) and `web-demo/demo-shell.html`'s `IMPLEMENTED_TEMPLATES` are the
 gates — an activity whose template isn't listed is filtered out of pickers entirely (no teasers,
 no broken screens) rather than shown half-working. Check these before assuming a game template
-"exists" on both surfaces.
+"exists" on both surfaces. Development is **demo-first**: features land and get verified in the
+web demo, and the mobile port is tracked as an explicit `BACKLOG.md` item (currently: `cut-along`,
+`number-hop`, the Feed layout tweaks, the Draw Magic-drawer panel, and the tracing controls are
+demo-only).
 
 ### Multi-child profiles, screen time, rewards
 
