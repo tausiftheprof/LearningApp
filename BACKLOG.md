@@ -58,8 +58,10 @@ built: **Feed the Animal** ✅ (built with real art), **Pop the Bubbles** ✅ (e
     fail state); on finish the two halves slide apart + bounce, then stars burst + happy chime.
   - **General polish note:** carry this level of animation/juice across the other new games too
     (Number Path Hop, etc.) unless told otherwise.
-- [ ] **Number Path Hop** — tap stepping stones 1→2→3 in order. Needs: 1 stone/lilypad
-  (+ optional hopping character).
+- [ ] **Number Path Hop** — tap stepping stones 1→2→3 in order; the **mascot** hops stone to
+  stone (owner chose to reuse the existing mascot art as the hopping character, with a
+  squash/bounce on each hop — no new character art needed). **Art still needed:** just the
+  stepping-stone / lilypad (`hop-stone.png`). Carry the same animation juice as Cutting Practice.
 - ~~**Build a Face** — drag eyes/nose/mouth onto a blank head.~~ **Parked** at owner's request
   (July 2026) — revisit later. No art needed for now.
 
