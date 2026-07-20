@@ -18,6 +18,24 @@ describe('starter content pack', () => {
     }
   });
 
+  it('ships Cutting Practice and Number Path Hop games (owner art, July 2026)', () => {
+    const cut = pack.activities.filter((a) => a.type === 'game' && a.template === 'cut-along');
+    expect(cut.map((a) => a.id).sort()).toEqual(['toddler-cut-car', 'toddler-cut-cake'].sort());
+    for (const a of cut) {
+      const p = (a as { params: Record<string, unknown> }).params;
+      expect(typeof p.image).toBe('string');
+      expect(typeof p.scissorsOpen).toBe('string');
+      expect(typeof p.scissorsClosed).toBe('string');
+    }
+    const hop = pack.activities.filter((a) => a.type === 'game' && a.template === 'number-hop');
+    expect(hop.length).toBeGreaterThanOrEqual(2);
+    for (const a of hop) {
+      const p = (a as { params: Record<string, unknown> }).params;
+      expect(typeof p.max).toBe('number');
+      expect(typeof p.stone).toBe('string');
+    }
+  });
+
   it('feeds two characters their own foods (owner art, July 2026)', () => {
     const feed = pack.activities.filter((a) => a.type === 'game' && a.template === 'feed-animal');
     expect(feed.map((a) => a.id).sort()).toEqual(['toddler-feed-kangaroo', 'toddler-feed-mascot']);

@@ -339,6 +339,20 @@ const games: GameSpec[] = [
   { id: 'toddler-shadow-match', title: 'Find my shadow', template: 'shadow-match', category: 'toddler', ageBands: ['2-3', '3-5'], difficulty: 1, motorSkills: ['dragging', 'precision-placement'], minutes: 2, theme: 'animals', params: { items: ['dolphin', 'dinosaur', 'rocket'] } },
   { id: 'toddler-reveal', title: 'Wipe and see!', template: 'reveal-wipe', category: 'toddler', ageBands: ['2-3'], difficulty: 1, motorSkills: ['swiping'], minutes: 1, theme: 'surprise', params: { pictures: ['unicorn', 'whale', 'treehouse'] } },
   { id: 'toddler-stack', title: 'Stack the blocks', template: 'stack-blocks', category: 'toddler', ageBands: ['2-3'], difficulty: 1, motorSkills: ['dragging', 'precision-placement'], minutes: 2, theme: 'everyday', params: { blocks: 4 } },
+  // Cutting Practice (owner art, July 2026): drag the scissors along the dotted
+  // line across the picture; it snips and splits in two. Scissor-skills builder.
+  { id: 'toddler-cut-car', title: 'Cut the car', template: 'cut-along', category: 'toddler', ageBands: ['3-5', '5-7'], difficulty: 2, motorSkills: ['controlled-movement', 'holding-moving', 'bilateral'], minutes: 2, theme: 'everyday', params: {
+    image: 'images/cut-car.png', line: 'straight',
+    scissorsOpen: 'images/cut-scissors-open.png', scissorsClosed: 'images/cut-scissors-closed.png',
+  } },
+  { id: 'toddler-cut-cake', title: 'Cut the cake', template: 'cut-along', category: 'toddler', ageBands: ['3-5', '5-7'], difficulty: 2, motorSkills: ['controlled-movement', 'holding-moving', 'bilateral'], minutes: 2, theme: 'food', params: {
+    image: 'images/cut-cake.png', line: 'wavy',
+    scissorsOpen: 'images/cut-scissors-open.png', scissorsClosed: 'images/cut-scissors-closed.png',
+  } },
+  // Number Path Hop (owner art, July 2026): tap the lily-pad stones in number
+  // order; the mascot hops from pad to pad.
+  { id: 'toddler-number-hop', title: 'Hop the numbers', template: 'number-hop', category: 'toddler', ageBands: ['2-3', '3-5'], difficulty: 1, motorSkills: ['tapping'], minutes: 2, theme: 'nature', params: { max: 5, stone: 'images/hop-stone.png' } },
+  { id: 'toddler-number-hop-10', title: 'Hop to ten', template: 'number-hop', category: 'toddler', ageBands: ['3-5', '5-7'], difficulty: 2, motorSkills: ['tapping'], minutes: 2, theme: 'nature', params: { max: 10, stone: 'images/hop-stone.png' } },
   // Preschool (PRD 6.6)
   { id: 'preschool-letter-match', title: 'Big and small letters', template: 'letter-match', category: 'toddler', ageBands: ['3-5', '5-7'], difficulty: 2, motorSkills: ['tapping', 'dragging'], minutes: 3, theme: 'letters-numbers', params: { letters: ['A', 'B', 'C', 'D'] } },
   { id: 'preschool-count-objects', title: 'Count the fish', template: 'counting', category: 'toddler', ageBands: ['3-5'], difficulty: 2, motorSkills: ['tapping'], minutes: 2, theme: 'food', params: { max: 5, item: 'fish' } },

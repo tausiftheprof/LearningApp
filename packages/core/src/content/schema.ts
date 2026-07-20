@@ -118,6 +118,8 @@ export const gameTemplateIds = [
   'reveal-wipe',
   'pattern-complete',
   'dot-to-dot',
+  'cut-along',
+  'number-hop',
 ] as const;
 
 export const gameActivitySchema = activityBase.extend({
