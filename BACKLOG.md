@@ -19,6 +19,15 @@ Status key: `[ ]` open · `[~]` in progress · `[x]` done (move to the bottom or
     `DrawingBoard` (colour rail, slim bar, wand drawer, floating size, stamps/glow brushes).
   - **Tracing controls** (colour picker / CAPS / undo-trash / name-finish) — still demo-only.
 
+- [ ] **Feed the Animal — feedback (July 2026).** Two issues on both Feed the Mascot and Feed
+  the Kangaroo:
+  - **Feeding isn't seamless** — the drag-into-mouth interaction feels janky/not smooth.
+    Investigate: drop-zone hit area, chomp timing/lockout (`chomping` flag blocks drops for
+    480ms), food snap-back, and pointer/drag responsiveness. Make feeding fluid.
+  - **Completion options are wrong** — when all foods are eaten, do **not** offer "go to Home".
+    Only offer **"one screen back"** and **"play again / have fun again"**. (Mirror the fun
+    name-completion card from tracing.) Demo `renderGame` feed-animal + mobile `FeedAnimalGame`.
+
 - [ ] **Verify the mobile app is adaptive across device sizes.** The web demo was audited and
   fixed for 320-1366px; the Expo app's layouts (`HomeScreen`, players, pickers) haven't been
   checked on small phones vs. large tablets — best done on a device/emulator.
