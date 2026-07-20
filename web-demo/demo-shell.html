@@ -137,15 +137,18 @@
   .starbar { text-align: center; font-size: 17px; font-weight: 800; padding: 6px; }
 
   /* ---- approved home design: greeting card, star pill, lock, subtitles ---- */
-  .home-top { display: flex; gap: 10px; padding: 10px 14px 2px; align-items: stretch; }
+  /* Adaptive top bar: greeting grows/shrinks; the button pair stays together and
+     wraps to its own right-aligned line only when the row genuinely runs out of
+     room - it never squishes or stacks the two buttons. */
+  .home-top { display: flex; flex-wrap: wrap; gap: 10px; padding: 10px 14px 2px; align-items: stretch; }
   .greeting-card {
-    flex: 1; display: flex; align-items: center; gap: 10px;
+    flex: 1 1 260px; min-width: 0; display: flex; align-items: center; gap: 10px;
     border-radius: 22px; padding: 10px 16px;
   }
   .greeting-card .hi { font-size: clamp(22px, 3.4vw, 34px); font-weight: 800; }
   .greeting-card .sub { font-size: clamp(13px, 2vw, 18px); opacity: 0.8; margin-top: 2px; }
   .greeting-card .mascot { font-size: clamp(30px, 4.4vw, 46px); margin-left: auto; }
-  .home-topright { display: flex; flex-direction: row; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: flex-end; }
+  .home-topright { flex: 0 0 auto; margin-left: auto; display: flex; flex-direction: row; flex-wrap: nowrap; gap: 8px; align-items: center; justify-content: flex-end; }
   .star-pill {
     border-radius: 999px; padding: 5px 14px; font-weight: 800;
     font-size: clamp(13px, 1.9vw, 17px);
