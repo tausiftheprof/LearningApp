@@ -51,6 +51,13 @@ built: **Feed the Animal** ✅ (built with real art), **Pop the Bubbles** ✅ (e
   dotted line runs **across** the shape — straight (easy) → wavy → zigzag (harder) by difficulty —
   and the shape **splits into two halves** with a celebration at the end. Scissors rotate to
   follow the line and alternate open/closed to "snip". Ready to build — no open questions.
+  - **Animations (owner asked, July 2026):** snip rhythm (open↔closed timed to drag speed);
+    scissors rotate/tilt to follow the line; the cut edges ease apart behind the blades to show
+    progress; little paper flecks flutter at the blade tip; soft synced "snip-snip" sound; idle
+    wiggle at the start to invite the drag; gentle rubber-band nudge back when off the line (no
+    fail state); on finish the two halves slide apart + bounce, then stars burst + happy chime.
+  - **General polish note:** carry this level of animation/juice across the other new games too
+    (Number Path Hop, etc.) unless told otherwise.
 - [ ] **Number Path Hop** — tap stepping stones 1→2→3 in order. Needs: 1 stone/lilypad
   (+ optional hopping character).
 - ~~**Build a Face** — drag eyes/nose/mouth onto a blank head.~~ **Parked** at owner's request
