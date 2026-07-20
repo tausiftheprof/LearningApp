@@ -10,7 +10,7 @@ describe('homeTilesForAge', () => {
       'Daily Adventure', 'Draw', 'Colour', 'Tracing', 'Puzzles', 'Little Games',
     ]);
     expect(labelsFor('5-7')).toEqual([
-      'Daily Adventure', 'Draw', 'Colour', 'Tracing', 'Puzzles', 'Big Kid Games', 'Think & Solve',
+      'Daily Adventure', 'Draw', 'Colour', 'Tracing', 'Puzzles', 'Little Games', 'Think & Solve',
     ]);
   });
 
@@ -22,15 +22,15 @@ describe('homeTilesForAge', () => {
 
   it('hides reading-heavy / advanced doors from the littlest (2-3)', () => {
     const labels = labelsFor('2-3');
-    for (const hidden of ['Tracing', 'Think & Solve', 'Big Kid Games']) {
+    for (const hidden of ['Tracing', 'Think & Solve']) {
       expect(labels).not.toContain(hidden);
     }
   });
 
-  it('drops Little Games and shows the big-kid doors at 5-7', () => {
+  it('keeps Little Games and adds Think & Solve at 5-7 (Big Kid Games retired)', () => {
     const labels = labelsFor('5-7');
-    expect(labels).not.toContain('Little Games');
-    expect(labels).toEqual(expect.arrayContaining(['Big Kid Games', 'Think & Solve']));
+    expect(labels).toEqual(expect.arrayContaining(['Little Games', 'Think & Solve']));
+    expect(labels).not.toContain('Big Kid Games');
   });
 
   it('has no duplicate labels within a band and keeps every idx in 0..7', () => {

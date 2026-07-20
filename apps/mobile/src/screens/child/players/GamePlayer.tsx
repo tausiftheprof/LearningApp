@@ -1,10 +1,44 @@
-import React, { useMemo, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import React, { useMemo, useRef, useState } from 'react';
+import {
+  Animated,
+  Image,
+  LayoutRectangle,
+  PanResponder,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import type { GameActivity } from '@littlegrip/core';
 import { pickFeedback } from '@littlegrip/core';
 import type { Theme } from '../../../ui/theme';
 import { CompletionBanner } from '../ActivityPlayerScreen';
 import { audioService } from '../../../services/audio';
+
+/**
+ * Shared owner artwork (assets/images/) for the Feed-the-Animal game, keyed by
+ * the pack-relative asset basename. Metro resolves these at build time, so the
+ * requires must be static string literals.
+ */
+const FEED_IMAGES: Record<string, number> = {
+  'feed-mascot-open': require('../../../../../../assets/images/feed-mascot-open.png'),
+  'feed-mascot-chomp': require('../../../../../../assets/images/feed-mascot-chomp.png'),
+  'feed-kangaroo-open': require('../../../../../../assets/images/feed-kangaroo-open.png'),
+  'feed-kangaroo-chomp': require('../../../../../../assets/images/feed-kangaroo-chomp.png'),
+  'feed-strawberry': require('../../../../../../assets/images/feed-strawberry.png'),
+  'feed-cupcake': require('../../../../../../assets/images/feed-cupcake.png'),
+  'feed-watermelon': require('../../../../../../assets/images/feed-watermelon.png'),
+  'feed-icecream': require('../../../../../../assets/images/feed-icecream.png'),
+  'feed-plant1': require('../../../../../../assets/images/feed-plant1.png'),
+  'feed-plant2': require('../../../../../../assets/images/feed-plant2.png'),
+  'feed-grass': require('../../../../../../assets/images/feed-grass.png'),
+};
+
+/** 'images/feed-mascot-open.png' -> 'feed-mascot-open'. */
+function assetName(ref: string): string {
+  const base = ref.split('/').pop() ?? ref;
+  return base.replace(/\.[a-z0-9]+$/i, '');
+}
 
 /**
  * Parameterised game player (FR-008..FR-010, docs/03 S14).
@@ -38,6 +72,9 @@ export function GamePlayer(props: {
       )}
       {t === 'counting' && <CountingGame theme={props.theme} onMiss={() => setAttempts((a) => a + 1)} onFinish={finish} />}
       {t === 'odd-one-out' && <OddOneOutGame theme={props.theme} onMiss={() => setAttempts((a) => a + 1)} onFinish={finish} />}
+      {t === 'feed-animal' && (
+        <FeedAnimalGame params={props.activity.params} theme={props.theme} onMiss={() => setAttempts((a) => a + 1)} onFinish={finish} />
+      )}
       <CompletionBanner visible={done} onDone={props.onDone} colour={props.theme.success} />
     </View>
   );
@@ -243,6 +280,140 @@ function OddOneOutGame(props: { theme: Theme; onMiss: () => void; onFinish: () =
   );
 }
 
+/* --- Feed the animal: drag the food into the hungry character's mouth --- */
+type Mouth = { x: number; y: number; r: number };
+type FoodSpec = { name: string; image: string };
+
+function FeedAnimalGame(props: {
+  params: Record<string, unknown>;
+  theme: Theme;
+  onMiss: () => void;
+  onFinish: () => void;
+}): React.JSX.Element {
+  const p = props.params;
+  const openSrc = FEED_IMAGES[assetName(typeof p.open === 'string' ? p.open : '')];
+  const chompSrc = FEED_IMAGES[assetName(typeof p.chomp === 'string' ? p.chomp : '')];
+  const mouthFrac: Mouth =
+    p.mouth && typeof p.mouth === 'object'
+      ? (p.mouth as Mouth)
+      : { x: 0.5, y: 0.55, r: 0.24 };
+  const foods: FoodSpec[] = Array.isArray(p.foods) ? (p.foods as FoodSpec[]) : [];
+
+  const [eaten, setEaten] = useState<Set<number>>(new Set());
+  const [chomping, setChomping] = useState(false);
+  const mouthRef = useRef<Mouth | null>(null);
+  const bounce = useRef(new Animated.Value(1)).current;
+
+  function onCharLayout(rect: LayoutRectangle): void {
+    mouthRef.current = {
+      x: rect.x + rect.width * mouthFrac.x,
+      y: rect.y + rect.height * mouthFrac.y,
+      r: rect.width * mouthFrac.r,
+    };
+  }
+
+  function eat(index: number): void {
+    void audioService.playEffect('gentle-pop');
+    setChomping(true);
+    Animated.sequence([
+      Animated.timing(bounce, { toValue: 1.06, duration: 120, useNativeDriver: true }),
+      Animated.timing(bounce, { toValue: 1, duration: 240, useNativeDriver: true }),
+    ]).start();
+    setTimeout(() => setChomping(false), 480);
+    setEaten((prev) => {
+      const next = new Set(prev);
+      next.add(index);
+      if (next.size >= foods.length) setTimeout(props.onFinish, 500);
+      return next;
+    });
+  }
+
+  return (
+    <View style={styles.feedRoot}>
+      <Text style={[styles.prompt, { color: props.theme.text }]}>Drag the food to the mouth! 🍓</Text>
+      <View style={styles.feedStage}>
+        <Animated.View
+          style={[styles.feedCharacter, { transform: [{ scale: bounce }] }]}
+          onLayout={(e) => onCharLayout(e.nativeEvent.layout)}
+        >
+          {(chomping ? chompSrc : openSrc) != null && (
+            <Image source={chomping ? chompSrc : openSrc} style={styles.feedCharacterImg} resizeMode="contain" />
+          )}
+        </Animated.View>
+      </View>
+      <View style={styles.feedTray}>
+        {foods.map((f, i) =>
+          eaten.has(i) ? (
+            <View key={i} style={styles.feedFoodSlot} />
+          ) : (
+            <DraggableFood
+              key={i}
+              source={FEED_IMAGES[assetName(f.image)]}
+              label={f.name}
+              mouthRef={mouthRef}
+              onEaten={() => eat(i)}
+              onMiss={props.onMiss}
+            />
+          ),
+        )}
+      </View>
+    </View>
+  );
+}
+
+function DraggableFood(props: {
+  source: number | undefined;
+  label: string;
+  mouthRef: React.MutableRefObject<Mouth | null>;
+  onEaten: () => void;
+  onMiss: () => void;
+}): React.JSX.Element {
+  const pan = useRef(new Animated.ValueXY()).current;
+  const home = useRef({ cx: 0, cy: 0 }).current;
+  const responder = useMemo(
+    () =>
+      PanResponder.create({
+        onStartShouldSetPanResponder: () => true,
+        onMoveShouldSetPanResponder: () => true,
+        onPanResponderMove: Animated.event([null, { dx: pan.x, dy: pan.y }], { useNativeDriver: false }),
+        onPanResponderRelease: (_e, g) => {
+          const cx = home.cx + g.dx;
+          const cy = home.cy + g.dy;
+          const m = props.mouthRef.current;
+          if (m && Math.hypot(cx - m.x, cy - m.y) <= m.r) {
+            props.onEaten();
+            Animated.timing(pan, {
+              toValue: { x: m.x - home.cx, y: m.y - home.cy },
+              duration: 140,
+              useNativeDriver: false,
+            }).start();
+          } else {
+            props.onMiss();
+            Animated.spring(pan, { toValue: { x: 0, y: 0 }, useNativeDriver: false }).start();
+          }
+        },
+      }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
+
+  return (
+    <Animated.View
+      {...responder.panHandlers}
+      onLayout={(e) => {
+        const { x, y, width, height } = e.nativeEvent.layout;
+        home.cx = x + width / 2;
+        home.cy = y + height / 2;
+      }}
+      accessibilityRole="image"
+      accessibilityLabel={props.label}
+      style={[styles.feedFoodSlot, { transform: pan.getTranslateTransform() }]}
+    >
+      {props.source != null && <Image source={props.source} style={styles.feedFoodImg} resizeMode="contain" />}
+    </Animated.View>
+  );
+}
+
 const styles = StyleSheet.create({
   root: { flex: 1 },
   playArea: { flex: 1, padding: 12 },
@@ -258,4 +429,11 @@ const styles = StyleSheet.create({
   numberOption: { width: 84, height: 84, margin: 10, borderRadius: 42, alignItems: 'center', justifyContent: 'center' },
   numberText: { fontSize: 34, fontWeight: '800', color: '#FFFFFF' },
   oddOption: { width: 84, height: 84, margin: 8, borderRadius: 16, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' },
+  feedRoot: { flex: 1, padding: 12 },
+  feedStage: { flex: 1, alignItems: 'center', justifyContent: 'flex-start' },
+  feedCharacter: { width: '70%', height: '80%', alignItems: 'center', justifyContent: 'center' },
+  feedCharacterImg: { width: '100%', height: '100%' },
+  feedTray: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', flexWrap: 'wrap', paddingVertical: 8 },
+  feedFoodSlot: { width: 84, height: 84, margin: 8, alignItems: 'center', justifyContent: 'center' },
+  feedFoodImg: { width: '100%', height: '100%' },
 });

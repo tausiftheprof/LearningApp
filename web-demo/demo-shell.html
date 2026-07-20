@@ -612,6 +612,30 @@ function playChime() {
   } catch (e) { /* stand-in only */ }
 }
 
+/** A single soft "nom" — a gentle low blip for one-shot successes (e.g. a bite). */
+function playPop() {
+  if (!state.profile || state.profile.sound.effects === false) return;
+  try {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return;
+    chimeCtx = chimeCtx || new AC();
+    if (chimeCtx.state === 'suspended') chimeCtx.resume();
+    const now = chimeCtx.currentTime;
+    const vol = Math.max(0, Math.min(1, state.profile.sound.volume ?? 0.7)) * 0.2;
+    const osc = chimeCtx.createOscillator();
+    const gain = chimeCtx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(392, now);
+    osc.frequency.exponentialRampToValueAtTime(261.6, now + 0.16);
+    gain.gain.setValueAtTime(0, now);
+    gain.gain.linearRampToValueAtTime(vol, now + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.22);
+    osc.connect(gain).connect(chimeCtx.destination);
+    osc.start(now);
+    osc.stop(now + 0.26);
+  } catch (e) { /* stand-in only */ }
+}
+
 /* ---------- profile activation (multi-profile, FR-001/C-01 full scope) ---------- */
 async function activateProfile(profileId) {
   const pr = await repos.profiles.get(profileId);
@@ -849,13 +873,14 @@ function renderHome() {
   const mascotHtml = th.greeting.mascotImage && (IMAGES[th.greeting.mascotImage] || RASTER_IMAGES[th.greeting.mascotImage])
     ? imgHtml(th.greeting.mascotImage, 64)
     : `<span class="mascot" aria-hidden="true">${th.greeting.mascot}</span>`;
+  // Star + rewards total sit next to the child's name (owner direction, July 2026).
+  const starPill = `<span class="star-pill" style="background:${hc ? '#FFFFFF' : th.starPill};${hc ? 'border:2px solid #000' : ''}" aria-label="${state.rewards.totalStars} stars earned">⭐ ${state.rewards.totalStars}</span>`;
   const greet = el(`<div class="greeting-card" style="background:${hc ? '#FFFFFF' : th.greeting.background};${hc ? 'border:2px solid #000' : ''}">
-    <div><div class="hi" style="${!hc && th.greeting.titleColor ? `color:${th.greeting.titleColor}` : ''}">Hi, ${state.profile?.nickname ?? 'friend'}!</div><div class="sub">${th.greeting.subtitle}</div></div>
+    <div><div class="hi-row" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><div class="hi" style="${!hc && th.greeting.titleColor ? `color:${th.greeting.titleColor}` : ''}">Hi, ${state.profile?.nickname ?? 'friend'}!</div>${starPill}</div><div class="sub">${th.greeting.subtitle}</div></div>
     <span class="mascot-slot" aria-hidden="true">${mascotHtml}</span>
   </div>`);
+  // Grown-ups and Rewards icons sit next to each other on one line, top-right.
   const right = el(`<div class="home-topright"></div>`);
-  right.append(el(`<div class="star-pill" style="background:${hc ? '#FFFFFF' : th.starPill};${hc ? 'border:2px solid #000' : ''}" aria-label="${state.rewards.totalStars} stars earned">⭐ ${state.rewards.totalStars}</div>`));
-  // My Rewards: a small button in the top bar, next to Grown-ups (owner direction).
   const rewardsBtn = el(`<button class="lock-btn" style="background:${hc ? HC_COLOURS[0] : th.rewards.background}" aria-label="My Rewards: stickers, badges and stars"><span class="ic" aria-hidden="true">${th.rewards.icon}</span>Rewards</button>`);
   rewardsBtn.style.color = hc ? '#fff' : th.text;
   rewardsBtn.onclick = () => { speak('My rewards'); navigate({ name: 'rewards' }); };
@@ -951,6 +976,37 @@ function renderDrawSections() {
       <span class="glyph-big" aria-hidden="true">${sct.glyph}</span>
       <span class="tile-text"><span class="label">${sct.label}</span><span class="sublabel">${sct.sub}</span></span>
     </button>`);
+    tile.onclick = () => {
+      speak(sct.label);
+      // Blank Canvas has a single destination, so skip the intermediate picker
+      // and open the canvas straight away (owner direction, July 2026).
+      if (sct.key === 'draw-blank') {
+        const blank = state.catalogue.find((a) => a.id === 'draw-free-board');
+        if (blank) { if (guardScreenTime()) navigate({ name: 'activity', activity: blank, from: 'picker', pickerCategory: 'drawing' }); return; }
+      }
+      navigate({ name: 'picker', category: sct.key });
+    };
+    grid.append(tile);
+  });
+  app.append(top, grid);
+}
+
+/** Colour chooser (owner direction, July 2026): two doors — Colour by Numbers
+ *  (guided, number-keyed pages) and Colour Your Way (free flood-fill scenes). */
+function renderColourSections() {
+  setStatus('Colour sections', ['content pack colouring']);
+  const top = el(`<div class="topbar"></div>`);
+  top.append(holdToHomeButton(() => navigate({ name: 'home' })), el(`<div class="hello">How shall we colour?</div>`));
+  const grid = el(`<div class="tile-grid home-grid"></div>`);
+  const sections = [
+    { key: 'colour-bynum', label: 'Colour by Numbers', sub: 'Match the numbers to colours', glyph: '🔢' },
+    { key: 'colour-yourway', label: 'Colour Your Way', sub: 'Colour it however you like', glyph: '🌈' },
+  ];
+  sections.forEach((sct, i) => {
+    const tile = el(`<button class="big-tile" style="background:${tiles()[(i + 1) % tiles().length]}">
+      <span class="glyph-big" aria-hidden="true">${sct.glyph}</span>
+      <span class="tile-text"><span class="label">${sct.label}</span><span class="sublabel">${sct.sub}</span></span>
+    </button>`);
     tile.onclick = () => { speak(sct.label); navigate({ name: 'picker', category: sct.key }); };
     grid.append(tile);
   });
@@ -980,6 +1036,9 @@ function renderPicker(category) {
   // Draw splits into three sections too: Blank Canvas, Guided Drawing, Dot
   // to Dot (owner direction, July 2026).
   if (category === 'drawing') { renderDrawSections(); return; }
+  // Colour splits into two sections (owner direction, July 2026): Colour by
+  // Numbers and Colour Your Way.
+  if (category === 'colouring') { renderColourSections(); return; }
   const numericSort = (a, b) => a.id.localeCompare(b.id, undefined, { numeric: true });
   const tracingOf = (kind) =>
     state.catalogue
@@ -989,9 +1048,16 @@ function renderPicker(category) {
         : kind === 'numbers' ? /^trace-number-/.test(a.id)
         : !/^trace-(letter|number)-/.test(a.id))
       .sort(numericSort);
+  const colouringOf = (kind) =>
+    state.catalogue
+      .filter((a) => a.type === 'colouring')
+      .filter((a) => (kind === 'bynum' ? /^colour-cbn-/.test(a.id) : !/^colour-cbn-/.test(a.id)))
+      .sort(numericSort);
   const ranked = category === 'tracing-letters' ? tracingOf('letters')
     : category === 'tracing-numbers' ? tracingOf('numbers')
     : category === 'tracing-shapes' ? tracingOf('shapes')
+    : category === 'colour-bynum' ? colouringOf('bynum')
+    : category === 'colour-yourway' ? colouringOf('yourway')
     : category === 'draw-blank' ? state.catalogue.filter((a) => a.type === 'guided-drawing' && a.steps.length <= 1)
     : category === 'draw-guided' ? state.catalogue.filter((a) => a.type === 'guided-drawing' && a.steps.length > 1)
     : category === 'draw-dotdot' ? state.catalogue.filter((a) => a.type === 'game' && a.template === 'dot-to-dot')
@@ -1017,6 +1083,11 @@ function renderPicker(category) {
   if (/^draw-/.test(category)) {
     const back = el(`<button class="icon-btn" aria-label="Back">←</button>`);
     back.onclick = () => navigate({ name: 'picker', category: 'drawing' });
+    top.append(back);
+  }
+  if (/^colour-(bynum|yourway)$/.test(category)) {
+    const back = el(`<button class="icon-btn" aria-label="Back">←</button>`);
+    back.onclick = () => navigate({ name: 'picker', category: 'colouring' });
     top.append(back);
   }
   top.append(el(`<div class="hello">Pick one!</div>`));
@@ -2594,7 +2665,7 @@ function renderPuzzle(activity) {
 
 const EMOJI_FALLBACK = { nose: '👃', ears: '👂', hands: '🙌', happy: '🙂', sad: '😢', red: '🟥', blue: '🟦' };
 function itemHtml(name, size) {
-  return IMAGES[name] ? imgHtml(name, size) : `<span style="font-size:${size * 0.8}px;line-height:${size}px">${EMOJI_FALLBACK[name] || '⭐'}</span>`;
+  return (IMAGES[name] || RASTER_IMAGES[name]) ? imgHtml(name, size) : `<span style="font-size:${size * 0.8}px;line-height:${size}px">${EMOJI_FALLBACK[name] || '⭐'}</span>`;
 }
 
 /** Generic pointer-drag onto drop zones. zones: [{el, onDrop(itemEl)->accepted}] */
@@ -2856,25 +2927,64 @@ function renderGame(activity) {
     },
 
     'feed-animal': () => {
-      const animal = params.animal || 'bear';
-      const food = params.food || 'fish';
-      const total = typeof params.foods === 'number' ? params.foods : 4;
+      // Real owner art: a hungry character (open + chomp images) and a set of
+      // foods dragged into its mouth. Mouth hotspot is a fraction of the
+      // character's rendered box (params.mouth {x,y,r}); on a hit the character
+      // chomps (image swap + bounce) and the food is eaten.
+      const openName = imageNameFromRef(params.open || '');
+      const chompName = imageNameFromRef(params.chomp || '');
+      const mouth = params.mouth || { x: 0.5, y: 0.55, r: 0.24 };
+      const foods = Array.isArray(params.foods) ? params.foods : [];
+      const total = foods.length || 4;
+      let fed = 0, chomping = false;
+
+      const charImg = el(`<img alt="Feed me!" src="${RASTER_IMAGES[openName] || ''}" style="position:absolute;left:50%;top:14px;transform:translateX(-50%);height:44%;max-height:280px;width:auto;object-fit:contain;pointer-events:none;filter:drop-shadow(0 8px 10px rgba(0,0,0,0.12))">`);
+      stage.append(charImg);
+      const mouthZone = el(`<div aria-label="Feed me here" style="position:absolute;border-radius:50%;pointer-events:none"></div>`);
+      stage.append(mouthZone);
+
+      function bite() {
+        if (!chompName || !RASTER_IMAGES[chompName]) return;
+        chomping = true;
+        charImg.src = RASTER_IMAGES[chompName];
+        charImg.style.transform = 'translateX(-50%) scale(1.06)';
+        setTimeout(() => {
+          charImg.src = RASTER_IMAGES[openName] || charImg.src;
+          charImg.style.transform = 'translateX(-50%) scale(1)';
+          chomping = false;
+        }, 480);
+      }
+
       requestAnimationFrame(() => {
         const r = stage.getBoundingClientRect();
-        let fed = 0;
-        stage.append(el(`<div style="position:absolute;left:50%;top:6%;transform:translateX(-50%)">${itemHtml(animal, Math.min(190, r.height * 0.45))}</div>`));
-        const mouth = el(`<div aria-label="Feed me!" style="position:absolute;left:50%;top:${Math.min(190, r.height * 0.45) * 0.72}px;transform:translateX(-50%);width:110px;height:64px;border:3px dashed #FF8A65;border-radius:32px;display:grid;place-items:center;font-size:14px;color:#4A3B32;background:rgba(255,255,255,0.6)">yum yum</div>`);
-        stage.append(mouth);
-        const zones = [{ el: mouth, onDrop: (it) => {
+        const cb = charImg.getBoundingClientRect();
+        // Position the (invisible) mouth drop-zone over the character's mouth.
+        const zw = cb.width * mouth.r * 2;
+        const cx = cb.left - r.left + cb.width * mouth.x;
+        const cy = cb.top - r.top + cb.height * mouth.y;
+        mouthZone.style.left = (cx - zw / 2) + 'px';
+        mouthZone.style.top = (cy - zw / 2) + 'px';
+        mouthZone.style.width = zw + 'px';
+        mouthZone.style.height = zw + 'px';
+
+        const zones = [{ el: mouthZone, onDrop: (it) => {
+          if (chomping) return false;
+          const label = it.dataset.name || 'yum';
           it.remove(); fed++;
-          say(fed >= total ? 'All full! ' + LH.pickFeedback('completed') : 'Yum! ' + LH.pickFeedback('completed'));
-          if (fed >= total) finish();
+          bite();
+          playPop();
+          say(fed >= total ? 'All full! ' + LH.pickFeedback('completed') : 'Yum, ' + label + '! ' + LH.pickFeedback('almost'));
+          if (fed >= total) setTimeout(finish, 520);
           return true;
         } }];
-        for (let i = 0; i < total; i++) {
-          const it = placeItem(stage, food, 64, 24 + i * (r.width - 130) / Math.max(1, total - 1), r.height * 0.68);
+
+        const size = Math.min(96, r.width / (total + 1.5));
+        const gap = (r.width - size) / Math.max(1, total - 1);
+        foods.forEach((f, i) => {
+          const nm = imageNameFromRef(f.image || '');
+          const it = placeItem(stage, nm, size, Math.round(6 + i * (gap - 6)), Math.round(r.height - size - 12), f.name);
           makeDraggable(stage, it, () => zones, () => miss());
-        }
+        });
       });
     },
 

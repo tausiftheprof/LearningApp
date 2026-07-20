@@ -12,4 +12,5 @@ export const IMPLEMENTED_GAME_TEMPLATES: readonly string[] = [
   'memory-cards',
   'counting',
   'odd-one-out',
+  'feed-animal',
 ];

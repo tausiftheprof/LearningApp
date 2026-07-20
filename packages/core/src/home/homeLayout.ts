@@ -44,7 +44,9 @@ const COLOUR: HomeTile = { label: 'Colour', idx: 1, target: { category: 'colouri
 const PUZZLES: HomeTile = { label: 'Puzzles', idx: 2, target: { category: 'puzzles' } };
 const TRACING: HomeTile = { label: 'Tracing', idx: 3, target: { category: 'tracing' } };
 const LITTLE_GAMES: HomeTile = { label: 'Little Games', idx: 4, target: { category: 'toddler' } };
-const BIG_KID_GAMES: HomeTile = { label: 'Big Kid Games', idx: 5, target: { category: 'preschool' } };
+// "Big Kid Games" retired (owner direction, July 2026): those games were really
+// little-kid games, so they now live under Little Games; a genuine big-kid set
+// will be designed separately. Only Think & Solve remains as an older-child door.
 const THINK_SOLVE: HomeTile = { label: 'Think & Solve', idx: 6, target: { category: 'logic' } };
 
 /**
@@ -59,7 +61,8 @@ export function homeTilesForAge(ageBand: AgeBand): HomeTile[] {
     case '3-5':
       return [DAILY, DRAW, COLOUR, TRACING, PUZZLES, LITTLE_GAMES];
     case '5-7':
-      // Little Games drops off; the "big kid" doors come in.
-      return [DAILY, DRAW, COLOUR, TRACING, PUZZLES, BIG_KID_GAMES, THINK_SOLVE];
+      // Older children keep Little Games (now home to the former "Big Kid Games")
+      // and additionally get the Think & Solve door.
+      return [DAILY, DRAW, COLOUR, TRACING, PUZZLES, LITTLE_GAMES, THINK_SOLVE];
   }
 }

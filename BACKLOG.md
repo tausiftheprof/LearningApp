@@ -15,42 +15,34 @@ Status key: `[ ]` open · `[~]` in progress · `[x]` done (move to the bottom or
   Porting them to `apps/mobile/.../players/TracingPlayer.tsx` is best paired with a
   device/emulator run so the touch UI can actually be driven.
 
-- [ ] **Top bar layout (home header).** Move the star + rewards total to sit next to the
-  child's name. Place the Grown-ups and rewards icons next to each other on one line, top-right.
+### New little games still to build (need the owner's cute/funny art, ages 2-5)
 
-- [ ] **Blank Canvas is currently 2 screens** (Draw → Blank Canvas lands on an intermediate
-  screen before the canvas). Skip the middle step — go straight to the final drawing/canvas
-  screen as soon as "Blank Canvas" is tapped.
+These three are genuinely new mechanics (not yet in the app) and each needs its own art set,
+per the agreed one-game-at-a-time flow. The other four the owner picked already exist or are
+built: **Feed the Animal** ✅ (built with real art), **Pop the Bubbles** ✅ (exists),
+**Sorting Bins** ✅ (exists as `drag-sort`), **Count & Tap** ✅ (exists as `counting`).
 
-- [ ] **Colour section — remove three pages:** "Fish by Numbers", "Pack of Balloons", and
-  "Rocket". Drop them from the Colour picker on both surfaces.
-
-- [ ] **Split Colour into two sections:** **"Colour by Numbers"** (guided — match number to
-  colour) and **"Colour Your Way"** (free-form flood-fill). Names chosen by owner.
-  - **Artwork split:** the **Colour by Numbers** set is the 4 files the owner uploaded to
-    `design-reference/colouring-pages/` — Bunny, Car, Flower, Puppy (all `Color by number - … -2to4Age.png`).
-    Everything else already in the Colour section goes to **Colour Your Way**. (When building:
-    these design-reference PNGs need processing into the flood-fill/by-numbers pipeline — they're
-    not yet in `assets/images/`; confirm the numbered-region + palette-key format expected.)
-
-### New little games (owner picked — build into app; art must be cute & funny for ages 2-5)
-
-- [ ] **Feed the Animal** — drag food to a hungry animal's mouth; it chomps on a hit. Drag
-  precision (reuses puzzle/match drag engine). Ages 2-3.
-- [ ] **Pop the Bubbles** — bubbles drift up, tap to pop with a satisfying sound. Tap accuracy.
-  Small new engine. Ages 2-3.
 - [ ] **Cutting Practice** — drag "scissors" along a dotted line. Reuses the tracing corridor
-  engine, new metaphor. Real-world scissor skill.
-- [ ] **Build a Face** — drag eyes/nose/mouth onto a blank head. Creative, no wrong answer.
-  Reuses drag engine.
-- [ ] **Sorting Bins** — drag items into the right bin by colour/shape. Drag + categorisation.
-  Reuses drag engine.
-- [ ] **Count & Tap** (#14) — "how many ducks? tap that number." Reuses counting template.
-- [ ] **Number Path Hop** (#15) — tap stepping stones 1→2→3 in order. Reuses counting template.
-  - **Art direction:** all seven need cute/funny sprites for ages 2-5. Decision pending (emoji-
-    style sprites that ship now vs. owner-supplied illustrations). Build order: prove the pattern
-    with a 1-2 game vertical slice, get sign-off, then batch the rest across core + demo + mobile.
+  engine. Needs: 1 scissors sprite (+ optional fun paper shapes).
+- [ ] **Build a Face** — drag eyes/nose/mouth onto a blank head. Needs: 1 head + 4-8 face parts.
+- [ ] **Number Path Hop** — tap stepping stones 1→2→3 in order. Needs: 1 stone/lilypad
+  (+ optional hopping character).
 
 ## Done
 
-<!-- move completed items here (or delete) so Open stays the live list -->
+- [x] **Feed the Animal** (2 characters) — drag food into a hungry mouth; it chomps (image swap
+  + bounce), soft "nom" per bite, stars + chime on finish. Built with the owner's real art:
+  **Mascot** eats treats (strawberry, cupcake, watermelon, ice cream); **Kangaroo** eats plants
+  (2 plants + grass). Cut out from the uploads (background removed, interior whites kept). Demo +
+  mobile + core content + test.
+- [x] **Top bar layout** — star + rewards total now sit next to the child's name; Grown-ups and
+  Rewards icons share one row, top-right.
+- [x] **Blank Canvas → straight to canvas** — the intermediate picker is skipped; tapping Blank
+  Canvas opens the drawing canvas immediately.
+- [x] **Colour: removed 3 pages** — "Fish by Numbers", "Pack of Balloons", "Rocket" dropped.
+- [x] **Colour split into two sections** — **"Colour by Numbers"** (owner's 4 uploaded pages:
+  Bunny, Car, Flower, Puppy — processed into `assets/images/scene-cbn-*.png`, flood-fill with the
+  number key printed in the art) and **"Colour Your Way"** (the 6 free scenes). Two-door chooser
+  with back navigation.
+- [x] **"Big Kid Games" retired** — the preschool games moved into "Little Games" (toddler); the
+  5-7 home band now shows Little Games + Think & Solve. A genuine big-kid set to be designed later.

@@ -181,55 +181,33 @@ function ellipse(cx: number, cy: number, rx: number, ry: number, steps = 28): Po
   return pts;
 }
 
+// Colour by Numbers (owner art, July 2026): black-outline pages with the number
+// key printed in the artwork itself, flood-filled by the same line-art engine.
+// These form the "Colour by Numbers" section; the scenes below are "Colour Your Way".
 const colouringActivities: Activity[] = [
   {
-    type: 'colouring', id: 'colour-balloon', title: 'Pack of balloons', category: 'colouring',
-    ageBands: ['2-3', '3-5'], difficulty: 1, motorSkills: ['tapping', 'holding-moving', 'pinching'],
-    estimatedMinutes: 3, theme: 'celebrations', locale: 'en-AU', instructionAudio: audio('colour-free'),
-    mode: 'free',
-    // A bunch of three balloons whose strings gather at a bow (owner direction).
-    regions: [
-      polyRegion('sun', ellipse(140, 140, 80, 80)),
-      polyRegion('string-1', [{ x: 300, y: 470 }, { x: 340, y: 470 }, { x: 512, y: 764 }, { x: 478, y: 776 }]),
-      polyRegion('string-2', [{ x: 528, y: 402 }, { x: 566, y: 402 }, { x: 522, y: 760 }, { x: 488, y: 758 }]),
-      polyRegion('string-3', [{ x: 748, y: 496 }, { x: 786, y: 490 }, { x: 540, y: 762 }, { x: 516, y: 738 }]),
-      polyRegion('balloon-1', ellipse(310, 310, 140, 168)),
-      polyRegion('balloon-2', ellipse(548, 238, 128, 158)),
-      polyRegion('balloon-3', ellipse(772, 340, 118, 148)),
-      polyRegion('bow', ellipse(508, 792, 56, 44, 16)),
-    ],
+    type: 'colouring', id: 'colour-cbn-bunny', title: 'Bunny by Numbers', category: 'colouring',
+    ageBands: ['2-3', '3-5'], difficulty: 1, motorSkills: ['tapping', 'precision-placement'],
+    estimatedMinutes: 4, theme: 'animals', locale: 'en-AU', instructionAudio: audio('colour-by-number'),
+    mode: 'line-art', image: 'images/scene-cbn-bunny.png', regions: [],
   },
   {
-    type: 'colouring', id: 'colour-fish-by-number', title: 'Fish by numbers', category: 'colouring',
-    ageBands: ['3-5', '5-7'], difficulty: 2, motorSkills: ['tapping', 'precision-placement'],
-    estimatedMinutes: 4, theme: 'underwater', locale: 'en-AU', instructionAudio: audio('colour-by-number'),
-    mode: 'by-number',
-    // A proper fish: oval body, forked tail, top and bottom fins, eye, bubbles.
-    regions: [
-      polyRegion('sea', [{ x: 60, y: 830 }, { x: 940, y: 830 }, { x: 940, y: 950 }, { x: 60, y: 950 }], 4),
-      polyRegion('body', ellipse(420, 510, 250, 160), 1),
-      polyRegion('tail', [{ x: 645, y: 510 }, { x: 850, y: 365 }, { x: 805, y: 510 }, { x: 850, y: 655 }], 2),
-      polyRegion('fin-top', [{ x: 330, y: 372 }, { x: 452, y: 268 }, { x: 508, y: 372 }], 3),
-      polyRegion('fin-bottom', [{ x: 360, y: 648 }, { x: 432, y: 742 }, { x: 508, y: 645 }], 3),
-      polyRegion('eye', ellipse(300, 470, 30, 30, 16)),
-      polyRegion('bubble-1', ellipse(720, 240, 34, 34, 14)),
-      polyRegion('bubble-2', ellipse(790, 160, 24, 24, 12)),
-    ],
+    type: 'colouring', id: 'colour-cbn-car', title: 'Car by Numbers', category: 'colouring',
+    ageBands: ['2-3', '3-5'], difficulty: 1, motorSkills: ['tapping', 'precision-placement'],
+    estimatedMinutes: 4, theme: 'everyday', locale: 'en-AU', instructionAudio: audio('colour-by-number'),
+    mode: 'line-art', image: 'images/scene-cbn-car.png', regions: [],
   },
   {
-    type: 'colouring', id: 'colour-rocket', title: 'Rocket', category: 'colouring',
-    ageBands: ['3-5', '5-7'], difficulty: 2, motorSkills: ['holding-moving', 'pinching'],
-    estimatedMinutes: 4, theme: 'space', locale: 'en-AU', instructionAudio: audio('colour-free'),
-    mode: 'free',
-    // Rocket-shaped sketch: body, nose cone, fins, flame, round window on top.
-    regions: [
-      polyRegion('body', [{ x: 400, y: 300 }, { x: 600, y: 300 }, { x: 600, y: 700 }, { x: 400, y: 700 }]),
-      polyRegion('nose', [{ x: 380, y: 300 }, { x: 500, y: 120 }, { x: 620, y: 300 }]),
-      polyRegion('fin-left', [{ x: 400, y: 540 }, { x: 280, y: 740 }, { x: 400, y: 700 }]),
-      polyRegion('fin-right', [{ x: 600, y: 540 }, { x: 720, y: 740 }, { x: 600, y: 700 }]),
-      polyRegion('flame', [{ x: 445, y: 700 }, { x: 555, y: 700 }, { x: 500, y: 875 }]),
-      polyRegion('window', ellipse(500, 430, 62, 62, 20)),
-    ],
+    type: 'colouring', id: 'colour-cbn-flower', title: 'Flower by Numbers', category: 'colouring',
+    ageBands: ['2-3', '3-5'], difficulty: 1, motorSkills: ['tapping', 'precision-placement'],
+    estimatedMinutes: 4, theme: 'nature', locale: 'en-AU', instructionAudio: audio('colour-by-number'),
+    mode: 'line-art', image: 'images/scene-cbn-flower.png', regions: [],
+  },
+  {
+    type: 'colouring', id: 'colour-cbn-puppy', title: 'Puppy by Numbers', category: 'colouring',
+    ageBands: ['2-3', '3-5'], difficulty: 1, motorSkills: ['tapping', 'precision-placement'],
+    estimatedMinutes: 4, theme: 'animals', locale: 'en-AU', instructionAudio: audio('colour-by-number'),
+    mode: 'line-art', image: 'images/scene-cbn-puppy.png', regions: [],
   },
 ];
 
@@ -332,7 +310,29 @@ const games: GameSpec[] = [
   // Toddler (PRD 6.5)
   { id: 'toddler-pop-bubbles', title: 'Pop the bubbles', template: 'pop-bubbles', category: 'toddler', ageBands: ['2-3'], difficulty: 1, motorSkills: ['tapping'], minutes: 2, theme: 'underwater', params: { count: 10 } },
   { id: 'toddler-tap-animal', title: 'Tap the animal', template: 'tap-target', category: 'toddler', ageBands: ['2-3'], difficulty: 1, motorSkills: ['tapping'], minutes: 2, theme: 'animals', params: { targets: ['dog', 'cat', 'duck'], rounds: 5 } },
-  { id: 'toddler-feed-animal', title: 'Feed the bear', template: 'feed-animal', category: 'toddler', ageBands: ['2-3'], difficulty: 1, motorSkills: ['dragging'], minutes: 2, theme: 'animals', params: { animal: 'bear', food: 'fish', foods: 4 } },
+  { id: 'toddler-feed-mascot', title: 'Feed the mascot', template: 'feed-animal', category: 'toddler', ageBands: ['2-3', '3-5'], difficulty: 1, motorSkills: ['dragging', 'precision-placement'], minutes: 2, theme: 'animals', params: {
+    character: 'mascot',
+    open: 'images/feed-mascot-open.png',
+    chomp: 'images/feed-mascot-chomp.png',
+    mouth: { x: 0.5, y: 0.56, r: 0.26 },
+    foods: [
+      { name: 'strawberry', image: 'images/feed-strawberry.png' },
+      { name: 'cupcake', image: 'images/feed-cupcake.png' },
+      { name: 'watermelon', image: 'images/feed-watermelon.png' },
+      { name: 'icecream', image: 'images/feed-icecream.png' },
+    ],
+  } },
+  { id: 'toddler-feed-kangaroo', title: 'Feed the kangaroo', template: 'feed-animal', category: 'toddler', ageBands: ['2-3', '3-5'], difficulty: 1, motorSkills: ['dragging', 'precision-placement'], minutes: 2, theme: 'animals', params: {
+    character: 'kangaroo',
+    open: 'images/feed-kangaroo-open.png',
+    chomp: 'images/feed-kangaroo-chomp.png',
+    mouth: { x: 0.5, y: 0.4, r: 0.23 },
+    foods: [
+      { name: 'leafy plant', image: 'images/feed-plant1.png' },
+      { name: 'little plant', image: 'images/feed-plant2.png' },
+      { name: 'grass', image: 'images/feed-grass.png' },
+    ],
+  } },
   { id: 'toddler-toys-in-box', title: 'Toys in the box', template: 'drag-sort', category: 'toddler', ageBands: ['2-3'], difficulty: 1, motorSkills: ['dragging', 'precision-placement'], minutes: 2, theme: 'everyday', params: { bins: ['box'], items: ['bear', 'car', 'duck', 'star', 'balloon'] } },
   { id: 'toddler-match-objects', title: 'Match the toys', template: 'match-pairs', category: 'toddler', ageBands: ['2-3'], difficulty: 1, motorSkills: ['tapping', 'dragging'], minutes: 2, theme: 'everyday', params: { pairs: 3, images: ['duck', 'car', 'star'] } },
   { id: 'toddler-sort-colour', title: 'Sort by colour', template: 'drag-sort', category: 'toddler', ageBands: ['2-3', '3-5'], difficulty: 1, motorSkills: ['dragging'], minutes: 2, theme: 'shapes-patterns', params: { bins: ['red', 'blue'], items: 6 } },
@@ -340,16 +340,16 @@ const games: GameSpec[] = [
   { id: 'toddler-reveal', title: 'Wipe and see!', template: 'reveal-wipe', category: 'toddler', ageBands: ['2-3'], difficulty: 1, motorSkills: ['swiping'], minutes: 1, theme: 'surprise', params: { pictures: ['unicorn', 'whale', 'treehouse'] } },
   { id: 'toddler-stack', title: 'Stack the blocks', template: 'stack-blocks', category: 'toddler', ageBands: ['2-3'], difficulty: 1, motorSkills: ['dragging', 'precision-placement'], minutes: 2, theme: 'everyday', params: { blocks: 4 } },
   // Preschool (PRD 6.6)
-  { id: 'preschool-letter-match', title: 'Big and small letters', template: 'letter-match', category: 'preschool', ageBands: ['3-5', '5-7'], difficulty: 2, motorSkills: ['tapping', 'dragging'], minutes: 3, theme: 'letters-numbers', params: { letters: ['A', 'B', 'C', 'D'] } },
-  { id: 'preschool-count-objects', title: 'Count the fish', template: 'counting', category: 'preschool', ageBands: ['3-5'], difficulty: 2, motorSkills: ['tapping'], minutes: 2, theme: 'food', params: { max: 5, item: 'fish' } },
-  { id: 'preschool-number-quantity', title: 'Numbers and things', template: 'match-pairs', category: 'preschool', ageBands: ['3-5', '5-7'], difficulty: 2, motorSkills: ['dragging'], minutes: 3, theme: 'letters-numbers', params: { pairs: 4, kind: 'number-quantity', item: 'star' } },
-  { id: 'preschool-shapes', title: 'Match the shapes', template: 'match-pairs', category: 'preschool', ageBands: ['3-5'], difficulty: 1, motorSkills: ['dragging', 'precision-placement'], minutes: 2, theme: 'shapes-patterns', params: { pairs: 4, kind: 'shapes' } },
-  { id: 'preschool-body-parts', title: 'Point to the nose!', template: 'tap-target', category: 'preschool', ageBands: ['2-3', '3-5'], difficulty: 1, motorSkills: ['tapping'], minutes: 2, theme: 'body', params: { targets: ['nose', 'ears', 'hands'], rounds: 5 } },
-  { id: 'preschool-emotions', title: 'How do they feel?', template: 'odd-one-out', category: 'preschool', ageBands: ['3-5', '5-7'], difficulty: 2, motorSkills: ['tapping'], minutes: 2, theme: 'emotions', params: { rounds: 4, kind: 'emotions' } },
-  { id: 'preschool-helpers', title: 'Helpers and tools', template: 'match-pairs', category: 'preschool', ageBands: ['3-5', '5-7'], difficulty: 2, motorSkills: ['dragging'], minutes: 3, theme: 'community-helpers', params: { pairs: 4, kind: 'helper-tool' } },
-  { id: 'preschool-opposites', title: 'Opposites', template: 'match-pairs', category: 'preschool', ageBands: ['5-7'], difficulty: 3, motorSkills: ['dragging'], minutes: 3, theme: 'everyday', params: { pairs: 4, kind: 'opposites' } },
-  { id: 'preschool-sequence', title: 'What comes next?', template: 'sequence', category: 'preschool', ageBands: ['3-5', '5-7'], difficulty: 2, motorSkills: ['tapping', 'dragging'], minutes: 2, theme: 'shapes-patterns', params: { length: 4, images: ['sun', 'moon'] } },
-  { id: 'preschool-number-trace-count', title: 'Count and pinch', template: 'counting', category: 'preschool', ageBands: ['3-5', '5-7'], difficulty: 2, motorSkills: ['pinching', 'tapping', 'bilateral'], minutes: 2, theme: 'letters-numbers', params: { max: 8, zoom: true, item: 'star' } },
+  { id: 'preschool-letter-match', title: 'Big and small letters', template: 'letter-match', category: 'toddler', ageBands: ['3-5', '5-7'], difficulty: 2, motorSkills: ['tapping', 'dragging'], minutes: 3, theme: 'letters-numbers', params: { letters: ['A', 'B', 'C', 'D'] } },
+  { id: 'preschool-count-objects', title: 'Count the fish', template: 'counting', category: 'toddler', ageBands: ['3-5'], difficulty: 2, motorSkills: ['tapping'], minutes: 2, theme: 'food', params: { max: 5, item: 'fish' } },
+  { id: 'preschool-number-quantity', title: 'Numbers and things', template: 'match-pairs', category: 'toddler', ageBands: ['3-5', '5-7'], difficulty: 2, motorSkills: ['dragging'], minutes: 3, theme: 'letters-numbers', params: { pairs: 4, kind: 'number-quantity', item: 'star' } },
+  { id: 'preschool-shapes', title: 'Match the shapes', template: 'match-pairs', category: 'toddler', ageBands: ['3-5'], difficulty: 1, motorSkills: ['dragging', 'precision-placement'], minutes: 2, theme: 'shapes-patterns', params: { pairs: 4, kind: 'shapes' } },
+  { id: 'preschool-body-parts', title: 'Point to the nose!', template: 'tap-target', category: 'toddler', ageBands: ['2-3', '3-5'], difficulty: 1, motorSkills: ['tapping'], minutes: 2, theme: 'body', params: { targets: ['nose', 'ears', 'hands'], rounds: 5 } },
+  { id: 'preschool-emotions', title: 'How do they feel?', template: 'odd-one-out', category: 'toddler', ageBands: ['3-5', '5-7'], difficulty: 2, motorSkills: ['tapping'], minutes: 2, theme: 'emotions', params: { rounds: 4, kind: 'emotions' } },
+  { id: 'preschool-helpers', title: 'Helpers and tools', template: 'match-pairs', category: 'toddler', ageBands: ['3-5', '5-7'], difficulty: 2, motorSkills: ['dragging'], minutes: 3, theme: 'community-helpers', params: { pairs: 4, kind: 'helper-tool' } },
+  { id: 'preschool-opposites', title: 'Opposites', template: 'match-pairs', category: 'toddler', ageBands: ['5-7'], difficulty: 3, motorSkills: ['dragging'], minutes: 3, theme: 'everyday', params: { pairs: 4, kind: 'opposites' } },
+  { id: 'preschool-sequence', title: 'What comes next?', template: 'sequence', category: 'toddler', ageBands: ['3-5', '5-7'], difficulty: 2, motorSkills: ['tapping', 'dragging'], minutes: 2, theme: 'shapes-patterns', params: { length: 4, images: ['sun', 'moon'] } },
+  { id: 'preschool-number-trace-count', title: 'Count and pinch', template: 'counting', category: 'toddler', ageBands: ['3-5', '5-7'], difficulty: 2, motorSkills: ['pinching', 'tapping', 'bilateral'], minutes: 2, theme: 'letters-numbers', params: { max: 8, zoom: true, item: 'star' } },
   // Logic (PRD 6.7)
   { id: 'logic-pattern', title: 'Finish the pattern', template: 'pattern-complete', category: 'logic', ageBands: ['3-5', '5-7'], difficulty: 2, motorSkills: ['tapping', 'dragging'], minutes: 2, theme: 'shapes-patterns', params: { rounds: 4, images: ['star', 'fish', 'sun'] } },
   { id: 'logic-odd-one-out', title: 'Find the odd one', template: 'odd-one-out', category: 'logic', ageBands: ['3-5', '5-7'], difficulty: 2, motorSkills: ['tapping'], minutes: 2, theme: 'everyday', params: { rounds: 5, kind: 'objects' } },

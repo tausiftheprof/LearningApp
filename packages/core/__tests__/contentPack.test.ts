@@ -9,10 +9,24 @@ describe('starter content pack', () => {
     expect(validateContentPack(pack).ok).toBe(true);
   });
 
-  it('covers all seven activity categories', () => {
+  it('covers the active activity categories', () => {
+    // 'preschool' ("Big Kid Games") was retired July 2026 - those games moved
+    // to 'toddler' ("Little Games") - so it is no longer a populated category.
     const categories = new Set(pack.activities.map((a) => a.category));
-    for (const c of ['drawing', 'colouring', 'puzzles', 'tracing', 'toddler', 'preschool', 'logic']) {
+    for (const c of ['drawing', 'colouring', 'puzzles', 'tracing', 'toddler', 'logic']) {
       expect(categories).toContain(c);
+    }
+  });
+
+  it('feeds two characters their own foods (owner art, July 2026)', () => {
+    const feed = pack.activities.filter((a) => a.type === 'game' && a.template === 'feed-animal');
+    expect(feed.map((a) => a.id).sort()).toEqual(['toddler-feed-kangaroo', 'toddler-feed-mascot']);
+    for (const a of feed) {
+      const params = (a as { params: Record<string, unknown> }).params;
+      expect(typeof params.open).toBe('string');
+      expect(typeof params.chomp).toBe('string');
+      expect(Array.isArray(params.foods)).toBe(true);
+      expect((params.foods as unknown[]).length).toBeGreaterThanOrEqual(3);
     }
   });
 
@@ -23,11 +37,21 @@ describe('starter content pack', () => {
     }
   });
 
-  it('ships six owner-supplied line-art colouring scenes (July 2026)', () => {
+  it('ships owner line-art colouring pages: 4 by-number + 6 free scenes (July 2026)', () => {
     const scenes = pack.activities.filter(
       (a): a is Extract<typeof a, { type: 'colouring' }> => a.type === 'colouring' && a.mode === 'line-art',
     );
-    expect(scenes.map((s) => s.id).sort()).toEqual([
+    // "Colour by Numbers" section (owner art with the number key printed in).
+    const byNumber = scenes.filter((s) => /^colour-cbn-/.test(s.id));
+    expect(byNumber.map((s) => s.id).sort()).toEqual([
+      'colour-cbn-bunny',
+      'colour-cbn-car',
+      'colour-cbn-flower',
+      'colour-cbn-puppy',
+    ]);
+    // "Colour Your Way" section (free flood-fill scenes).
+    const freeScenes = scenes.filter((s) => !/^colour-cbn-/.test(s.id));
+    expect(freeScenes.map((s) => s.id).sort()).toEqual([
       'colour-monkey-tree',
       'colour-rabbit-carrot',
       'colour-rocket-space',
@@ -57,13 +81,14 @@ describe('starter content pack', () => {
     expect(result.ok).toBe(false);
   });
 
-  it('ships a solid spread of toddler, preschool and logic games (PRD section 25)', () => {
+  it('ships a solid spread of little-kid and logic games (PRD section 25)', () => {
     const count = (c: string) => pack.activities.filter((a) => a.category === c).length;
-    // NOTE: a set of games was extracted to a separate project, dropping
-    // toddler to 9 and logic to 8. Backfill both categories to restore the
-    // PRD-25 target of 10 before ship. Preschool is unaffected.
-    expect(count('toddler')).toBeGreaterThanOrEqual(9);
-    expect(count('preschool')).toBeGreaterThanOrEqual(10);
+    // "Big Kid Games" (the preschool category) was retired (owner direction,
+    // July 2026): those games were really little-kid games, so they now live
+    // under the toddler ("Little Games") category. Only Think & Solve (logic)
+    // remains an older-child door.
+    expect(count('toddler')).toBeGreaterThanOrEqual(18);
+    expect(count('preschool')).toBe(0);
     expect(count('logic')).toBeGreaterThanOrEqual(8);
   });
 
