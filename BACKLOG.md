@@ -18,6 +18,10 @@ Status key: `[ ]` open · `[~]` in progress · `[x]` done (move to the bottom or
 - [ ] **Top bar layout (home header).** Move the star + rewards total to sit next to the
   child's name. Place the Grown-ups and rewards icons next to each other on one line, top-right.
 
+- [ ] **Blank Canvas is currently 2 screens** (Draw → Blank Canvas lands on an intermediate
+  screen before the canvas). Skip the middle step — go straight to the final drawing/canvas
+  screen as soon as "Blank Canvas" is tapped.
+
 ## Done
 
 <!-- move completed items here (or delete) so Open stays the live list -->
