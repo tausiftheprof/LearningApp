@@ -81,7 +81,7 @@ const tracingActivities: Activity[] = [
     type: 'tracing', id: 'trace-circle', title: 'Circle', category: 'tracing',
     ageBands: ['2-3', '3-5', '5-7'], difficulty: 1, motorSkills: ['tracing'],
     estimatedMinutes: 1, theme: 'shapes-patterns', locale: 'en-AU',
-    instructionAudio: audio('trace-circle'), paths: [arc(500, 500, 300, 180, 540)], closed: true,
+    instructionAudio: audio('trace-circle'), paths: [arc(500, 500, 300, -90, -450)], closed: true,
   },
   {
     type: 'tracing', id: 'trace-square', title: 'Square', category: 'tracing',
@@ -96,8 +96,9 @@ const tracingActivities: Activity[] = [
     ageBands: ['3-5', '5-7'], difficulty: 2, motorSkills: ['tracing'],
     estimatedMinutes: 1, theme: 'shapes-patterns', locale: 'en-AU',
     instructionAudio: audio('trace-triangle'),
-    // Base first (left-to-right), then up to the apex and back down.
-    paths: [[...line(200, 750, 800, 750, 4), ...line(800, 750, 500, 200, 4), ...line(500, 200, 200, 750, 4)]],
+    // Start at the top (apex): down the left side, across the base left-to-right,
+    // then up the right side back to the apex.
+    paths: [[...line(500, 200, 200, 750, 4), ...line(200, 750, 800, 750, 4), ...line(800, 750, 500, 200, 4)]],
     closed: true,
   },
   {
@@ -113,7 +114,7 @@ const tracingActivities: Activity[] = [
     ageBands: ['3-5', '5-7'], difficulty: 2, motorSkills: ['tracing'],
     estimatedMinutes: 1, theme: 'shapes-patterns', locale: 'en-AU',
     instructionAudio: audio('trace-oval'),
-    paths: [arc(500, 500, 340, 180, 540, 28).map((p) => ({ x: p.x, y: 500 + (p.y - 500) * 0.68 }))],
+    paths: [arc(500, 500, 340, -90, -450, 28).map((p) => ({ x: p.x, y: 500 + (p.y - 500) * 0.68 }))],
     closed: true,
   },
   {

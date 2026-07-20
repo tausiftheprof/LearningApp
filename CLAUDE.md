@@ -103,10 +103,13 @@ oversight, so don't loosen the schema to "just add a field" without checking doc
 
 **Tracing glyphs & flow**: letter (A-Z capital+small pair) and number (0-10) stroke skeletons are
 authored as polylines in `content/glyphs.ts` (`digitStrokes`/`letterStrokes`), shape strokes in
-`content/starterPack.ts`; both feed the same corridor engine. Strokes render one at a time — the
-**current** step is highlighted (bold guide + direction arrows drawn from the stroke's own
-tangents, chevrons pointing the trace direction), earlier steps glow "done", later steps stay
-greyed until their turn. On completion the player **auto-advances to the next item in the same
+`content/starterPack.ts`; both feed the same corridor engine. Stroke direction follows the
+"school way" the owner chose — round glyphs/shapes (o a d g q O Q, 0, circle, oval) **start at the
+top and curve anticlockwise** (left first, so the bottom is traced left-to-right); capital A starts
+at the apex (left diagonal, right diagonal, crossbar); the triangle starts at the apex with its
+base left-to-right. Strokes render one at a time — the **current** step is highlighted (bold guide
++ direction arrows drawn from the stroke's own tangents, chevrons pointing the trace direction),
+earlier steps glow "done", later steps stay greyed until their turn. On completion the player **auto-advances to the next item in the same
 section** (letters / numbers / shapes), wrapping after the last, with no "Home" prompt between
 them (the top-bar home button is the exit). Behind letters/numbers/name the player draws ruled
 "notebook" lines (`tracingGuideLines` returns the top/mid/base y in design space). **Trace-name**
