@@ -25,6 +25,9 @@ Status key: `[ ]` open · `[~]` in progress · `[x]` done (move to the bottom or
 - [ ] **Colour section — remove three pages:** "Fish by Numbers", "Pack of Balloons", and
   "Rocket". Drop them from the Colour picker on both surfaces.
 
+- [ ] **Split Colour into two sections:** a guided "colour by numbers" mode and a free-form
+  "explore your imagination" mode. Final section names TBD — see naming options below; owner to pick.
+
 ## Done
 
 <!-- move completed items here (or delete) so Open stays the live list -->
