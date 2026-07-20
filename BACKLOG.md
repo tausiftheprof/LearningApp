@@ -22,6 +22,9 @@ Status key: `[ ]` open · `[~]` in progress · `[x]` done (move to the bottom or
   screen before the canvas). Skip the middle step — go straight to the final drawing/canvas
   screen as soon as "Blank Canvas" is tapped.
 
+- [ ] **Colour section — remove three pages:** "Fish by Numbers", "Pack of Balloons", and
+  "Rocket". Drop them from the Colour picker on both surfaces.
+
 ## Done
 
 <!-- move completed items here (or delete) so Open stays the live list -->
