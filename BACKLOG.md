@@ -28,6 +28,10 @@ built: **Feed the Animal** ✅ (built with real art), **Pop the Bubbles** ✅ (e
 - [ ] **Number Path Hop** — tap stepping stones 1→2→3 in order. Needs: 1 stone/lilypad
   (+ optional hopping character).
 
+- [ ] **Verify the mobile app is adaptive across device sizes.** The web demo was audited and
+  fixed for 320-1366px (July 2026); the Expo app's layouts (`HomeScreen`, players, pickers)
+  haven't been checked on small phones vs. large tablets — best done on a device/emulator.
+
 ## Done
 
 - [x] **Feed the Animal** (2 characters) — drag food into a hungry mouth; it chomps (image swap
