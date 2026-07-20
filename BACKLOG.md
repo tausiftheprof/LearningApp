@@ -27,6 +27,9 @@ Status key: `[ ]` open · `[~]` in progress · `[x]` done (move to the bottom or
 
 - [ ] **Split Colour into two sections:** **"Colour by Numbers"** (guided — match number to
   colour) and **"Colour Your Way"** (free-form flood-fill). Names chosen by owner.
+  - **Artwork split:** owner has added new images on GitHub for **Colour by Numbers** — use
+    those for that section. Everything else already in the Colour section goes to **Colour Your
+    Way**. (When building: confirm exactly which new files/paths are the by-numbers set.)
 
 ## Done
 
