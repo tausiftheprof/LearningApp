@@ -45,9 +45,10 @@ built: **Feed the Animal** ✅ (built with real art), **Pop the Bubbles** ✅ (e
 
 - [ ] **Cutting Practice** — drag "scissors" along a dotted line. Reuses the tracing corridor
   engine. Needs: 1 scissors sprite (+ optional fun paper shapes).
-- [ ] **Build a Face** — drag eyes/nose/mouth onto a blank head. Needs: 1 head + 4-8 face parts.
 - [ ] **Number Path Hop** — tap stepping stones 1→2→3 in order. Needs: 1 stone/lilypad
   (+ optional hopping character).
+- ~~**Build a Face** — drag eyes/nose/mouth onto a blank head.~~ **Parked** at owner's request
+  (July 2026) — revisit later. No art needed for now.
 
 - [ ] **Feed the Animal — layout tweaks.** The character is too small. Make the animal **big in
   the centre** of the stage, move the **foods to a right-hand column** (instead of along the
