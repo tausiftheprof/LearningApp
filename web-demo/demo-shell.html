@@ -298,6 +298,26 @@
     font-family: inherit;
   }
   .tool.active { background: color-mix(in srgb, var(--accent, #FF8A65) 30%, #fff); }
+
+  /* ---- Draw board redesign (Magic drawer, Layout 2, July 2026) ---- */
+  .draw-corner { position: absolute; top: 10px; z-index: 6; display: flex; gap: 7px; }
+  .draw-corner.tl { left: 10px; } .draw-corner.tr { right: 10px; }
+  .draw-cbtn { width: 40px; height: 40px; border: none; border-radius: 13px; cursor: pointer; background: #fff; box-shadow: 0 3px 8px rgba(69,61,91,.16); font-size: 17px; font-family: inherit; }
+  .draw-cbtn:active { transform: scale(.92); }
+  .draw-rail { position: absolute; top: 58px; right: 10px; bottom: 10px; z-index: 5; width: 50px; display: flex; flex-direction: column; align-items: center; gap: 7px; padding: 9px 5px; overflow-y: auto; background: rgba(244,239,255,.94); border-radius: 19px; box-shadow: 0 6px 16px rgba(69,61,91,.18); }
+  .draw-rail::-webkit-scrollbar { width: 0; }
+  .draw-chip { width: 34px; height: 34px; border-radius: 50%; border: none; cursor: pointer; flex-shrink: 0; box-shadow: 0 3px 0 rgba(0,0,0,.1), 0 3px 7px rgba(69,61,91,.2); }
+  .draw-chip.sel { transform: scale(1.16); box-shadow: 0 0 0 4px #fff, 0 2px 7px rgba(69,61,91,.4); }
+  .draw-size { position: absolute; left: 10px; bottom: 10px; z-index: 5; display: flex; flex-direction: column; gap: 6px; align-items: center; padding: 8px 7px; background: rgba(244,239,255,.94); border-radius: 20px; box-shadow: 0 6px 16px rgba(69,61,91,.18); }
+  .draw-size .cap { font-size: 8.5px; font-weight: 800; color: #9a90b5; text-transform: uppercase; letter-spacing: .06em; }
+  .draw-sdot { border: none; background: #fff; cursor: pointer; border-radius: 50%; display: grid; place-items: center; box-shadow: 0 2px 6px rgba(69,61,91,.18); }
+  .draw-sdot i { display: block; border-radius: 50%; background: #7a6cae; }
+  .draw-sdot.sel { outline: 3px solid #B39DDB; outline-offset: 2px; }
+  .draw-drawer { position: absolute; left: 72px; right: 66px; bottom: 10px; z-index: 7; display: none; gap: 9px; flex-wrap: wrap; justify-content: center; padding: 11px 10px 13px; background: rgba(255,255,255,.98); border-radius: 18px; box-shadow: 0 12px 26px rgba(69,61,91,.24); }
+  .draw-drawer.open { display: flex; }
+  .draw-drawer .cap { width: 100%; text-align: center; font-size: 10px; font-weight: 800; color: #8a80a5; text-transform: uppercase; letter-spacing: .08em; }
+  .draw-bar { justify-content: center; }
+  .draw-bar .tool.magic, .draw-drawer .tool.magic { background: linear-gradient(150deg, #FFE1F0, #E7E1FF); }
   .swatch { min-width: 44px; min-height: 44px; border-radius: 999px; border: 2px solid #4A3B32; cursor: pointer; flex-shrink: 0; position: relative; }
   .swatch.active { border-width: 5px; }
   .swatch .num { position: absolute; inset: 0; display: grid; place-items: center; color: #fff; font-weight: 800; text-shadow: 0 1px 2px rgba(0,0,0,0.6); }
@@ -1839,44 +1859,45 @@ function renderDrawing(activity) {
   }
   const canvas = el(`<canvas class="stage" aria-label="Drawing canvas"></canvas>`);
   stage.append(canvas);
-  const bar = el(`<div class="toolbar" role="toolbar" aria-label="Drawing tools"></div>`);
+  // Draw redesign (Magic drawer, Layout 2): colours on a right rail, a slim
+  // bottom bar (crayon · paint · eraser · 🪄 magic), a floating size pod, undo/
+  // redo + start-over/save in the corners, and a wand-opened "magic" drawer with
+  // rainbow / glitter / glow / stamp brushes. The white play-stage IS the paper.
+  const bar = el(`<div class="toolbar draw-bar" role="toolbar" aria-label="Brushes"></div>`);
+  const drawer = el(`<div class="draw-drawer" role="menu" aria-label="Magic brushes"><span class="cap">🪄 magic brushes</span></div>`);
+  const rail = el(`<div class="draw-rail" role="toolbar" aria-label="Colours"></div>`);
+  const sizePod = el(`<div class="draw-size"><span class="cap">size</span></div>`);
+  const cornerTL = el(`<div class="draw-corner tl"></div>`);
+  const cornerTR = el(`<div class="draw-corner tr"></div>`);
+  stage.append(cornerTL, cornerTR, rail, sizePod, drawer);
   app.append(stage, bar);
   const ctx = canvas.getContext('2d');
 
   const widths = { small: 4, medium: 9, large: 16 };
-  const brushes = { crayon: '🖍️', pencil: '✏️', marker: '🖊️', paint: '🖌️', glitter: '✨', rainbow: '🌈', eraser: '🧽' };
+  const ERASER_SVG = '<svg viewBox="0 0 40 40" width="26" height="26" aria-hidden="true"><g transform="rotate(-38 20 20)"><rect x="9" y="12" width="22" height="16" rx="4" fill="#FF9EC4"/><rect x="9" y="12" width="22" height="7" rx="4" fill="#FFF" opacity=".5"/><rect x="9" y="21" width="22" height="7" fill="#7E8BE0"/></g></svg>';
+  const BASIC = [['crayon', '🖍️'], ['paint', '🖌️'], ['eraser', ERASER_SVG]];
+  const MAGIC = [['rainbow', '🌈'], ['glitter', '✨'], ['glow', '🔆'], ['stampStar', '⭐'], ['stampHeart', '💖']];
 
-  function rebuildToolbar() {
-    bar.innerHTML = '';
-    for (const [kind, icon] of Object.entries(brushes)) {
-      const b = el(`<button class="tool ${brush === kind ? 'active' : ''}" aria-label="${kind} brush">${icon}</button>`);
-      b.onclick = () => { brush = kind; rebuildToolbar(); };
-      bar.append(b);
-    }
-    for (const s of ['small', 'medium', 'large']) {
-      const b = el(`<button class="tool ${size === s ? 'active' : ''}" aria-label="${s} size">${s === 'small' ? '•' : s === 'medium' ? '●' : '⬤'}</button>`);
-      b.onclick = () => { size = s; rebuildToolbar(); };
-      bar.append(b);
-    }
-    const pal = el(`<button class="tool" aria-label="Switch palette">${paletteName === 'standard' ? '🎀' : '🌈'}</button>`);
-    pal.onclick = () => { paletteName = paletteName === 'standard' ? 'pastel' : 'standard'; rebuildToolbar(); };
-    bar.append(pal);
-    for (const c of LH.PALETTES[paletteName]) {
-      const sw = el(`<button class="swatch ${colour === c ? 'active' : ''}" style="background:${c}" aria-label="Colour ${c}"></button>`);
-      sw.onclick = () => { colour = c; rebuildToolbar(); };
-      bar.append(sw);
-    }
-    if (hasSketch) {
-      const t = el(`<button class="tool ${insideLines ? 'active' : ''}" aria-label="Stay inside the lines" title="Stay inside the lines">🎯</button>`);
-      t.onclick = () => { insideLines = !insideLines; rebuildToolbar(); paint(); };
-      bar.append(t);
-    }
-    const mk = (label, aria, fn) => { const b = el(`<button class="tool" aria-label="${aria}" style="font-size:15px;font-weight:800">${label}</button>`); b.onclick = fn; bar.append(b); };
-    mk('↶', 'Undo', () => { session.undo(); paint(); });
-    mk('↷', 'Redo', () => { session.redo(); paint(); });
-    mk('🧹', 'Clear page', () => { session.clear(); paint(); });
-    mk('💾', 'Save to gallery', save);
+  function refresh() {
+    stage.querySelectorAll('.tool[data-brush]').forEach((b) => b.classList.toggle('active', b.dataset.brush === brush));
+    const w = bar.querySelector('[data-wand]'); if (w) w.classList.toggle('active', drawer.classList.contains('open'));
+    rail.querySelectorAll('.draw-chip').forEach((c) => c.classList.toggle('sel', c.dataset.colour === colour));
+    sizePod.querySelectorAll('.draw-sdot').forEach((d) => d.classList.toggle('sel', d.dataset.size === size));
   }
+  const mkCorner = (host, label, aria, fn) => { const b = el(`<button class="draw-cbtn" aria-label="${aria}" title="${aria}">${label}</button>`); b.onclick = fn; host.append(b); };
+  mkCorner(cornerTL, '↶', 'Undo', () => { session.undo(); paint(); });
+  mkCorner(cornerTL, '↷', 'Redo', () => { session.redo(); paint(); });
+  mkCorner(cornerTR, '🗑️', 'Start over', () => { session.clear(); paint(); });
+  mkCorner(cornerTR, '💾', 'Save', save);
+  BASIC.forEach(([k, ic]) => { const b = el(`<button class="tool" data-brush="${k}" aria-label="${k}">${ic}</button>`); b.onclick = () => { brush = k; drawer.classList.remove('open'); refresh(); }; bar.append(b); });
+  const wand = el(`<button class="tool magic" data-wand aria-label="Magic brushes">🪄</button>`);
+  wand.onclick = () => { drawer.classList.toggle('open'); refresh(); };
+  bar.append(wand);
+  MAGIC.forEach(([k, ic]) => { const b = el(`<button class="tool magic" data-brush="${k}" aria-label="${k}">${ic}</button>`); b.onclick = () => { brush = k; refresh(); }; drawer.append(b); });
+  LH.PALETTES.standard.forEach((c) => { const b = el(`<button class="draw-chip" data-colour="${c}" style="background:${c}" aria-label="Colour ${c}"></button>`); if (c === '#FFFFFF') b.style.boxShadow = 'inset 0 0 0 1px #ddd, 0 3px 0 rgba(0,0,0,.1)'; b.onclick = () => { colour = c; if (brush === 'eraser') brush = 'crayon'; refresh(); }; rail.append(b); });
+  for (const s of ['large', 'medium', 'small']) { const box = 20 + widths[s]; const b = el(`<button class="draw-sdot" data-size="${s}" aria-label="${s} size" style="width:${box}px;height:${box}px"><i style="width:${widths[s]}px;height:${widths[s]}px"></i></button>`); b.onclick = () => { size = s; refresh(); }; sizePod.append(b); }
+  if (hasSketch) { const t = el(`<button class="draw-cbtn" aria-label="Stay inside the lines" title="Stay inside the lines">🎯</button>`); t.style.background = insideLines ? '#C8E6C9' : '#fff'; t.onclick = () => { insideLines = !insideLines; t.style.background = insideLines ? '#C8E6C9' : '#fff'; paint(); }; cornerTL.append(t); }
+  refresh();
 
   function strokeStyle(stroke, i) {
     if (stroke.brush.kind === 'eraser') return '#FFFFFF';
@@ -1886,16 +1907,29 @@ function renderDrawing(activity) {
   function drawStroke(stroke, i, tctx) {
     const g = tctx || ctx;
     const pts = stroke.points;
+    const kind = stroke.brush.kind;
+    // Stamp brushes drop an emoji along the path instead of an ink line.
+    if (kind === 'stampStar' || kind === 'stampHeart') {
+      const glyph = kind === 'stampHeart' ? '💖' : '⭐';
+      const sz = widths[stroke.brush.size] * 3.4 + 12;
+      g.font = `${sz}px serif`; g.textAlign = 'center'; g.textBaseline = 'middle';
+      let last = null;
+      for (const p of pts) { if (!last || Math.hypot(p.x - last.x, p.y - last.y) > sz * 0.72) { g.fillText(glyph, p.x, p.y); last = p; } }
+      if (!last && pts[0]) g.fillText(glyph, pts[0].x, pts[0].y);
+      return;
+    }
     if (pts.length < 2) return;
     g.beginPath();
     pts.forEach((p, j) => (j ? g.lineTo(p.x, p.y) : g.moveTo(p.x, p.y)));
     g.lineCap = g.lineJoin = 'round';
     g.strokeStyle = strokeStyle(stroke, i);
-    g.globalAlpha = stroke.brush.kind === 'pencil' ? 0.75 : 1;
-    g.lineWidth = widths[stroke.brush.size] * (stroke.brush.kind === 'marker' ? 1.6 : 1) * (live && stroke.points === live ? penPressure : 1);
+    g.globalAlpha = kind === 'pencil' ? 0.75 : 1;
+    g.lineWidth = widths[stroke.brush.size] * (kind === 'marker' ? 1.6 : 1) * (live && stroke.points === live ? penPressure : 1);
+    if (kind === 'glow') { g.shadowBlur = 16; g.shadowColor = stroke.brush.colour; }
     g.stroke();
+    g.shadowBlur = 0;
     g.globalAlpha = 1;
-    if (stroke.brush.kind === 'glitter') {
+    if (kind === 'glitter') {
       g.fillStyle = '#FFF59D';
       for (let j = 0; j < pts.length; j += 3) {
         g.beginPath();
@@ -1965,7 +1999,6 @@ function renderDrawing(activity) {
     persistSoon();
   }
 
-  rebuildToolbar();
   requestAnimationFrame(fit);
   new ResizeObserver(fit).observe(stage);
 }
