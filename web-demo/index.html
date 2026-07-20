@@ -110,6 +110,9 @@
   .big-tile {
     border: none; border-radius: 24px; cursor: pointer;
     min-height: var(--target, 96px);
+    /* min-width:0 lets a grid cell shrink below its content on narrow screens
+       so tiles never clip past the edge; text wraps instead. */
+    min-width: 0;
     display: flex; flex-direction: column; align-items: center; justify-content: center;
     gap: 4px; padding: 12px 6px;
     font-family: inherit;
@@ -129,6 +132,12 @@
   .tile-photo { display: grid; place-items: center; flex-shrink: 0; }
   .tile-photo .lg-img, .tile-photo img { width: clamp(74px, 12vw, 112px) !important; height: clamp(74px, 12vw, 112px) !important; border-radius: 0 !important; }
   .home-grid .big-tile.has-photo { box-shadow: none; }
+  /* Very small phones (≤340px): shrink the tile photo so two tiles still fit. */
+  @media (max-width: 340px) {
+    .tile-photo .lg-img, .tile-photo img { width: 58px !important; height: 58px !important; }
+    #app[data-app-theme="candy"] .home-grid .big-tile,
+    #app[data-app-theme="storybook"] .home-grid .big-tile { gap: 8px; padding: 10px 10px; }
+  }
   .rewards-banner.has-photo .tile-photo .lg-img, .rewards-banner.has-photo .tile-photo img { width: clamp(60px, 8vw, 88px) !important; height: clamp(60px, 8vw, 88px) !important; }
   /* Littlest band (2-3): fewer doors, so give each tile more room + bigger label. */
   .home-grid.age-littlest .big-tile { min-height: clamp(112px, 15vw, 140px); }
@@ -168,7 +177,7 @@
     font-size: clamp(24px, 3.6vw, 36px);
   }
   .big-tile .sublabel { font-size: clamp(10px, 1.4vw, 13px); color: var(--tile-ink, #fff); opacity: 0.75; font-weight: 600; }
-  .big-tile .tile-text { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+  .big-tile .tile-text { display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 0; }
   /* Candy Clouds (approved design): bubbly cloud tiles, icon left + text right */
   #app[data-app-theme="candy"] .big-tile:nth-child(odd) { border-radius: 40px 30px 44px 28px / 34px 40px 30px 44px; }
   #app[data-app-theme="candy"] .big-tile:nth-child(even) { border-radius: 30px 44px 28px 40px / 40px 30px 44px 34px; }
@@ -280,7 +289,8 @@
   canvas.stage { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; }
 
   .toolbar {
-    display: flex; gap: 6px; overflow-x: auto; padding: 6px 14px 12px; align-items: center;
+    display: flex; flex-wrap: wrap; justify-content: center; gap: 6px;
+    padding: 6px 14px 12px; align-items: center;
   }
   .tool {
     background: #FFFFFF; border: none; border-radius: 14px;
