@@ -93,6 +93,7 @@ export function TracingPlayer(props: {
   const [strokeIndex, setStrokeIndex] = useState(0);
   const session = useRef(new TracingSession(props.activity.paths[0]!, config));
   const scores = useRef<number[]>([]);
+  const lastRaw = useRef<{ x: number; y: number } | null>(null);
 
   const [size, setSize] = useState({ w: 1, h: 1 });
   const [childPoints, setChildPoints] = useState<{ x: number; y: number; onPath: boolean }[]>([]);
@@ -135,7 +136,7 @@ export function TracingPlayer(props: {
   }, [childPoints]);
   // The traced "ink" is a slim line within the (thick) corridor — thinner than
   // the traceable band so it reads like a pen, not a fill.
-  const fillWidth = Math.max(5, config.corridorWidth * 0.75 * scale);
+  const fillWidth = Math.max(4, config.corridorWidth * 0.45 * scale);
   const tip = childPoints.length ? childPoints[childPoints.length - 1]! : null;
   // Direction arrows on the current stroke only (the highlighted step).
   const currentStroke = props.activity.paths[Math.min(strokeIndex, props.activity.paths.length - 1)]!;
@@ -159,11 +160,29 @@ export function TracingPlayer(props: {
       PanResponder.create({
         onStartShouldSetPanResponder: () => !done,
         onMoveShouldSetPanResponder: () => !done,
+        onPanResponderGrant: () => { lastRaw.current = null; },
         onPanResponderMove: (e) => {
           const { locationX, locationY } = e.nativeEvent;
-          const result = session.current.addPoint(toDesign(locationX, locationY));
-          setChildPoints((prev) => [...prev.slice(-400), { x: locationX, y: locationY, onPath: result.onPath }]);
-          if (result.completed && !done) {
+          // Interpolate between move events so a fast drag leaves a smooth,
+          // unbroken trail (and the corridor engine gets dense samples).
+          const added: { x: number; y: number; onPath: boolean }[] = [];
+          let reachedEnd = false;
+          const add = (px: number, py: number) => {
+            const res = session.current.addPoint(toDesign(px, py));
+            if (res.completed) reachedEnd = true;
+            added.push({ x: px, y: py, onPath: res.onPath });
+          };
+          const prev = lastRaw.current;
+          if (prev) {
+            const dx = locationX - prev.x, dy = locationY - prev.y, dist = Math.hypot(dx, dy);
+            const steps = Math.min(32, Math.max(1, Math.round(dist / 5)));
+            for (let s = 1; s <= steps; s++) add(prev.x + (dx * s) / steps, prev.y + (dy * s) / steps);
+          } else {
+            add(locationX, locationY);
+          }
+          lastRaw.current = { x: locationX, y: locationY };
+          setChildPoints((p) => [...p.slice(-700), ...added]);
+          if (reachedEnd && !done) {
             const summary = session.current.endAttempt();
             scores.current.push(summary.accuracyScore);
             const nextIndex = strokeIndex + 1;
@@ -172,6 +191,7 @@ export function TracingPlayer(props: {
               session.current = new TracingSession(props.activity.paths[nextIndex]!, config);
               setStrokeIndex(nextIndex);
               setChildPoints([]);
+              lastRaw.current = null;
               setEncouragement(pickFeedback('completed') + ' Now the next one!');
             } else {
               setDone(true);
@@ -183,6 +203,7 @@ export function TracingPlayer(props: {
           }
         },
         onPanResponderRelease: () => {
+          lastRaw.current = null;
           if (done) return;
           const summary = session.current.endAttempt();
           if (!summary.completed) {

@@ -1263,7 +1263,7 @@ function renderTracing(firstActivity) {
   function drawFill() {
     // The "ink" the finger leaves is a slim line within the (thick) corridor —
     // thinner than the traceable band so it reads like a pen, not a fill.
-    const w = Math.max(5, config.corridorWidth * 0.75 * scale);
+    const w = Math.max(4, config.corridorWidth * 0.45 * scale);
     ctx.lineWidth = w;
     ctx.lineCap = ctx.lineJoin = 'round';
     ctx.globalAlpha = 0.95;
@@ -1382,12 +1382,12 @@ function renderTracing(firstActivity) {
 
   // Stylus + palm rejection: follow exactly one pointer (pen or finger);
   // extra touches (a resting palm) are ignored while it is down.
-  let activePointer = null;
+  let activePointer = null, lastRaw = null;
   canvas.addEventListener('pointerdown', (e) => {
     if (done || activePointer !== null) return;
     activePointer = e.pointerId;
     canvas.setPointerCapture(e.pointerId);
-    tracing = true; feed(e);
+    tracing = true; lastRaw = null; feed(e);
   });
   canvas.addEventListener('pointermove', (e) => { if (tracing && !done && e.pointerId === activePointer) feed(e); });
   window.addEventListener('pointerup', (e) => { if (e.pointerId === activePointer) { activePointer = null; lift(); } });
@@ -1395,12 +1395,25 @@ function renderTracing(firstActivity) {
   function feed(e) {
     const r = canvas.getBoundingClientRect();
     const x = e.clientX - r.left, y = e.clientY - r.top;
-    const result = session.addPoint({ x: (x - ox) / scale, y: (y - oy) / scale });
-    if (result.onPath) lastPos = result.pathPosition;
-    dots.push({ x, y, on: result.onPath });
-    if (dots.length > 500) dots.shift();
+    let result;
+    const add = (px, py) => {
+      result = session.addPoint({ x: (px - ox) / scale, y: (py - oy) / scale });
+      if (result.onPath) lastPos = result.pathPosition;
+      dots.push({ x: px, y: py, on: result.onPath });
+      if (dots.length > 800) dots.shift();
+    };
+    // Interpolate between pointer events so a fast drag leaves a smooth,
+    // unbroken trail (and the corridor engine gets dense samples).
+    if (lastRaw) {
+      const dx = x - lastRaw.x, dy = y - lastRaw.y, dist = Math.hypot(dx, dy);
+      const steps = Math.min(32, Math.max(1, Math.round(dist / 5)));
+      for (let s = 1; s <= steps; s++) add(lastRaw.x + (dx * s) / steps, lastRaw.y + (dy * s) / steps);
+    } else {
+      add(x, y);
+    }
+    lastRaw = { x, y };
     draw();
-    if (result.completed) {
+    if (result && result.completed) {
       tracing = false;
       strokeDone(session.endAttempt());
     }
