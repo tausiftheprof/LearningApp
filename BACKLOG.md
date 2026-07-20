@@ -15,7 +15,8 @@ Status key: `[ ]` open · `[~]` in progress · `[x]` done (move to the bottom or
   Spec (mockup: artifact a7c3865a-883b-4539-b7ca-50031849b293):
   - **White paper canvas** — drawing sheet is white (matches the real play-stage); the eraser
     rubs back to white, no background bleed-through.
-  - **Colours on a right-side rail** (big round dots, scrollable). Selected dot gets a ring.
+  - **Colours on a right-side rail** (big round dots, scrollable). Selected dot gets a **white**
+    ring (with a soft drop shadow for definition) — not the pink ring.
   - **Slim bottom bar, 4 items only:** 🖍️ crayon · 🖌️ paint · eraser · 🪄 **magic** (wand).
   - **🪄 wand opens a "magic drawer"** popover above the bar with the playful brushes:
     🌈 rainbow · ✨ glitter · 🔆 glow · ⭐/💖 **stamps**. (Wand icon is distinct from the ✨
