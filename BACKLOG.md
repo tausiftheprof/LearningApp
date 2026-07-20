@@ -33,6 +33,24 @@ Status key: `[ ]` open · `[~]` in progress · `[x]` done (move to the bottom or
     these design-reference PNGs need processing into the flood-fill/by-numbers pipeline — they're
     not yet in `assets/images/`; confirm the numbered-region + palette-key format expected.)
 
+### New little games (owner picked — build into app; art must be cute & funny for ages 2-5)
+
+- [ ] **Feed the Animal** — drag food to a hungry animal's mouth; it chomps on a hit. Drag
+  precision (reuses puzzle/match drag engine). Ages 2-3.
+- [ ] **Pop the Bubbles** — bubbles drift up, tap to pop with a satisfying sound. Tap accuracy.
+  Small new engine. Ages 2-3.
+- [ ] **Cutting Practice** — drag "scissors" along a dotted line. Reuses the tracing corridor
+  engine, new metaphor. Real-world scissor skill.
+- [ ] **Build a Face** — drag eyes/nose/mouth onto a blank head. Creative, no wrong answer.
+  Reuses drag engine.
+- [ ] **Sorting Bins** — drag items into the right bin by colour/shape. Drag + categorisation.
+  Reuses drag engine.
+- [ ] **Count & Tap** (#14) — "how many ducks? tap that number." Reuses counting template.
+- [ ] **Number Path Hop** (#15) — tap stepping stones 1→2→3 in order. Reuses counting template.
+  - **Art direction:** all seven need cute/funny sprites for ages 2-5. Decision pending (emoji-
+    style sprites that ship now vs. owner-supplied illustrations). Build order: prove the pattern
+    with a 1-2 game vertical slice, get sign-off, then batch the rest across core + demo + mobile.
+
 ## Done
 
 <!-- move completed items here (or delete) so Open stays the live list -->
