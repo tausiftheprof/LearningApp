@@ -27,9 +27,11 @@ Status key: `[ ]` open · `[~]` in progress · `[x]` done (move to the bottom or
 
 - [ ] **Split Colour into two sections:** **"Colour by Numbers"** (guided — match number to
   colour) and **"Colour Your Way"** (free-form flood-fill). Names chosen by owner.
-  - **Artwork split:** owner has added new images on GitHub for **Colour by Numbers** — use
-    those for that section. Everything else already in the Colour section goes to **Colour Your
-    Way**. (When building: confirm exactly which new files/paths are the by-numbers set.)
+  - **Artwork split:** the **Colour by Numbers** set is the 4 files the owner uploaded to
+    `design-reference/colouring-pages/` — Bunny, Car, Flower, Puppy (all `Color by number - … -2to4Age.png`).
+    Everything else already in the Colour section goes to **Colour Your Way**. (When building:
+    these design-reference PNGs need processing into the flood-fill/by-numbers pipeline — they're
+    not yet in `assets/images/`; confirm the numbered-region + palette-key format expected.)
 
 ## Done
 
