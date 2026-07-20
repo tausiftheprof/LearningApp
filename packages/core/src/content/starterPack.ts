@@ -184,30 +184,66 @@ function ellipse(cx: number, cy: number, rx: number, ry: number, steps = 28): Po
 // Colour by Numbers (owner art, July 2026): black-outline pages with the number
 // key printed in the artwork itself, flood-filled by the same line-art engine.
 // These form the "Colour by Numbers" section; the scenes below are "Colour Your Way".
+// Each page carries a sequenced byNumberPlan (owner direction): the child is
+// locked to colour 1 until every region marked 1 is filled, then 1 retires and
+// 2 activates, etc. Targets are one point per numbered region (fractions of the
+// square artwork), used to check that a tapped region really carries the number.
 const colouringActivities: Activity[] = [
   {
     type: 'colouring', id: 'colour-cbn-bunny', title: 'Bunny by Numbers', category: 'colouring',
     ageBands: ['2-3', '3-5'], difficulty: 1, motorSkills: ['tapping', 'precision-placement'],
     estimatedMinutes: 4, theme: 'animals', locale: 'en-AU', instructionAudio: audio('colour-by-number'),
     mode: 'line-art', image: 'images/scene-cbn-bunny.png', regions: [],
+    byNumberPlan: [
+      { number: 1, colour: '#F8BBD0', targets: [{ x: 0.50, y: 0.32 }, { x: 0.17, y: 0.50 }, { x: 0.845, y: 0.50 }] },
+      { number: 2, colour: '#BCAAA4', targets: [{ x: 0.365, y: 0.185 }, { x: 0.635, y: 0.185 }, { x: 0.50, y: 0.625 }] },
+      { number: 3, colour: '#A5D6A7', targets: [{ x: 0.36, y: 0.715 }, { x: 0.65, y: 0.715 }, { x: 0.50, y: 0.845 }] },
+    ],
   },
   {
     type: 'colouring', id: 'colour-cbn-car', title: 'Car by Numbers', category: 'colouring',
     ageBands: ['2-3', '3-5'], difficulty: 1, motorSkills: ['tapping', 'precision-placement'],
     estimatedMinutes: 4, theme: 'everyday', locale: 'en-AU', instructionAudio: audio('colour-by-number'),
     mode: 'line-art', image: 'images/scene-cbn-car.png', regions: [],
+    byNumberPlan: [
+      { number: 1, colour: '#EF9A9A', targets: [{ x: 0.49, y: 0.52 }, { x: 0.49, y: 0.86 }] },
+      { number: 2, colour: '#B3E5FC', targets: [{ x: 0.40, y: 0.36 }, { x: 0.59, y: 0.36 }] },
+      { number: 3, colour: '#FFCC80', targets: [
+        { x: 0.15, y: 0.19 }, { x: 0.845, y: 0.20 }, { x: 0.15, y: 0.55 }, { x: 0.845, y: 0.55 },
+        { x: 0.305, y: 0.605 }, { x: 0.305, y: 0.685 }, { x: 0.69, y: 0.605 }, { x: 0.69, y: 0.685 },
+      ] },
+    ],
   },
   {
     type: 'colouring', id: 'colour-cbn-flower', title: 'Flower by Numbers', category: 'colouring',
     ageBands: ['2-3', '3-5'], difficulty: 1, motorSkills: ['tapping', 'precision-placement'],
     estimatedMinutes: 4, theme: 'nature', locale: 'en-AU', instructionAudio: audio('colour-by-number'),
     mode: 'line-art', image: 'images/scene-cbn-flower.png', regions: [],
+    byNumberPlan: [
+      { number: 1, colour: '#FFE082', targets: [{ x: 0.49, y: 0.44 }, { x: 0.855, y: 0.195 }, { x: 0.16, y: 0.65 }, { x: 0.83, y: 0.66 }] },
+      { number: 2, colour: '#F48FB1', targets: [
+        { x: 0.49, y: 0.14 }, { x: 0.29, y: 0.29 }, { x: 0.69, y: 0.29 }, { x: 0.36, y: 0.515 }, { x: 0.61, y: 0.515 },
+        { x: 0.16, y: 0.57 }, { x: 0.08, y: 0.635 }, { x: 0.24, y: 0.635 }, { x: 0.11, y: 0.715 }, { x: 0.21, y: 0.715 },
+        { x: 0.83, y: 0.58 }, { x: 0.75, y: 0.645 }, { x: 0.91, y: 0.645 }, { x: 0.775, y: 0.72 }, { x: 0.885, y: 0.72 },
+      ] },
+      { number: 3, colour: '#A5D6A7', targets: [
+        { x: 0.385, y: 0.715 }, { x: 0.58, y: 0.72 }, { x: 0.10, y: 0.805 }, { x: 0.22, y: 0.805 },
+        { x: 0.765, y: 0.825 }, { x: 0.88, y: 0.825 }, { x: 0.485, y: 0.885 },
+      ] },
+    ],
   },
   {
     type: 'colouring', id: 'colour-cbn-puppy', title: 'Puppy by Numbers', category: 'colouring',
     ageBands: ['2-3', '3-5'], difficulty: 1, motorSkills: ['tapping', 'precision-placement'],
     estimatedMinutes: 4, theme: 'animals', locale: 'en-AU', instructionAudio: audio('colour-by-number'),
     mode: 'line-art', image: 'images/scene-cbn-puppy.png', regions: [],
+    byNumberPlan: [
+      { number: 1, colour: '#D9B38C', targets: [{ x: 0.50, y: 0.20 }, { x: 0.285, y: 0.265 }, { x: 0.715, y: 0.265 }, { x: 0.50, y: 0.57 }] },
+      { number: 2, colour: '#FFE082', targets: [{ x: 0.165, y: 0.49 }, { x: 0.83, y: 0.49 }] },
+      { number: 3, colour: '#A5D6A7', targets: [
+        { x: 0.105, y: 0.665 }, { x: 0.23, y: 0.655 }, { x: 0.765, y: 0.66 }, { x: 0.885, y: 0.66 }, { x: 0.50, y: 0.845 },
+      ] },
+    ],
   },
 ];
 

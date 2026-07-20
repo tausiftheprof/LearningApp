@@ -56,8 +56,10 @@ const THINK_SOLVE: HomeTile = { label: 'Think & Solve', idx: 6, target: { catego
 export function homeTilesForAge(ageBand: AgeBand): HomeTile[] {
   switch (ageBand) {
     case '2-3':
-      // Fewest, largest tiles: no reading-heavy or advanced doors.
-      return [DAILY, DRAW, COLOUR, PUZZLES, LITTLE_GAMES];
+      // Fewest, largest tiles. Tracing appears for the littlest too (owner
+      // direction, July 2026) but renderers route it straight to the Shapes
+      // section - letters/numbers stay a 3-5+ experience.
+      return [DAILY, DRAW, COLOUR, TRACING, PUZZLES, LITTLE_GAMES];
     case '3-5':
       return [DAILY, DRAW, COLOUR, TRACING, PUZZLES, LITTLE_GAMES];
     case '5-7':

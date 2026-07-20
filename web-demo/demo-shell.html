@@ -1066,7 +1066,12 @@ function renderPicker(category) {
   setStatus('Activity Picker — ' + category, ['recommendation.recommendActivities']);
   // Tracing splits into three sections (owner direction): Letters, Numbers,
   // Shapes. The 'tracing' door shows the chooser; each section lists its own.
-  if (category === 'tracing') { renderTracingSections(); return; }
+  if (category === 'tracing') {
+    // Littlest band (2-3) skips the chooser and goes straight to Shapes -
+    // letters/numbers stay a 3-5+ experience (owner direction, July 2026).
+    if ((state.profile?.ageBand ?? '3-5') === '2-3') category = 'tracing-shapes';
+    else { renderTracingSections(); return; }
+  }
   // Draw splits into three sections too: Blank Canvas, Guided Drawing, Dot
   // to Dot (owner direction, July 2026).
   if (category === 'drawing') { renderDrawSections(); return; }
@@ -1109,7 +1114,7 @@ function renderPicker(category) {
   const th = theme();
   const top = el(`<div class="topbar"></div>`);
   top.append(holdToHomeButton(() => navigate({ name: 'home' })));
-  if (/^tracing-/.test(category)) {
+  if (/^tracing-/.test(category) && (state.profile?.ageBand ?? '3-5') !== '2-3') {
     const back = el(`<button class="icon-btn" aria-label="Back">←</button>`);
     back.onclick = () => navigate({ name: 'picker', category: 'tracing' });
     top.append(back);
@@ -1129,6 +1134,15 @@ function renderPicker(category) {
   // Category order matches home tiles, so each category reuses its illustration.
   const catIndex = { drawing: 0, colouring: 1, puzzles: 2, tracing: 3, toddler: 4, preschool: 5, logic: 6 };
   const emojiFor = { drawing: '🖍️', colouring: '🎨', puzzles: '🧩', tracing: '✏️', toddler: '🐣', preschool: '🦘', logic: '💡' };
+  // Per-game icons (owner direction, July 2026): every game tile shows its own
+  // picture/emoji instead of the shared category chick - real art where we have
+  // it, a fitting emoji otherwise.
+  const GAME_EMOJI = {
+    'pop-bubbles': '🫧', 'tap-target': '🐶', 'drag-sort': '🧺', 'match-pairs': '🃏',
+    'memory-cards': '🃏', counting: '🔢', 'odd-one-out': '🔎', 'letter-match': '🔤',
+    sequence: '➡️', 'stack-blocks': '🧱', 'shadow-match': '👥', 'reveal-wipe': '✨',
+    'pattern-complete': '🔷', 'dot-to-dot': '🔢', 'feed-animal': '🍓', 'cut-along': '✂️', 'number-hop': '🐸',
+  };
   ranked.forEach((a, i) => {
     // Prefer the activity's own picture (jigsaw image, sketch to draw over);
     // otherwise use the category illustration from the theme.
@@ -1138,8 +1152,13 @@ function renderPicker(category) {
     else if (a.type === 'colouring' && a.mode === 'line-art') imgName = imageNameFromRef(a.image);
     else if (a.type === 'colouring') imgName = (/^colour-([a-z]+)/.exec(a.id) || [])[1] || null;
     else if (category === 'draw-dotdot') imgName = imageNameFromRef(a.params?.image || '');
+    else if (a.type === 'game' && a.template === 'feed-animal') imgName = imageNameFromRef(a.params?.open || '');
+    else if (a.type === 'game' && a.template === 'cut-along') imgName = 'cut-scissors-open';
+    else if (a.type === 'game' && a.template === 'number-hop') imgName = 'hop-stone';
     const hasPicture = (n) => Boolean(n && (IMAGES[n] || RASTER_IMAGES[n]));
-    if (!hasPicture(imgName)) imgName = th.tileImages?.[catIndex[a.category] ?? 0] ?? null;
+    // Games without their own art fall back to a per-game emoji, never the
+    // shared category illustration/chick.
+    if (!hasPicture(imgName)) imgName = a.type === 'game' ? null : th.tileImages?.[catIndex[a.category] ?? 0] ?? null;
     // Letter/number tracing tiles show just the big glyph pair, no icon or
     // "Letter" prefix (owner direction): "A a", "B b", ... "9".
     const letterM = /^trace-letter-(.)$/.exec(a.id);
@@ -1153,7 +1172,7 @@ function renderPicker(category) {
         ? `<span class="tile-illo" aria-hidden="true">${shapeIconSvg(a, 52)}</span><span class="label picker-label">${a.title}</span>`
       : (hasPicture(imgName) && !highContrast()
         ? `<span class="tile-illo" aria-hidden="true">${imgHtml(imgName, 52)}</span>`
-        : `<span class="emoji">${emojiFor[a.category]}</span>`) + `<span class="label picker-label">${a.title}</span>`;
+        : `<span class="emoji">${(a.type === 'game' && GAME_EMOJI[a.template]) || emojiFor[a.category]}</span>`) + `<span class="label picker-label">${a.title}</span>`;
     const tile = el(`<button class="big-tile" aria-label="${a.title}" style="background:${tiles()[i % tiles().length]}">${inner}</button>`);
     tile.onclick = () => { speak(a.title); if (guardScreenTime()) navigate({ name: 'activity', activity: a, from: 'picker', pickerCategory: category }); };
     grid.append(tile);
@@ -1485,17 +1504,29 @@ function renderTracing(firstActivity) {
     }
   }
 
-  // Stylus + palm rejection: follow exactly one pointer (pen or finger);
-  // extra touches (a resting palm) are ignored while it is down.
-  let activePointer = null, lastRaw = null;
+  // Stylus + palm rejection: follow exactly one pointer, but PEN-FIRST — a pen
+  // always takes over from a resting palm/finger (a palm landing first must
+  // never block or break the stylus line).
+  let activePointer = null, activePointerType = '', lastRaw = null;
   canvas.addEventListener('pointerdown', (e) => {
-    if (done || activePointer !== null) return;
-    activePointer = e.pointerId;
+    if (done) return;
+    if (activePointer !== null) {
+      if (e.pointerType === 'pen' && activePointerType !== 'pen') { activePointer = null; lift(); }
+      else return;
+    }
+    activePointer = e.pointerId; activePointerType = e.pointerType;
     canvas.setPointerCapture(e.pointerId);
     tracing = true; lastRaw = null; feed(e);
   });
-  canvas.addEventListener('pointermove', (e) => { if (tracing && !done && e.pointerId === activePointer) feed(e); });
+  canvas.addEventListener('pointermove', (e) => {
+    if (!tracing || done || e.pointerId !== activePointer) return;
+    // High-frequency stylus samples arrive coalesced; feed every one so pen
+    // strokes stay continuous instead of breaking between frames.
+    const evs = e.getCoalescedEvents ? e.getCoalescedEvents() : null;
+    if (evs && evs.length) { for (const ev of evs) feed(ev); } else feed(e);
+  });
   window.addEventListener('pointerup', (e) => { if (e.pointerId === activePointer) { activePointer = null; lift(); } });
+  window.addEventListener('pointercancel', (e) => { if (e.pointerId === activePointer) { activePointer = null; lift(); } });
 
   function feed(e) {
     const r = canvas.getBoundingClientRect();
@@ -1772,9 +1803,21 @@ function renderGuidedDrawing(activity) {
     speak(note.textContent);
   }
 
+  let activePointerType = '';
+  const commitInk = () => {
+    if (live && live.length > 1) {
+      drawingSession.apply({ kind: 'stroke', stroke: { brush: { kind: brush, colour, size }, points: live } });
+    }
+    live = null; penPressure = 1; paint();
+  };
   canvas.addEventListener('pointerdown', (e) => {
-    if (activePointer !== null) return; // palm rejection
-    activePointer = e.pointerId;
+    // Pen-first palm rejection: a pen takes over from a resting palm/finger
+    // (committing any in-flight ink) instead of being blocked by it.
+    if (activePointer !== null) {
+      if (e.pointerType === 'pen' && activePointerType !== 'pen') { tracing = false; commitInk(); activePointer = null; }
+      else return;
+    }
+    activePointer = e.pointerId; activePointerType = e.pointerType;
     canvas.setPointerCapture(e.pointerId);
     penPressure = e.pointerType === 'pen' && e.pressure > 0 ? e.pressure : 1;
     tracing = true;
@@ -1786,21 +1829,26 @@ function renderGuidedDrawing(activity) {
   canvas.addEventListener('pointermove', (e) => {
     if (!tracing || e.pointerId !== activePointer) return;
     if (e.pointerType === 'pen' && e.pressure > 0) penPressure = 0.5 + e.pressure;
-    const p = pt(e);
-    live.push(p);
-    if (!done) {
-      const result = session.addPoint({ x: (p.x - ox) / scale, y: (p.y - oy) / scale });
-      if (result.completed) {
-        tracing = false;
-        drawingSession.apply({ kind: 'stroke', stroke: { brush: { kind: brush, colour, size }, points: live } });
-        live = null;
-        guideDone(session.endAttempt());
-        return;
+    // Stylus events arrive coalesced at high frequency - use every sample so
+    // pen lines stay continuous.
+    const evs = e.getCoalescedEvents ? e.getCoalescedEvents() : null;
+    for (const ev of (evs && evs.length ? evs : [e])) {
+      const p = pt(ev);
+      live.push(p);
+      if (!done) {
+        const result = session.addPoint({ x: (p.x - ox) / scale, y: (p.y - oy) / scale });
+        if (result.completed) {
+          tracing = false;
+          drawingSession.apply({ kind: 'stroke', stroke: { brush: { kind: brush, colour, size }, points: live } });
+          live = null;
+          guideDone(session.endAttempt());
+          return;
+        }
       }
     }
     paint();
   });
-  window.addEventListener('pointerup', (e) => {
+  const endStroke = (e) => {
     if (e.pointerId !== activePointer) return;
     activePointer = null;
     if (!tracing) return;
@@ -1809,11 +1857,10 @@ function renderGuidedDrawing(activity) {
     // is a drawing tool with a helper, not a pass/fail trace. The guide's
     // own coverage is deliberately NOT reset here (see file doc comment):
     // a few short dabs across several pen-lifts still add up to "done".
-    if (live && live.length > 1) {
-      drawingSession.apply({ kind: 'stroke', stroke: { brush: { kind: brush, colour, size }, points: live } });
-    }
-    live = null; penPressure = 1; paint();
-  });
+    commitInk();
+  };
+  window.addEventListener('pointerup', endStroke);
+  window.addEventListener('pointercancel', endStroke);
   function pt(e) { const r = canvas.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; }
 
   async function save() {
@@ -1969,10 +2016,19 @@ function renderDrawing(activity) {
     ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
     paint();
   }
-  let drawPointer = null, penPressure = 1;
+  let drawPointer = null, drawPointerType = '', penPressure = 1;
+  const commitStroke = () => {
+    if (live && live.length > 1) session.apply({ kind: 'stroke', stroke: { brush: { kind: brush, colour, size }, points: live } });
+    live = null; penPressure = 1; paint();
+  };
   canvas.addEventListener('pointerdown', (e) => {
-    if (drawPointer !== null) return; // palm rejection while pen/finger is down
-    drawPointer = e.pointerId;
+    // Pen-first palm rejection: a resting palm/finger never blocks the stylus
+    // - the pen takes over (committing any in-flight stroke first).
+    if (drawPointer !== null) {
+      if (e.pointerType === 'pen' && drawPointerType !== 'pen') { commitStroke(); drawPointer = null; }
+      else return;
+    }
+    drawPointer = e.pointerId; drawPointerType = e.pointerType;
     canvas.setPointerCapture(e.pointerId);
     penPressure = e.pointerType === 'pen' && e.pressure > 0 ? e.pressure : 1;
     live = [pt(e)]; paint();
@@ -1980,15 +2036,19 @@ function renderDrawing(activity) {
   canvas.addEventListener('pointermove', (e) => {
     if (live && e.pointerId === drawPointer) {
       if (e.pointerType === 'pen' && e.pressure > 0) penPressure = 0.5 + e.pressure; // stylus pressure shapes the line
-      live.push(pt(e)); paint();
+      // Coalesced samples keep fast pen strokes continuous.
+      const evs = e.getCoalescedEvents ? e.getCoalescedEvents() : null;
+      for (const ev of (evs && evs.length ? evs : [e])) live.push(pt(ev));
+      paint();
     }
   });
-  window.addEventListener('pointerup', (e) => {
+  const endDraw = (e) => {
     if (e.pointerId !== drawPointer) return;
     drawPointer = null;
-    if (live && live.length > 1) session.apply({ kind: 'stroke', stroke: { brush: { kind: brush, colour, size }, points: live } });
-    live = null; penPressure = 1; paint();
-  });
+    commitStroke();
+  };
+  window.addEventListener('pointerup', endDraw);
+  window.addEventListener('pointercancel', endDraw);
   function pt(e) { const r = canvas.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; }
 
   async function save() {
@@ -2023,6 +2083,13 @@ function renderColouringLineArt(activity) {
   let menuOpen = true;
   let done = false;
   let ready = false;
+  // Sequenced Colour by Numbers (owner direction, July 2026): the palette is
+  // number-locked - only the current number's colour is pickable; filling every
+  // region marked with that number retires it and activates the next.
+  const cbnPlan = Array.isArray(activity.byNumberPlan) && activity.byNumberPlan.length ? activity.byNumberPlan : null;
+  let cbnStep = 0;
+  const cbnFilled = cbnPlan ? cbnPlan.map((s) => s.targets.map(() => false)) : null;
+  if (cbnPlan) swatch = { kind: 'solid', colour: cbnPlan[0].colour };
   const RAINBOW = ['#E53935', '#FB8C00', '#FDD835', '#43A047', '#1E88E5', '#5E35B1', '#8E24AA'];
 
   const stage = el(`<div class="play-stage"></div>`);
@@ -2044,6 +2111,23 @@ function renderColouringLineArt(activity) {
     : sw.colour;
 
   function renderPanel() {
+    if (cbnPlan) {
+      // Number-locked palette: one numbered dot per remaining number, top to
+      // bottom; only the current one is active, later ones wait greyed out.
+      fab.style.display = 'none';
+      panel.style.display = 'flex';
+      panel.innerHTML = '';
+      cbnPlan.forEach((step, i) => {
+        if (i < cbnStep) return; // retired numbers disappear
+        const active = i === cbnStep;
+        const b = el(`<button class="swatch ${active ? 'active' : ''}" aria-label="Colour number ${step.number}${active ? '' : ' (locked)'}"
+          style="background:${step.colour};${active ? '' : 'opacity:0.35;filter:grayscale(0.6);cursor:default'}">
+          <span class="num">${step.number}</span></button>`);
+        if (!active) b.onclick = () => speak(`Finish all the number ${cbnPlan[cbnStep].number}s first!`);
+        panel.append(b);
+      });
+      return;
+    }
     fab.style.display = menuOpen ? 'none' : 'grid';
     fab.style.background = swatchCss(swatch);
     fab.innerHTML = swatch.kind === 'glitter' ? '✨' : '';
@@ -2139,8 +2223,22 @@ function renderColouringLineArt(activity) {
    *  non-wall area into paintCv with the current swatch. */
   function floodFill(sx, sy) {
     if (!ready || sx < 0 || sy < 0 || sx >= RES || sy >= RES) return;
+    if (wallMask[sy * RES + sx]) {
+      // Tapped exactly on a line or a printed digit - children do this all the
+      // time, so hop to the nearest open pixel instead of ignoring the tap.
+      let found = null;
+      for (let r = 3; r <= 33 && !found; r += 3) {
+        for (let a = 0; a < 16 && !found; a++) {
+          const x = sx + Math.round(Math.cos((a * Math.PI) / 8) * r);
+          const y = sy + Math.round(Math.sin((a * Math.PI) / 8) * r);
+          if (x < 0 || y < 0 || x >= RES || y >= RES) continue;
+          if (!wallMask[y * RES + x]) found = { x, y };
+        }
+      }
+      if (!found) return;
+      sx = found.x; sy = found.y;
+    }
     const start = sy * RES + sx;
-    if (wallMask[start]) return; // tapped exactly on a line - ignore
     const visited = new Uint8Array(RES * RES);
     const qx = new Int32Array(RES * RES);
     const qy = new Int32Array(RES * RES);
@@ -2163,7 +2261,60 @@ function renderColouringLineArt(activity) {
         qx[tail] = nx; qy[tail] = ny; tail++;
       }
     }
+    // Number-locked mode: only accept the region if it carries the current
+    // number (a plan target point falls inside the flooded area). Targets sit
+    // on/near the printed digits - which are ink, never flooded - so the test
+    // samples a small neighbourhood around each target, not the exact pixel.
+    if (cbnPlan) {
+      const R = Math.round(RES * 0.045);
+      const nearTarget = (t) => {
+        const cx = Math.round(t.x * RES), cy = Math.round(t.y * RES);
+        for (let dy = -R; dy <= R; dy += 9) {
+          for (let dx = -R; dx <= R; dx += 9) {
+            const x = cx + dx, y = cy + dy;
+            if (x < 0 || y < 0 || x >= RES || y >= RES) continue;
+            if (visited[y * RES + x]) return true;
+          }
+        }
+        return false;
+      };
+      const hits = [];
+      cbnPlan.forEach((stepDef, si) => stepDef.targets.forEach((t, ti) => {
+        if (nearTarget(t)) hits.push([si, ti]);
+      }));
+      const currentHits = hits.filter(([si]) => si === cbnStep);
+      if (!currentHits.length) {
+        const other = hits.find(([si]) => si !== cbnStep);
+        speak(other
+          ? `That one is number ${cbnPlan[other[0]].number} — find the ${cbnPlan[cbnStep].number}s first!`
+          : `Find a space with a ${cbnPlan[cbnStep].number} in it!`);
+        return;
+      }
+      currentHits.forEach(([si, ti]) => { cbnFilled[si][ti] = true; });
+      paintRegion(pixels, minX, maxX, minY, maxY);
+      cbnAdvance();
+      return;
+    }
     paintRegion(pixels, minX, maxX, minY, maxY);
+  }
+
+  /** Advance the number-locked sequence once every region of the current
+   *  number is coloured; finishing the last number completes the page. */
+  function cbnAdvance() {
+    if (!cbnFilled[cbnStep].every(Boolean)) return;
+    cbnStep++;
+    if (cbnStep >= cbnPlan.length) {
+      done = true;
+      renderPanel();
+      speak('You coloured it all! ' + LH.pickFeedback('completed'));
+      playChime();
+      completeActivity(activity, {});
+      stage.append(completionBanner(onDone));
+    } else {
+      swatch = { kind: 'solid', colour: cbnPlan[cbnStep].colour };
+      speak(`Now number ${cbnPlan[cbnStep].number}!`);
+      renderPanel();
+    }
   }
 
   function paintRegion(pixels, minX, maxX, minY, maxY) {
@@ -2226,7 +2377,8 @@ function renderColouringLineArt(activity) {
   });
   canvas.addEventListener('pointermove', (e) => {
     if (!brushing || !ready || done) return;
-    strokeAt(toRes(e), false);
+    const evs = e.getCoalescedEvents ? e.getCoalescedEvents() : null;
+    for (const ev of (evs && evs.length ? evs : [e])) strokeAt(toRes(ev), false);
   });
   const endBrush = () => { brushing = false; };
   canvas.addEventListener('pointerup', endBrush);
@@ -2281,6 +2433,12 @@ function renderColouringLineArt(activity) {
     paintCtx.clearRect(0, 0, RES, RES);
     done = false;
     lastBrushPt = null;
+    if (cbnPlan) {
+      cbnStep = 0;
+      cbnFilled.forEach((flags) => flags.fill(false));
+      swatch = { kind: 'solid', colour: cbnPlan[0].colour };
+      renderPanel();
+    }
     stage.querySelectorAll('.banner').forEach((n) => n.remove());
     draw();
     speak("All clean! Let's colour!");
@@ -2715,12 +2873,22 @@ function itemHtml(name, size) {
   return (IMAGES[name] || RASTER_IMAGES[name]) ? imgHtml(name, size) : `<span style="font-size:${size * 0.8}px;line-height:${size}px">${EMOJI_FALLBACK[name] || '⭐'}</span>`;
 }
 
-/** Generic pointer-drag onto drop zones. zones: [{el, onDrop(itemEl)->accepted}] */
+/** Generic pointer-drag onto drop zones. zones: [{el, onDrop(itemEl)->accepted}]
+ *  Misses spring the item home smoothly (not an instant teleport), and a
+ *  cancelled pointer (system gesture, palm) returns it too so nothing strands. */
 function makeDraggable(stage, itemEl, getZones, onMiss) {
   let dragging = false;
   itemEl.style.touchAction = 'none';
   itemEl.style.cursor = 'grab';
-  itemEl.addEventListener('pointerdown', (e) => { dragging = true; itemEl.setPointerCapture(e.pointerId); itemEl.style.zIndex = 30; });
+  const springHome = () => {
+    itemEl.style.transition = 'left 0.28s cubic-bezier(0.3, 1.3, 0.5, 1), top 0.28s cubic-bezier(0.3, 1.3, 0.5, 1)';
+    itemEl.style.left = itemEl.dataset.homeX; itemEl.style.top = itemEl.dataset.homeY;
+    setTimeout(() => { itemEl.style.transition = ''; }, 320);
+  };
+  itemEl.addEventListener('pointerdown', (e) => {
+    dragging = true; itemEl.setPointerCapture(e.pointerId);
+    itemEl.style.transition = ''; itemEl.style.zIndex = 30;
+  });
   itemEl.addEventListener('pointermove', (e) => {
     if (!dragging) return;
     const r = stage.getBoundingClientRect();
@@ -2735,9 +2903,14 @@ function makeDraggable(stage, itemEl, getZones, onMiss) {
       return e.clientX >= zr.left && e.clientX <= zr.right && e.clientY >= zr.top && e.clientY <= zr.bottom;
     });
     if (!hit || !hit.onDrop(itemEl)) {
-      itemEl.style.left = itemEl.dataset.homeX; itemEl.style.top = itemEl.dataset.homeY;
+      springHome();
       if (onMiss) onMiss();
     }
+  });
+  itemEl.addEventListener('pointercancel', () => {
+    if (!dragging) return;
+    dragging = false; itemEl.style.zIndex = 1;
+    springHome();
   });
 }
 function placeItem(stage, name, size, x, y, label) {
@@ -2999,25 +3172,47 @@ function renderGame(activity) {
         return it;
       });
 
+      let biteTimer = null;
       function bite() {
         chomping = true;
         if (chompName && RASTER_IMAGES[chompName]) charImg.src = RASTER_IMAGES[chompName];
         charImg.style.transform = `scale(${scale * 1.08})`;
-        setTimeout(() => {
+        if (biteTimer) clearTimeout(biteTimer); // rapid feeds restart the chomp cleanly
+        biteTimer = setTimeout(() => {
           charImg.src = RASTER_IMAGES[openName] || charImg.src;
           charImg.style.transform = `scale(${scale})`;
           chomping = false;
-        }, 480);
+        }, 420);
       }
 
+      // Owner feedback (July 2026): feeding must be seamless — a drop mid-chomp
+      // is accepted (never bounced back), and finishing offers only "feed
+      // again" / "back one screen", never a Home prompt.
+      const feedDone = () => {
+        if (finished) return;
+        finished = true;
+        completeActivity(activity, { attempts });
+        const sc = state.screen || {};
+        const card = el(`<div class="banner name-done" role="status">
+          <div class="big">😋 All full! Thank you! 🌟</div>
+          <div class="name-done-btns">
+            <button data-a="again">🍽️ Feed again</button>
+            <button data-a="back">⬅️ Back</button>
+          </div>
+        </div>`);
+        card.querySelector('[data-a="again"]').onclick = () =>
+          navigate({ name: 'activity', activity, from: sc.from, pickerCategory: sc.pickerCategory });
+        card.querySelector('[data-a="back"]').onclick = () =>
+          navigate({ name: 'picker', category: sc.pickerCategory || 'toddler' });
+        stage.append(card);
+      };
       const zones = [{ el: mouthZone, onDrop: (it) => {
-        if (chomping) return false;
         const label = it.dataset.name || 'yum';
         it.dataset.eaten = '1'; it.remove(); fed++;
         bite(); playPop();
         say(fed >= total ? 'All full! ' + LH.pickFeedback('completed') : 'Yum, ' + label + '! ' + LH.pickFeedback('almost'));
         layout();
-        if (fed >= total) setTimeout(finish, 520);
+        if (fed >= total) setTimeout(feedDone, 520);
         return true;
       } }];
 
@@ -3035,8 +3230,9 @@ function renderGame(activity) {
         charImg.style.left = cLeft + 'px';
         charImg.style.top = cTop + 'px';
         charImg.style.transform = `scale(${scale})`;
-        // Mouth drop-zone over the character's mouth.
-        const zw = cw * mouth.r * 2;
+        // Mouth drop-zone over the character's mouth — generous (2.6× the
+        // authored radius) so near-misses still land (owner: seamless feeding).
+        const zw = cw * mouth.r * 2.6;
         mouthZone.style.width = zw + 'px';
         mouthZone.style.height = zw + 'px';
         mouthZone.style.left = (cLeft + cw * mouth.x - zw / 2) + 'px';
@@ -3132,7 +3328,7 @@ function renderGame(activity) {
       const scissors = el(`<img alt="scissors" src="${RASTER_IMAGES[openName] || ''}" style="position:absolute;pointer-events:none;z-index:6;width:72px;object-fit:contain;transform-origin:center;filter:drop-shadow(0 6px 9px rgba(0,0,0,.25))">`);
       stage.append(scissors);
       const img = new Image(); img.src = RASTER_IMAGES[imgName] || '';
-      let irect = { x: 0, y: 0, w: 0, h: 0 }, path = [], session = null, progress = 0, done = false, splitShift = 0, snipOpen = true, lastSnipX = -999, started = false, wig = null;
+      let irect = { x: 0, y: 0, w: 0, h: 0 }, path = [], session = null, progress = 0, done = false, splitK = 0, snipOpen = true, lastSnipX = -999, started = false, wig = null, lastNudge = 0;
       const flecks = [];
 
       function buildPath() {
@@ -3161,8 +3357,21 @@ function renderGame(activity) {
         if (!started && path[0]) { scissors.style.left = (path[0].x - 36) + 'px'; scissors.style.top = (path[0].y - 45) + 'px'; scissors.style.transform = 'rotate(90deg)'; }
         draw();
       }
-      function half(side, shift) {
-        ctx.save(); ctx.beginPath();
+      // A half of the picture, clipped along the cut line. k (0..1) is the
+      // end-of-cut split: the halves TIP AND SLIDE OUTWARD like two pieces
+      // flopping open on a table (owner chose this over a straight up/down
+      // slide, which read as the picture "breaking").
+      function half(side, k) {
+        const mid = path[Math.floor(path.length / 2)] || { x: irect.x + irect.w / 2, y: irect.y + irect.h / 2 };
+        const dir = side === 'top' ? -1 : 1;
+        ctx.save();
+        if (k > 0) {
+          ctx.translate(dir * k * Math.min(30, irect.w * 0.06), dir * k * Math.min(20, irect.h * 0.05));
+          ctx.translate(mid.x, mid.y);
+          ctx.rotate(dir * k * 0.11);
+          ctx.translate(-mid.x, -mid.y);
+        }
+        ctx.beginPath();
         if (side === 'top') {
           ctx.moveTo(irect.x - 60, irect.y - 60); ctx.lineTo(irect.x + irect.w + 60, irect.y - 60);
           for (let i = path.length - 1; i >= 0; i--) ctx.lineTo(path[i].x, path[i].y);
@@ -3171,15 +3380,25 @@ function renderGame(activity) {
           for (let i = 0; i < path.length; i++) ctx.lineTo(path[i].x, path[i].y);
         }
         ctx.closePath(); ctx.clip();
-        ctx.drawImage(img, irect.x, irect.y - (side === 'top' ? shift : -shift), irect.w, irect.h);
+        ctx.drawImage(img, irect.x, irect.y, irect.w, irect.h);
         ctx.restore();
       }
       function draw() {
         const r = stage.getBoundingClientRect();
         ctx.clearRect(0, 0, r.width, r.height);
-        if (img.complete && img.naturalWidth) { half('top', splitShift); half('bottom', splitShift); }
+        if (img.complete && img.naturalWidth) { half('top', splitK); half('bottom', splitK); }
+        const cutIdx = Math.max(0, Math.floor(progress * (path.length - 1)));
+        if (!done && cutIdx > 0) {
+          // The cut opens progressively behind the blades: a widening sliver of
+          // white paper along the already-cut part of the line.
+          ctx.lineCap = 'round';
+          ctx.strokeStyle = '#FFFFFF';
+          ctx.lineWidth = Math.max(7, irect.h * 0.04);
+          ctx.beginPath();
+          for (let i = 0; i <= cutIdx; i++) { const p = path[i]; i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y); }
+          ctx.stroke();
+        }
         if (!done) {
-          const cutIdx = Math.max(0, Math.floor(progress * (path.length - 1)));
           ctx.lineCap = 'round';
           ctx.setLineDash([9, 11]); ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(74,59,50,.5)';
           ctx.beginPath();
@@ -3209,6 +3428,12 @@ function renderGame(activity) {
             playPop();
           }
         }
+        // Off the line: a quick opacity pulse on the scissors is the gentle
+        // "come back to the dots" cue (no fail state).
+        if (res && res.onPath === false && performance.now() - lastNudge > 700) {
+          lastNudge = performance.now();
+          if (scissors.animate) scissors.animate([{ opacity: 1 }, { opacity: 0.4 }, { opacity: 1 }], { duration: 280 });
+        }
         placeScissors(); draw();
         if (progress > 0.92) finishCut();
       }
@@ -3217,15 +3442,20 @@ function renderGame(activity) {
         say('You did it! ' + LH.pickFeedback('completed'));
         const t0 = performance.now();
         (function anim(t) {
-          const k = Math.min(1, (t - t0) / 640); splitShift = k * Math.min(64, irect.h * 0.2);
+          const raw = Math.min(1, (t - t0) / 700);
+          splitK = raw * raw * (3 - 2 * raw); // smoothstep: halves tip open and settle
           for (const f of flecks) { f.y += f.vy; f.vy += 0.05; f.a -= 0.02; }
           draw();
-          if (k < 1) requestAnimationFrame(anim); else finish();
+          if (raw < 1) requestAnimationFrame(anim); else finish();
         })(performance.now());
       }
       const toPt = (e) => { const r = canvas.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; };
       canvas.addEventListener('pointerdown', (e) => { if (done) return; started = true; if (wig) { try { wig.cancel(); } catch (err) {} } canvas.setPointerCapture(e.pointerId); step(toPt(e)); });
-      canvas.addEventListener('pointermove', (e) => { if (done || !started) return; step(toPt(e)); });
+      canvas.addEventListener('pointermove', (e) => {
+        if (done || !started) return;
+        const evs = e.getCoalescedEvents ? e.getCoalescedEvents() : null;
+        for (const ev of (evs && evs.length ? evs : [e])) step(toPt(ev));
+      });
       window.addEventListener('pointerup', () => {});
       img.onload = fit;
       requestAnimationFrame(() => {

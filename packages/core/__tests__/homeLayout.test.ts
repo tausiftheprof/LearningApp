@@ -5,7 +5,7 @@ describe('homeTilesForAge', () => {
   const labelsFor = (band: AgeBand) => homeTilesForAge(band).map((t) => t.label);
 
   it('gives each band exactly the expected doors, in order', () => {
-    expect(labelsFor('2-3')).toEqual(['Daily Adventure', 'Draw', 'Colour', 'Puzzles', 'Little Games']);
+    expect(labelsFor('2-3')).toEqual(['Daily Adventure', 'Draw', 'Colour', 'Tracing', 'Puzzles', 'Little Games']);
     expect(labelsFor('3-5')).toEqual([
       'Daily Adventure', 'Draw', 'Colour', 'Tracing', 'Puzzles', 'Little Games',
     ]);
@@ -20,11 +20,10 @@ describe('homeTilesForAge', () => {
     }
   });
 
-  it('hides reading-heavy / advanced doors from the littlest (2-3)', () => {
+  it('shows Tracing to the littlest (2-3) but still hides Think & Solve', () => {
     const labels = labelsFor('2-3');
-    for (const hidden of ['Tracing', 'Think & Solve']) {
-      expect(labels).not.toContain(hidden);
-    }
+    expect(labels).toContain('Tracing'); // renderers route 2-3 straight to Shapes
+    expect(labels).not.toContain('Think & Solve');
   });
 
   it('keeps Little Games and adds Think & Solve at 5-7 (Big Kid Games retired)', () => {

@@ -87,6 +87,20 @@ export const colouringActivitySchema = activityBase.extend({
   /** Full-page line-art asset (mode 'line-art'): a bold black-outline SVG
    *  that the player flood-fills on tap, rather than authored polygons. */
   image: assetRefSchema.optional(),
+  /** Sequenced colour-by-number plan for line-art pages whose numbers are
+   *  printed in the artwork itself (owner direction, July 2026): the child is
+   *  locked to colour 1 until every region marked 1 is filled, then colour 1
+   *  retires and colour 2 activates, and so on. `targets` are one point per
+   *  numbered region, as fractions (0..1) of the square artwork. */
+  byNumberPlan: z
+    .array(
+      z.object({
+        number: z.number().int().positive(),
+        colour: z.string().regex(/^#[0-9a-fA-F]{6}$/),
+        targets: z.array(pointSchema).min(1),
+      }),
+    )
+    .optional(),
 });
 
 export const jigsawActivitySchema = activityBase.extend({

@@ -41,6 +41,10 @@ type PickerCategory = ActivityCategory | 'tracing-letters' | 'tracing-numbers' |
 export function ActivityPickerScreen(props: { category: PickerCategory }): React.JSX.Element {
   const { profile, catalogue, navigate } = useAppStore();
   const theme = childTheme(profile?.accessibility ?? defaultAccessibilitySettings(), profile?.themeId);
+  const littlest = (profile?.ageBand ?? '3-5') === '2-3';
+  // The littlest band (2-3) skips the tracing chooser and goes straight to
+  // Shapes - letters/numbers stay a 3-5+ experience (owner direction, July 2026).
+  const category: PickerCategory = props.category === 'tracing' && littlest ? 'tracing-shapes' : props.category;
 
   const playable = catalogue.filter(
     (a) =>
@@ -61,11 +65,11 @@ export function ActivityPickerScreen(props: { category: PickerCategory }): React
         : !/^trace-(letter|number)-/.test(a.id))
       .sort(numericSort);
   const ranked =
-    props.category === 'tracing-letters' ? tracingOf('letters')
-    : props.category === 'tracing-numbers' ? tracingOf('numbers')
-    : props.category === 'tracing-shapes' ? tracingOf('shapes')
+    category === 'tracing-letters' ? tracingOf('letters')
+    : category === 'tracing-numbers' ? tracingOf('numbers')
+    : category === 'tracing-shapes' ? tracingOf('shapes')
     : recommendActivities(
-          playable.filter((a) => a.category === props.category),
+          playable.filter((a) => a.category === category),
           {
             ageBand: profile?.ageBand ?? '3-5',
             difficulty: profile?.difficulty ?? 2,
@@ -76,7 +80,16 @@ export function ActivityPickerScreen(props: { category: PickerCategory }): React
           24,
         );
 
+  // Per-game icons (owner direction, July 2026): every game tile shows its own
+  // emoji instead of the shared category chick.
+  const GAME_EMOJI: Record<string, string> = {
+    'pop-bubbles': '🫧', 'tap-target': '🐶', 'drag-sort': '🧺', 'match-pairs': '🃏',
+    'memory-cards': '🃏', counting: '🔢', 'odd-one-out': '🔎', 'letter-match': '🔤',
+    sequence: '➡️', 'stack-blocks': '🧱', 'shadow-match': '👥', 'reveal-wipe': '✨',
+    'pattern-complete': '🔷', 'dot-to-dot': '🔢', 'feed-animal': '🍓', 'cut-along': '✂️', 'number-hop': '🐸',
+  };
   const emojiFor = (a: Activity): string =>
+    (a.type === 'game' ? GAME_EMOJI[a.template] : undefined) ??
     ({ drawing: '🖍️', colouring: '🎨', puzzles: '🧩', tracing: '✏️', toddler: '🐣', preschool: '🦘', logic: '💡' })[a.category];
 
   // Letter/number tracing tiles show just the big glyph pair (owner direction).
@@ -88,7 +101,7 @@ export function ActivityPickerScreen(props: { category: PickerCategory }): React
   }
 
   // The Tracing door shows a section chooser first (owner direction).
-  if (props.category === 'tracing') {
+  if (category === 'tracing') {
     const sections = [
       { key: 'tracing-letters' as const, label: 'Letters', sub: 'A to Z, big and small', glyph: 'A a' },
       { key: 'tracing-numbers' as const, label: 'Numbers', sub: '0 to 10', glyph: '1 2 3' },
@@ -140,7 +153,7 @@ export function ActivityPickerScreen(props: { category: PickerCategory }): React
     );
   }
 
-  const isTracingSection = /^tracing-/.test(props.category);
+  const isTracingSection = /^tracing-/.test(category) && !littlest;
   return (
     <View style={styles.root}>
       <View style={styles.topBar}>
