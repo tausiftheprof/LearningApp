@@ -37,6 +37,14 @@ Status key: `[ ]` open · `[~]` in progress · `[x]` done (move to the bottom or
   so the picker (`renderPicker` in demo, `ActivityPickerScreen` on mobile) shows it instead of
   `emojiFor[category]`. Keeps pre-readers able to tell games apart at a glance.
 
+- [ ] **Tracing for the 2-3 band (Shapes only).** Owner chose (July 2026): add the **Tracing**
+  door to the 2-3 home band, but for 2-3 it opens **straight to the Shapes section** (circles,
+  lines, zigzags — age-appropriate fine motor); **Letters & Numbers stay 3-5+**. 3-5 and 5-7 keep
+  the full chooser (Letters · Numbers · Shapes · My Name). Impl: add `TRACING` to the 2-3 case in
+  `home/homeLayout.ts`; make the 2-3 Tracing door route to the Shapes section directly (both
+  renderers: demo `renderTracingSections`/picker + mobile), and update `homeLayout.test.ts`
+  (2-3 now contains 'Tracing') + the "hides advanced doors from 2-3" test.
+
 - [ ] **Verify the mobile app is adaptive across device sizes.** The web demo was audited and
   fixed for 320-1366px; the Expo app's layouts (`HomeScreen`, players, pickers) haven't been
   checked on small phones vs. large tablets — best done on a device/emulator.
