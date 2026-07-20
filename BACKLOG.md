@@ -21,6 +21,24 @@ Status key: `[ ]` open · `[~]` in progress · `[x]` done (move to the bottom or
   - **Tracing controls** (colour picker / CAPS / undo-trash / name-finish) — still demo-only.
   - **Stylus behaviour on-device** — pen-first fixes shipped (see Done); verify with the real stylus.
 
+- [ ] **"What comes next?" — more pages with the owner's uploaded art, split by age.** Today there
+  is a single page (`preschool-sequence`, sun/moon SVG icons, plain A-B alternation). Build more
+  pages from art already in `assets/images/` (feed foods: strawberry / cupcake / watermelon /
+  ice-cream / grass / plant1 / plant2; plus hop-stone, cut-cake, cut-car, mascot):
+  - **Easy pages (ageBands `['3-5']`)**: simple **AB** patterns, short sequence (~4 shown + "?"),
+    2-3 answer choices. Suggested pages: fruit snack (strawberry/watermelon), sweet treats
+    (cupcake/ice-cream), kangaroo food (grass/plant1).
+  - **Difficult pages (ageBands `['5-7']`)**: harder pattern types — **ABC**, **AAB**, **AABB** —
+    longer sequence (~6 shown), 3 answer choices. Suggested pages: picnic mix
+    (strawberry/cupcake/watermelon ABC), garden (plant1/plant2/grass AAB or AABB), on-the-go
+    (cut-car/hop-stone/mascot ABC).
+  - **Engine change needed**: `sequenceGame` in `demo-shell.html` only alternates two images —
+    add a `pattern` param to the schema/params (e.g. `'AB' | 'ABC' | 'AAB' | 'AABB'`) and have
+    the renderer build the shown sequence + correct answer from it, rounds cycling which image
+    plays which role. Confirm `itemHtml()` resolves raster keys (feed-* PNGs), not just SVG names.
+  - Per-page tiles follow the per-game icon rule (each page can show its own first image).
+  - Demo-first; mobile port folds into the existing port item above.
+
 - [ ] **Verify the mobile app is adaptive across device sizes.** The web demo was audited and
   fixed for 320-1366px; the Expo app's layouts haven't been checked on small phones vs. large
   tablets — best done on a device/emulator.
