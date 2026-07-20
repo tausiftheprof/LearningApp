@@ -47,9 +47,10 @@ built: **Feed the Animal** ✅ (built with real art), **Pop the Bubbles** ✅ (e
   Reuses the tracing corridor engine. **Art received** (July 2026, in `assets/images/`, to be
   renamed to clean asset keys when building): `Cutting Practice - scissor open.png`,
   `Cutting Practice- Scissor closed.png` (open/closed pair → snip animation), `Cutting practice -
-  Car.png`, `Cutting Practice - cake.png` (two things to cut). **Open decision:** cut path style —
-  (A) straight/wavy dotted line *across* the shape, splits in two [recommended]; (B) cut *around*
-  the outline; (C) a standalone snip line with the shapes as decoration.
+  Car.png`, `Cutting Practice - cake.png` (two things to cut). **Cut path (owner chose):** a
+  dotted line runs **across** the shape — straight (easy) → wavy → zigzag (harder) by difficulty —
+  and the shape **splits into two halves** with a celebration at the end. Scissors rotate to
+  follow the line and alternate open/closed to "snip". Ready to build — no open questions.
 - [ ] **Number Path Hop** — tap stepping stones 1→2→3 in order. Needs: 1 stone/lilypad
   (+ optional hopping character).
 - ~~**Build a Face** — drag eyes/nose/mouth onto a blank head.~~ **Parked** at owner's request
