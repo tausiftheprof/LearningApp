@@ -9,6 +9,26 @@ Status key: `[ ]` open · `[~]` in progress · `[x]` done (move to the bottom or
 
 ## Open
 
+- [ ] **Redesign the Draw colour & brush panel → "Magic Playground, Layout 2 (Magic drawer)".**
+  Owner reviewed market patterns + interactive mockups and chose this. Build it into the real
+  Draw section (demo `renderGuidedDrawing`/free-board toolbar first, then mobile `DrawingBoard`).
+  Spec (mockup: artifact a7c3865a-883b-4539-b7ca-50031849b293):
+  - **White paper canvas** — drawing sheet is white (matches the real play-stage); the eraser
+    rubs back to white, no background bleed-through.
+  - **Colours on a right-side rail** (big round dots, scrollable). Selected dot gets a ring.
+  - **Slim bottom bar, 4 items only:** 🖍️ crayon · 🖌️ paint · eraser · 🪄 **magic** (wand).
+  - **🪄 wand opens a "magic drawer"** popover above the bar with the playful brushes:
+    🌈 rainbow · ✨ glitter · 🔆 glow · ⭐/💖 **stamps**. (Wand icon is distinct from the ✨
+    glitter brush — that clash was fixed.)
+  - **Brush size floats** in its own small pod bottom-left, over the paper (keeps the bar slim).
+  - **Corners:** undo/redo top-left; 🗑️ **Start over** (whole-page wipe) + 💾 save top-right.
+    Note: eraser = rub out *part*; Start over = wipe *all* — deliberately different.
+  - Big thumb-friendly targets; fully responsive (per the adaptive audit).
+  - **Two decisions still open before/at build:** (1) keep the eraser, or drop it and rely on
+    Undo + Start over? (2) magic set = rainbow/glitter/glow/stamps, or swap any?
+  - **Art needed:** stamp images (star, heart, an animal or two) — can ship emoji stamps first
+    and swap in the owner's cute art later. Everyday brushes/rainbow/glitter/glow need no art.
+
 - [ ] **Port the demo-first tracing controls to the mobile app.** The colour picker
   (rainbow/black/grey/glitter/colour-blind), CAPS toggle, right-side panel, left undo/trash,
   and the fun name-completion card currently exist and are verified only in the web demo.
