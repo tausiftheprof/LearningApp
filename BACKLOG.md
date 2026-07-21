@@ -48,6 +48,28 @@ Status key: `[ ]` open · `[~]` in progress · `[x]` done (move to the bottom or
   - **Tracing controls** (colour picker / CAPS / undo-trash / name-finish) — still demo-only.
   - **Stylus behaviour on-device** — pen-first fixes shipped (see Done); verify with the real stylus.
 
+- [ ] **Home screen — add life & polish (keep the approved art/layout).** Owner approved a mockup
+  (scratchpad artifact `f1349581-e720-422d-a309-4a0c05faf86c`) that keeps the existing Candy-Clouds
+  illustrated tiles and colours but adds motion and tightens the top bar. Build-ready spec:
+  - **Keep** the real illustrated blob-card tiles (`CANDY_TILE_PHOTOS`) and per-tile colours/labels —
+    owner likes them; do **not** swap to bubbles or emoji here (home stays distinct from the inner
+    bubble screens).
+  - **Shared tap language** (same as the bubble work): gentle idle **bob** on tiles, a **squish on
+    press** (scale-down + slight drop), and a **pop + sparkle burst** on tap. Respect
+    `prefers-reduced-motion`. The tile art already has its own soft drop-shadow so it reads liftable —
+    no hard rectangular bottom-edge (would clip wrong behind the transparent-corner blob art).
+  - **Mascot greeter**: put the real `mascot.png` in the greeting card beside "Hi \[name\]!", with a
+    subtle idle **hop** animation (not a wave — the mascot has no free hand).
+  - **Merge the star count into the greeting**: `⭐ × N` sits **inline, right next to the child's
+    name** inside the greeting card (owner confirmed inline beside, not underneath) — remove the
+    separate star pill from the top-right, leaving only Rewards + Grown-ups there.
+  - **Size-cap the tiles** so they stay small/tidy on tablets instead of blowing up: cap each tile
+    (~172px) and centre-pack the grid (`repeat(auto-fit, minmax(132px, 172px))`), rather than a fixed
+    2-column grid that stretches. Phone still ~2 across; tablet gets more at a sensible size.
+  - **No hero tile** — owner preferred the uniform equal-tile layout; dropped.
+  - Surfaces: demo `renderHome()` in `demo-shell.html` (then `node web-demo/build.mjs`); mobile
+    `HomeScreen`/tiles port folds into the mobile-port item. Renderer/styling only, no core change.
+
 - [ ] **"What comes next?" — more pages with the owner's uploaded art, split by age.** Today there
   is a single page (`preschool-sequence`, sun/moon SVG icons, plain A-B alternation). Build more
   pages from art already in `assets/images/` (feed foods: strawberry / cupcake / watermelon /
