@@ -1408,7 +1408,7 @@ function renderTracingSections() {
   const top = el(`<div class="topbar"></div>`);
   top.append(holdToHomeButton(() => navigate({ name: 'home' })), el(`<div class="hello">What shall we trace?</div>`));
   const nick = state.profile?.nickname || '';
-  if (state.secBare === undefined) state.secBare = true; // owner comparing: default floating (bare)
+  if (state.secBare === undefined) state.secBare = false; // cloud badges need contrast — default to bubbles
   const sections = [
     { key: 'tracing-letters', label: 'Letters', glyph: 'A a', icon: 'sec-letters' },
     { key: 'tracing-numbers', label: 'Numbers', glyph: '1 2 3', icon: 'sec-numbers' },
@@ -1425,8 +1425,10 @@ function renderTracingSections() {
   function build() {
     grid.innerHTML = '';
     sections.forEach((sct, i) => {
+      // Strong shadow + thin outline so the light cloud badge lifts off the
+      // light background even when floating (bare).
       const iconHtml = (RASTER_IMAGES[sct.icon] && !highContrast())
-        ? `<span class="tile-illo" aria-hidden="true">${imgHtml(sct.icon, 72)}</span>`
+        ? `<span class="tile-illo" aria-hidden="true">${imgHtml(sct.icon, 74, 'filter:drop-shadow(0 0 1.5px rgba(74,59,50,.55)) drop-shadow(0 6px 10px rgba(74,59,50,.3))')}</span>`
         : `<span class="glyph-big" aria-hidden="true">${sct.glyph}</span>`;
       grid.append(bubbleTile(iconHtml, sct.label, tiles()[(i + 2) % tiles().length], () => {
         speak(sct.label);
