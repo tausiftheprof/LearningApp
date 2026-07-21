@@ -311,6 +311,7 @@
     background: #FFFFFF; border-radius: 16px; padding: 6px 12px; margin-right: 8px;
   }
   .instruction-bar .txt { flex: 1; font-size: clamp(13px, 2vw, 18px); font-weight: 700; }
+  .instruction-bar .trace-hdr { width: clamp(38px, 6vw, 50px); height: clamp(38px, 6vw, 50px); object-fit: contain; flex: 0 0 auto; }
   .icon-btn {
     background: #FFFFFF; border: none; border-radius: 999px;
     min-width: 52px; min-height: 52px; font-size: 24px; cursor: pointer;
@@ -1694,17 +1695,22 @@ function renderTracing(firstActivity) {
   let session = new LH.TracingSession(strokes[0], config);
   let scores = [];
   let scale = 1, ox = 0, oy = 0, dots = [], filledStrokes = [], done = false, tracing = false, lastPos = 0;
-  let phase = 0, headerImg = null;
+  let phase = 0;
   // Inside-screen accent follows the active theme (start affordance, arrows).
   const accent = highContrast() ? '#0000CC' : theme().accent;
 
-  // The owner's clay letter/number art (transparent-cleaned) shown as a small
-  // "this is the letter" header cue. Shapes and the name have no clay art.
+  // The owner's clay letter/number/shape art shown as a small "this is the
+  // letter" cue in the instruction bar, next to the title (matching the mock).
+  // Each clay art file is named exactly after its activity id.
   function setHeader(id) {
-    // Each clay art file is named exactly after its activity id (trace-letter-a,
-    // trace-number-5, trace-circle, ...), so a direct lookup covers every glyph.
-    if (RASTER_IMAGES[id]) { headerImg = new Image(); headerImg.onload = draw; headerImg.src = RASTER_IMAGES[id]; }
-    else headerImg = null;
+    const barEl = document.querySelector('.instruction-bar');
+    if (!barEl) return;
+    let img = barEl.querySelector('.trace-hdr');
+    const src = RASTER_IMAGES[id];
+    if (src) {
+      if (!img) { img = el(`<img class="trace-hdr" alt="" aria-hidden="true">`); barEl.insertBefore(img, barEl.firstChild); }
+      img.src = src; img.style.display = '';
+    } else if (img) { img.style.display = 'none'; }
   }
 
   // Single-colour ink (owner direction, matching the approved mock): the trail
@@ -1820,31 +1826,35 @@ function renderTracing(firstActivity) {
     ctx.globalAlpha = 1;
   }
 
-  // Colour the corridor in behind the mascot: the child's on-path points are
-  // stroked as one thick rounded trail (~corridor width) in the theme accent,
-  // broken wherever the finger strayed off the path, so the letter visibly
-  // fills as it is traced.
+  // Stroke a glyph path from its start up to arc-fraction `frac` (0..1), along
+  // the path's own centre line — so the ink always fills the band and follows
+  // the letter exactly (like the mock), never spilling out where the finger
+  // wandered inside the forgiving tolerance zone.
+  function inkPath(path, frac) {
+    if (frac <= 0 || path.length < 2) return;
+    let total = 0; const segs = [];
+    for (let i = 0; i < path.length - 1; i++) { const dx = path[i + 1].x - path[i].x, dy = path[i + 1].y - path[i].y, len = Math.hypot(dx, dy); segs.push({ a: path[i], b: path[i + 1], len }); total += len; }
+    const target = Math.min(1, frac) * total;
+    ctx.beginPath();
+    ctx.moveTo(path[0].x * scale + ox, path[0].y * scale + oy);
+    let acc = 0;
+    for (const s of segs) {
+      if (acc + s.len <= target) { ctx.lineTo(s.b.x * scale + ox, s.b.y * scale + oy); acc += s.len; }
+      else { const t = (target - acc) / s.len; ctx.lineTo((s.a.x + (s.b.x - s.a.x) * t) * scale + ox, (s.a.y + (s.b.y - s.a.y) * t) * scale + oy); break; }
+    }
+    ctx.stroke();
+  }
+  // The ink fills the letter along its own line as the child covers it: finished
+  // strokes are full, the current stroke fills up to how far along it's traced.
   function drawFill() {
-    // The "ink" the finger leaves is a slim line within the band — thinner than
-    // the band so it reads like a pen filling it in, not a flood.
     const w = Math.max(4, drawBand * 0.62 * scale);
     ctx.lineWidth = w;
     ctx.lineCap = ctx.lineJoin = 'round';
     ctx.globalAlpha = 0.95;
-    ctx.strokeStyle = ink; ctx.fillStyle = ink;
-    const drawTrail = (pts) => {
-      let prev = null;
-      for (const d of pts) {
-        if (prev) { ctx.beginPath(); ctx.moveTo(prev.x, prev.y); ctx.lineTo(d.x, d.y); ctx.stroke(); }
-        else { ctx.beginPath(); ctx.arc(d.x, d.y, w / 2, 0, Math.PI * 2); ctx.fill(); }
-        prev = d;
-      }
-    };
-    // Earlier finished strokes stay painted; the current stroke breaks on off-path.
-    for (const trail of filledStrokes) drawTrail(trail);
-    let seg = [];
-    for (const d of dots) { if (d.on) seg.push(d); else { if (seg.length) drawTrail(seg); seg = []; } }
-    if (seg.length) drawTrail(seg);
+    ctx.strokeStyle = ink;
+    const finishedCount = done ? strokes.length : strokeIndex;
+    for (let i = 0; i < finishedCount; i++) inkPath(strokes[i], 1);
+    if (!done && strokeIndex < strokes.length) inkPath(strokes[strokeIndex], lastPos);
     ctx.globalAlpha = 1;
   }
 
@@ -1883,11 +1893,6 @@ function renderTracing(firstActivity) {
     // Directional guide on the CURRENT stroke: dotted track + a single glowing
     // dot leading the way, a pulsing start dot and a start arrow.
     if (!done) drawGuide();
-    // The owner's clay letter/number art as a small header cue (top-left).
-    if (headerImg && headerImg.complete && headerImg.naturalWidth) {
-      const hh = Math.min(r.height * 0.16, 84), hw = hh * (headerImg.naturalWidth / headerImg.naturalHeight);
-      ctx.drawImage(headerImg, 10, 8, hw, hh);
-    }
   }
 
   // The directional guide for the stroke in progress.
@@ -1987,7 +1992,7 @@ function renderTracing(firstActivity) {
     let result;
     const add = (px, py) => {
       result = session.addPoint({ x: (px - ox) / scale, y: (py - oy) / scale });
-      if (result.onPath) lastPos = result.pathPosition;
+      if (result.onPath) lastPos = Math.max(lastPos, result.pathPosition);
       dots.push({ x: px, y: py, on: result.onPath });
       if (dots.length > 800) dots.shift();
     };
