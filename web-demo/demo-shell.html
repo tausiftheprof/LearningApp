@@ -256,6 +256,14 @@
   @keyframes lgSpark { to { transform: translate(var(--sdx), var(--sdy)) scale(0.2); opacity: 0; } }
   @media (prefers-reduced-motion: reduce) { .bubble { animation: none; } .bubble.pop { animation: none; } }
 
+  /* ---- Home life: a gentle idle bob on the door tiles and a little hop on the
+     mascot greeter (owner-approved home polish). Layout/art unchanged. ---- */
+  .home-grid .big-tile { animation: homeBob var(--hb, 4s) ease-in-out var(--hd, 0s) infinite; }
+  @keyframes homeBob { 0%, 100% { translate: 0 0; } 50% { translate: 0 -5px; } }
+  .greeting-card .mascot-slot { display: inline-block; transform-origin: 50% 90%; animation: mascotHop 3.6s ease-in-out infinite; }
+  @keyframes mascotHop { 0%, 72%, 100% { transform: translateY(0) rotate(0); } 82% { transform: translateY(-7px) rotate(-5deg); } 92% { transform: translateY(0) rotate(3deg); } }
+  @media (prefers-reduced-motion: reduce) { .home-grid .big-tile, .greeting-card .mascot-slot { animation: none; } }
+
   /* ---- Colour section layout (owner direction): right-aligned collapsible
      palette, save/start-again bottom-left ---- */
   .colour-panel {
@@ -970,7 +978,11 @@ function renderHome() {
       ${iconHtml}
       <span class="tile-text"><span class="label" style="${usePhoto ? `color:${th.text}` : ''}">${t.label}</span></span>
     </button>`);
+    // Stagger the idle bob so the doors don't pulse in lock-step.
+    tile.style.setProperty('--hb', (3.6 + (i % 4) * 0.5).toFixed(1) + 's');
+    tile.style.setProperty('--hd', (i * 0.18).toFixed(2) + 's');
     tile.onclick = () => {
+      const r = tile.getBoundingClientRect(); sparkleBurst(r.left + r.width / 2, r.top + r.height / 2, 6);
       speak(t.label);
       if (!guardScreenTime()) return;
       if (isDaily) navigate({ name: 'daily' });
