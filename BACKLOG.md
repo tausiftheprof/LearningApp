@@ -37,6 +37,19 @@ Status key: `[ ]` open · `[~]` in progress · `[x]` done (move to the bottom or
   In `renderPicker`, pass an empty/suppressed label when `category` is `puzzles`, `tracing-letters` or
   `tracing-numbers`. Demo + mobile.
 
+- [ ] **Straight-line tracing — vertical AND horizontal (fix icon/screen mismatch).** The clay icon is
+  a **vertical** line but the activity geometry is **horizontal** (`trace-line-straight` =
+  `line(150,500 → 850,500)` in `starterPack.ts`). Both a down-stroke `|` and an across-stroke `—` are
+  core pre-writing skills, so give the child both. Options considered:
+  - (a) a **rotate toggle** on the activity — extra UI/comprehension load for 2-5s; not recommended.
+  - (b) **two separate activities** — "Down line" (vertical) + "Across line" (horizontal), each a
+    single clean stroke. Cleanest for the littlest band. Needs a horizontal icon (rotate the vertical
+    clay art 90° via the art pipeline; the vertical art keys the down-line).
+  - (c) **two strokes in one activity** (vertical then horizontal) — one tile/icon, teaches both, but
+    the single vertical icon only hints at the first stroke.
+  **Recommendation: (b)** two separate activities (vertical + horizontal), horizontal icon derived by
+  rotating the clay art. Keep them first in the Shapes list (2-3 pre-writing warm-ups).
+
 - [ ] **Port the recent demo-first work to the mobile app.** These all shipped and are verified in
   the web demo but are not yet in the Expo app (mobile needs a device/emulator to drive + verify):
   - The two new games — **Cutting Practice** (`cut-along`) and **Number Path Hop** (`number-hop`)
