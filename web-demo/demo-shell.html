@@ -230,6 +230,32 @@
   #app[data-app-theme="candy"] .play-stage { border-radius: 30px 38px 32px 40px / 34px 30px 40px 32px; }
   #app[data-app-theme="candy"] .picker-grid .big-tile:nth-child(3n) { border-radius: 36px 26px 40px 24px / 30px 36px 26px 40px; }
 
+  /* ---- Bubble tiles (owner-approved): round balloon tiles + plain-text names,
+     a gentle bob, and a pop + sparkle on tap. Used on every "pick something"
+     grid (games, choosers, tracing lists). ---- */
+  .bubble-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(118px, 1fr)); gap: clamp(12px, 3vw, 26px) clamp(8px, 2.4vw, 18px); justify-items: center; padding: 6px 4px 16px; }
+  .bubble-wrap { display: flex; flex-direction: column; align-items: center; gap: 7px; width: 100%; }
+  .bubble {
+    position: relative; width: clamp(96px, 22vw, 138px); aspect-ratio: 1; border: none; border-radius: 50%;
+    cursor: pointer; display: grid; place-items: center; background: var(--bub, #FFB4C6);
+    box-shadow: inset 0 -12px 20px rgba(0,0,0,0.10), inset 0 10px 18px rgba(255,255,255,0.5), 0 9px 18px rgba(74,59,50,0.16);
+    transition: transform .18s cubic-bezier(.34,1.56,.64,1);
+    animation: bubBob var(--bd, 4s) ease-in-out var(--bl, 0s) infinite;
+  }
+  .bubble::before { content: ""; position: absolute; top: 12%; left: 16%; width: 38%; height: 30%; border-radius: 50%; background: radial-gradient(closest-side, rgba(255,255,255,0.85), rgba(255,255,255,0)); pointer-events: none; }
+  .bubble:hover { transform: scale(1.05); }
+  .bubble:active { transform: scale(0.9); }
+  .bubble.pop { animation: bubPop .5s ease; }
+  .bubble .emoji { font-size: clamp(40px, 9vw, 60px); line-height: 1; filter: drop-shadow(0 3px 3px rgba(0,0,0,0.14)); }
+  .bubble .tile-illo .lg-img, .bubble .tile-illo svg { width: clamp(54px, 12vw, 82px) !important; height: clamp(54px, 12vw, 82px) !important; }
+  .bubble .glyph-big { font-size: clamp(40px, 9vw, 62px); }
+  .bubble-label { font-weight: 800; font-size: clamp(13px, 2.4vw, 16px); color: var(--tile-ink, #4A3B32); text-align: center; line-height: 1.12; max-width: 15ch; }
+  @keyframes bubBob { 0%, 100% { translate: 0 0; } 50% { translate: 0 -6px; } }
+  @keyframes bubPop { 0% { transform: scale(1); } 35% { transform: scale(1.16); } 100% { transform: scale(1); } }
+  .lg-spark { position: fixed; z-index: 60; font-size: 20px; pointer-events: none; animation: lgSpark .7s ease-out forwards; }
+  @keyframes lgSpark { to { transform: translate(var(--sdx), var(--sdy)) scale(0.2); opacity: 0; } }
+  @media (prefers-reduced-motion: reduce) { .bubble { animation: none; } .bubble.pop { animation: none; } }
+
   /* ---- Colour section layout (owner direction): right-aligned collapsible
      palette, save/start-again bottom-left ---- */
   .colour-panel {
@@ -962,23 +988,19 @@ function renderTracingSections() {
   setStatus('Tracing sections', ['content pack tracing']);
   const top = el(`<div class="topbar"></div>`);
   top.append(holdToHomeButton(() => navigate({ name: 'home' })), el(`<div class="hello">What shall we trace?</div>`));
-  const grid = el(`<div class="tile-grid home-grid"></div>`);
+  const grid = el(`<div class="bubble-grid"></div>`);
   const nick = state.profile?.nickname || '';
   const sections = [
-    { key: 'tracing-letters', label: 'Letters', sub: 'A to Z, big and small', glyph: 'A a' },
-    { key: 'tracing-numbers', label: 'Numbers', sub: '0 to 10', glyph: '1 2 3' },
-    { key: 'tracing-shapes', label: 'Shapes', sub: 'Circles, squares and more', glyph: '○ △ □' },
+    { key: 'tracing-letters', label: 'Letters', glyph: 'A a' },
+    { key: 'tracing-numbers', label: 'Numbers', glyph: '1 2 3' },
+    { key: 'tracing-shapes', label: 'Shapes', glyph: '○ △ □' },
   ];
   // "My Name" traces the child's own name (from their profile), if it has letters.
   if (LH.nameStrokes(nick).length) {
-    sections.push({ key: 'tracing-name', label: 'My Name', sub: 'Trace your own name', glyph: '✍️' });
+    sections.push({ key: 'tracing-name', label: 'My Name', glyph: '✍️' });
   }
   sections.forEach((sct, i) => {
-    const tile = el(`<button class="big-tile" style="background:${tiles()[(i + 2) % tiles().length]}">
-      <span class="glyph-big" aria-hidden="true">${sct.glyph}</span>
-      <span class="tile-text"><span class="label">${sct.label}</span><span class="sublabel">${sct.sub}</span></span>
-    </button>`);
-    tile.onclick = () => {
+    grid.append(bubbleTile(`<span class="glyph-big" aria-hidden="true">${sct.glyph}</span>`, sct.label, tiles()[(i + 2) % tiles().length], () => {
       speak(sct.label);
       if (sct.key === 'tracing-name') {
         if (!guardScreenTime()) return;
@@ -987,8 +1009,7 @@ function renderTracingSections() {
       } else {
         navigate({ name: 'picker', category: sct.key });
       }
-    };
-    grid.append(tile);
+    }));
   });
   app.append(top, grid);
 }
@@ -999,18 +1020,14 @@ function renderDrawSections() {
   setStatus('Draw sections', ['content pack drawing']);
   const top = el(`<div class="topbar"></div>`);
   top.append(holdToHomeButton(() => navigate({ name: 'home' })), el(`<div class="hello">What shall we draw?</div>`));
-  const grid = el(`<div class="tile-grid home-grid"></div>`);
+  const grid = el(`<div class="bubble-grid"></div>`);
   const sections = [
-    { key: 'draw-blank', label: 'Blank Canvas', sub: 'Draw anything you like', glyph: '🖍️' },
-    { key: 'draw-guided', label: 'Guided Drawing', sub: 'Follow the lines to draw a picture', glyph: '✏️' },
-    { key: 'draw-dotdot', label: 'Dot to Dot', sub: 'Join the numbers in order', glyph: '🔢' },
+    { key: 'draw-blank', label: 'Blank Canvas', glyph: '🖍️' },
+    { key: 'draw-guided', label: 'Guided Drawing', glyph: '✏️' },
+    { key: 'draw-dotdot', label: 'Dot to Dot', glyph: '🔢' },
   ];
   sections.forEach((sct, i) => {
-    const tile = el(`<button class="big-tile" style="background:${tiles()[(i + 2) % tiles().length]}">
-      <span class="glyph-big" aria-hidden="true">${sct.glyph}</span>
-      <span class="tile-text"><span class="label">${sct.label}</span><span class="sublabel">${sct.sub}</span></span>
-    </button>`);
-    tile.onclick = () => {
+    grid.append(bubbleTile(`<span class="glyph-big" aria-hidden="true">${sct.glyph}</span>`, sct.label, tiles()[(i + 2) % tiles().length], () => {
       speak(sct.label);
       // Blank Canvas has a single destination, so skip the intermediate picker
       // and open the canvas straight away (owner direction, July 2026).
@@ -1019,8 +1036,7 @@ function renderDrawSections() {
         if (blank) { if (guardScreenTime()) navigate({ name: 'activity', activity: blank, from: 'picker', pickerCategory: 'drawing' }); return; }
       }
       navigate({ name: 'picker', category: sct.key });
-    };
-    grid.append(tile);
+    }));
   });
   app.append(top, grid);
 }
@@ -1031,18 +1047,15 @@ function renderColourSections() {
   setStatus('Colour sections', ['content pack colouring']);
   const top = el(`<div class="topbar"></div>`);
   top.append(holdToHomeButton(() => navigate({ name: 'home' })), el(`<div class="hello">How shall we colour?</div>`));
-  const grid = el(`<div class="tile-grid home-grid"></div>`);
+  const grid = el(`<div class="bubble-grid"></div>`);
   const sections = [
-    { key: 'colour-bynum', label: 'Colour by Numbers', sub: 'Match the numbers to colours', glyph: '🔢' },
-    { key: 'colour-yourway', label: 'Colour Your Way', sub: 'Colour it however you like', glyph: '🌈' },
+    { key: 'colour-bynum', label: 'Colour by Numbers', glyph: '🔢' },
+    { key: 'colour-yourway', label: 'Colour Your Way', glyph: '🌈' },
   ];
   sections.forEach((sct, i) => {
-    const tile = el(`<button class="big-tile" style="background:${tiles()[(i + 1) % tiles().length]}">
-      <span class="glyph-big" aria-hidden="true">${sct.glyph}</span>
-      <span class="tile-text"><span class="label">${sct.label}</span><span class="sublabel">${sct.sub}</span></span>
-    </button>`);
-    tile.onclick = () => { speak(sct.label); navigate({ name: 'picker', category: sct.key }); };
-    grid.append(tile);
+    grid.append(bubbleTile(`<span class="glyph-big" aria-hidden="true">${sct.glyph}</span>`, sct.label, tiles()[(i + 1) % tiles().length], () => {
+      speak(sct.label); navigate({ name: 'picker', category: sct.key });
+    }));
   });
   app.append(top, grid);
 }
@@ -1060,6 +1073,33 @@ function shapeIconSvg(activity, sizePx) {
     .map((s) => `<polyline points="${s.map((p) => `${p.x.toFixed(0)},${p.y.toFixed(0)}`).join(' ')}" fill="none" stroke="currentColor" stroke-width="80" stroke-linecap="round" stroke-linejoin="round"/>`)
     .join('');
   return `<svg viewBox="${minx - pad} ${miny - pad} ${w + 2 * pad} ${h + 2 * pad}" width="${sizePx}" height="${sizePx}" style="display:block;color:var(--tile-ink,#4A3B32)" aria-hidden="true">${paths}</svg>`;
+}
+
+// A little star burst at (x,y) — the shared "tap" feedback across bubble tiles.
+function sparkleBurst(x, y, n = 6) {
+  if (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  for (let k = 0; k < n; k++) {
+    const s = document.createElement('span'); s.className = 'lg-spark'; s.textContent = ['✨', '⭐', '🌟'][k % 3];
+    const ang = (k / n) * Math.PI * 2;
+    s.style.left = x + 'px'; s.style.top = y + 'px';
+    s.style.setProperty('--sdx', Math.cos(ang) * 64 + 'px'); s.style.setProperty('--sdy', Math.sin(ang) * 64 + 'px');
+    document.body.appendChild(s); setTimeout(() => s.remove(), 700);
+  }
+}
+// A round bubble tile: icon bursting out, plain-text label below, a gentle idle
+// bob, and a pop + sparkle on tap (owner-approved picker style).
+function bubbleTile(iconHtml, label, colourCss, onClick) {
+  const wrap = el(`<div class="bubble-wrap"><button class="bubble" aria-label="${label}" style="--bub:${colourCss}">${iconHtml}</button><div class="bubble-label">${label}</div></div>`);
+  const btn = wrap.querySelector('.bubble');
+  const i = Math.floor(Math.random() * 4);
+  btn.style.setProperty('--bd', (3.6 + i * 0.5).toFixed(1) + 's');
+  btn.style.setProperty('--bl', (Math.random() * 1.2).toFixed(2) + 's');
+  btn.onclick = () => {
+    btn.classList.remove('pop'); void btn.offsetWidth; btn.classList.add('pop');
+    const r = btn.getBoundingClientRect(); sparkleBurst(r.left + r.width / 2, r.top + r.height / 2, 6);
+    onClick();
+  };
+  return wrap;
 }
 
 function renderPicker(category) {
@@ -1130,7 +1170,7 @@ function renderPicker(category) {
     top.append(back);
   }
   top.append(el(`<div class="hello">Pick one!</div>`));
-  const grid = el(`<div class="tile-grid picker-grid"></div>`);
+  const grid = el(`<div class="bubble-grid"></div>`);
   // Category order matches home tiles, so each category reuses its illustration.
   const catIndex = { drawing: 0, colouring: 1, puzzles: 2, tracing: 3, toddler: 4, preschool: 5, logic: 6 };
   const emojiFor = { drawing: '🖍️', colouring: '🎨', puzzles: '🧩', tracing: '✏️', toddler: '🐣', preschool: '🦘', logic: '💡' };
@@ -1166,16 +1206,17 @@ function renderPicker(category) {
     const glyph = letterM ? `${letterM[1].toUpperCase()} ${letterM[1]}` : numberM ? numberM[1] : null;
     // Shape-tracing tiles show a tiny outline of the shape itself, not a pencil.
     const isShape = a.type === 'tracing' && !letterM && !numberM;
-    const inner = glyph
+    // Round "bubble" tile: art/emoji/glyph bursting out, plain-text name below.
+    const iconHtml = glyph
       ? `<span class="glyph-big" aria-hidden="true">${glyph}</span>`
       : isShape
-        ? `<span class="tile-illo" aria-hidden="true">${shapeIconSvg(a, 52)}</span><span class="label picker-label">${a.title}</span>`
+        ? `<span class="tile-illo" aria-hidden="true">${shapeIconSvg(a, 62)}</span>`
       : (hasPicture(imgName) && !highContrast()
-        ? `<span class="tile-illo" aria-hidden="true">${imgHtml(imgName, 52)}</span>`
-        : `<span class="emoji">${(a.type === 'game' && GAME_EMOJI[a.template]) || emojiFor[a.category]}</span>`) + `<span class="label picker-label">${a.title}</span>`;
-    const tile = el(`<button class="big-tile" aria-label="${a.title}" style="background:${tiles()[i % tiles().length]}">${inner}</button>`);
-    tile.onclick = () => { speak(a.title); if (guardScreenTime()) navigate({ name: 'activity', activity: a, from: 'picker', pickerCategory: category }); };
-    grid.append(tile);
+        ? `<span class="tile-illo" aria-hidden="true">${imgHtml(imgName, 62)}</span>`
+        : `<span class="emoji">${(a.type === 'game' && GAME_EMOJI[a.template]) || emojiFor[a.category]}</span>`);
+    grid.append(bubbleTile(iconHtml, a.title, tiles()[i % tiles().length], () => {
+      speak(a.title); if (guardScreenTime()) navigate({ name: 'activity', activity: a, from: 'picker', pickerCategory: category });
+    }));
   });
   if (ranked.length === 0) {
     grid.append(el(`<p style="grid-column:1/-1;font-size:17px;text-align:center;padding:20px">New activities are on their way! Try another door on the home screen. 🏠</p>`));
@@ -3713,14 +3754,24 @@ function renderGame(activity) {
       box.innerHTML = `<h2>${asPattern ? 'Finish the pattern!' : 'What comes next?'}</h2>`;
       const row = el(`<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:center"></div>`);
       if (names) {
-        const a = names[round % names.length], b = names[(round + 1) % names.length];
-        const seq = [a, b, a, b, a];
-        const answer = b;
-        seq.forEach((n) => row.append(el(itemHtml(n, 60))));
+        // The repeating unit is a pattern of letters (A/B/C...): AB is the
+        // simplest (toddlers), ABC/AAB/AABB are harder (older kids). Each round
+        // rotates which picture plays which letter, for variety.
+        const pattern = String(params.pattern || (asPattern ? 'ABC' : 'AB')).toUpperCase().replace(/[^A-Z]/g, '') || 'AB';
+        const uniq = [...new Set(pattern.split(''))];
+        const map = {}; uniq.forEach((L, i) => { map[L] = names[(i + round) % names.length]; });
+        const unit = pattern.split('').map((L) => map[L]);
+        // Show two-plus repeats of the unit, then hide the very next cell.
+        const shownCount = pattern.length * 2 + (round % Math.max(1, pattern.length));
+        const cellAt = (i) => unit[i % unit.length];
+        const answer = cellAt(shownCount);
+        for (let i = 0; i < shownCount; i++) row.append(el(itemHtml(cellAt(i), 60)));
         row.append(el(`<span style="font-size:44px;font-weight:800;color:#4A3B32">?</span>`));
         box.append(row);
         const optRow = el(`<div style="display:flex;gap:12px;margin-top:12px"></div>`);
-        const opts = [...new Set([answer, a, names[(round + 2) % names.length] || a])];
+        // Options: the answer plus distinct distractors from the picture set.
+        const opts = [...new Set([answer, ...names.filter((n) => n !== answer)])].slice(0, Math.min(3, Math.max(2, uniq.length)));
+        for (let i = opts.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [opts[i], opts[j]] = [opts[j], opts[i]]; }
         for (const n of opts) {
           const btn = el(`<button aria-label="${n}" style="border:none;background:#fff;border-radius:16px;padding:8px;cursor:pointer">${itemHtml(n, 72)}</button>`);
           btn.onclick = () => {
