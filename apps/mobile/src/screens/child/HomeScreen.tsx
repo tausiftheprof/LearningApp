@@ -121,7 +121,12 @@ function FloatingTile({
         }}
         style={({ pressed }) => [styles.homeTile, pressed && styles.homeTilePressed]}
       >
-        <Image source={artSource} style={styles.tileArt} resizeMode="contain" accessibilityElementsHidden />
+        <Image
+          source={artSource}
+          style={[styles.tileArt, littlest && styles.tileArtLittlest]}
+          resizeMode="contain"
+          accessibilityElementsHidden
+        />
         <Text style={[styles.tileLabel, { color: textColour }]}>{label}</Text>
         <Sparkles trigger={sparkKey} />
       </Pressable>
@@ -262,14 +267,17 @@ const styles = StyleSheet.create({
   grid: { flexDirection: 'row', flexWrap: 'wrap', padding: 8 },
   cell: { width: '50%', minHeight: 130 },
   cellLittlest: { minHeight: 168 },
-  // Candy: floating art tiles, centre-packed & size-capped.
-  gridCandy: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', paddingHorizontal: 10, paddingBottom: 28, paddingTop: 4, gap: 12 },
-  tileCell: { width: 150, alignItems: 'center' },
-  tileCellLittlest: { width: 172 },
-  homeTile: { alignItems: 'center', padding: 4, width: '100%' },
+  // Candy: floating art tiles, centre-packed & size-capped. Fixed pixel art
+  // sizes (RN won't reliably resolve % width through the Animated wrapper, and
+  // views don't clip by default, so an unconstrained image overflows hugely).
+  gridCandy: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', alignItems: 'flex-start', paddingHorizontal: 10, paddingBottom: 28, paddingTop: 4, gap: 12 },
+  tileCell: { width: 160, alignItems: 'center' },
+  tileCellLittlest: { width: 188 },
+  homeTile: { alignItems: 'center', padding: 6 },
   homeTilePressed: { transform: [{ scale: 0.94 }] },
-  tileArt: { width: '100%', aspectRatio: 1 },
+  tileArt: { width: 128, height: 128 },
+  tileArtLittlest: { width: 150, height: 150 },
   tileLabel: { fontSize: 16, fontWeight: '800', marginTop: 2, textAlign: 'center' },
-  sparkLayer: { position: 'absolute', top: '38%', left: 0, right: 0, alignItems: 'center', justifyContent: 'center' },
+  sparkLayer: { position: 'absolute', top: '30%', left: 0, right: 0, alignItems: 'center', justifyContent: 'center' },
   spark: { position: 'absolute', fontSize: 20 },
 });
