@@ -9,55 +9,10 @@ Status key: `[ ]` open · `[~]` in progress · `[x]` done (move to the bottom or
 
 ## Open
 
-- [ ] **Use the updated 1/2/3 clay art.** Owner uploaded `Tracing - 1 updated.png` / `2 updated` /
-  `3 updated` (redrawn to fix the too-big sizing). Clean each with the region-size key-out pipeline →
-  replace `trace-number-1/2/3.png`, and **drop the manual vertical padding** I added earlier (the new
-  source fixes the size at the art level). Re-check the Numbers list reads consistently after rebuild.
-
-- [ ] **Section icons for the Tracing chooser (Letters / Numbers / Shapes / My Name).** Owner uploaded
-  `Icon - Letters.png` / `Icon - Numbers.png` / `Icon - Shapes.png` / `Icon - My Name.png` (likely
-  checkerboard bg — clean with the region-size pipeline). Wire them into `renderTracingSections`
-  (the "What shall we trace?" chooser), replacing the current glyph text (`A a` / `1 2 3` / `○ △ □` /
-  `✍️`). **Owner wants to compare bubble vs bare (no circle)** — build the chooser both ways (or a
-  quick toggle) so the owner can pick, matching whichever the glyph lists ended up using. Suggested
-  clean keys: `sec-letters` / `sec-numbers` / `sec-shapes` / `sec-name`.
-
-- [ ] **Wire the number 0 clay art.** Owner uploaded `Tracing - 0.png` (still has the checkerboard
-  background). Clean it with the region-size key-out pipeline → `trace-number-0.png`, then it auto-wires
-  (the `trace-number-0` tracing activity already exists — it currently falls back to a plain black "0"
-  in the picker). Confirm it appears in the Numbers list with the clay art after cleanup + rebuild.
-
-- [ ] **Rewards section — simple, proud, industry-standard (all four pieces chosen).** Owner approved
-  the interactive mockup (scratchpad artifact `1381b8f0-02ec-444d-ac9f-88b676d780e8`, "I like it for
-  now"). Keep it uncomplicated and pressure-free; build on the existing `rewards/rewardsEngine.ts`
-  (daily-capped ledger) + `renderRewards`. Four cards (2×2 grid, responsive to 1-col on phone):
-  Star Jar · Trophies · Sticker Book · Certificates, with the mascot cheering in the corner.
-  **Deliberately avoid** (owner + industry direction for under-7s): leaderboards/ranking, harsh
-  streaks, coins/purchases, anything competitive.
-  - **Star jar / meter** — stars collect into a jar that visibly fills; when it's full it "pops"
-    (confetti + chime) and awards a new sticker, then resets. The satisfying fill-it-up loop; drives
-    off the existing `totalStars` ledger (e.g. jar holds N stars → sticker).
-  - **Milestone trophies** — a small set of big, *nameable* achievements with cute art: e.g.
-    "Traced every letter", "First puzzle", "Counted to 10", "Wrote my name", "Coloured a picture".
-    Each unlocks once; shown on a trophy shelf in `renderRewards`. (Replaces/augments the current
-    generic badges — make them concrete and proud-worthy.)
-  - **Sticker book (polish)** — a page of slots (mock uses 12); collected stickers fill in, empty
-    slots show dashed circles, sparkle when a new one lands, tap a sticker to hear its name (spoken).
-    **When a page fills, celebrate ("You filled the whole book! 🏆") and start a fresh blank page**
-    (endless, no dead end), with a "📖 ×N filled!" tally the child can be proud of.
-  - **Name certificate** — a simple screenshot-friendly card ("I can write my name!" / "I know my
-    letters!") the parent can capture, shown when the matching milestone trophy is earned. Pride +
-    involves the grown-up. (No sharing/upload — purely on-device visual.)
-  - **Mascot celebrates** — the Little Grip mascot cheers on reward moments (jar pop, new trophy),
-    reusing the existing celebrate()/sound effects. Emotional reward, no new engine.
-  - Surfaces: core `rewardsEngine` (jar threshold, trophy unlock rules) + `renderRewards` (demo) then
-    mobile `RewardsScreen`. Keep it demo-first; mobile port folds into the mobile-port item.
-
-- [ ] **Don't read the child's name aloud.** Suppress the child's name in any spoken/voice output
-  (privacy). Audit every `speak(...)` call that includes the nickname — e.g. the home greeting and the
-  "My name" tracing activity (`loadActivity` speaks `next.title` = "My name: <nick>", and the name
-  tile). Speak a generic phrase instead ("your name", "Let's write your name"), and keep the name
-  only on-screen (visual), never in TTS. Demo + mobile (`audioService`/`playInstruction`).
+- [ ] **Bug: "Count the fish" game speaks "count the apples".** The spoken instruction doesn't match
+  the game's name/visuals. Fix the instruction text/audio key for the counting game so the voice says
+  the right item (fish). Check `instructionFor()` / the counting activity's `instructionAudio` in
+  `starterPack.ts` + the demo's `speak()` for that template.
 
 - [ ] **Port the recent demo-first work to the mobile app.** These all shipped and are verified in
   the web demo but are not yet in the Expo app (mobile needs a device/emulator to drive + verify):
@@ -90,6 +45,10 @@ swap in cute art whenever ready.
 
 ## Done
 
+- [x] **Rewards section (demo)** — four-card My Rewards screen (Star Jar filling to the next sticker · Trophies with locked/unlocked milestones · Sticker Book paged by 12 with tap-to-hear + "book filled" tally · Certificate keepsake with the child's name), mascot cheer, driven off the existing rewards ledger. No core change.
+- [x] **Tracing section icons** — owner clay cloud-badges for Letters/Numbers/Shapes/My Name in the chooser, with a Bubbles ⇄ Floating toggle to compare (default floating, matching the lists).
+- [x] **Don't read the child's name aloud** — the home greeting and the name-tracing prompt now speak a generic phrase; the name stays on-screen only. (Demo; mobile in port item.)
+- [x] **Updated 1/2/3 + number 0 clay art** — redrawn 1/2/3 wired (manual padding dropped), and the 0 cleaned + wired; all numbers read consistently.
 - [x] **Tracing polish — thinner band + no colour picker (matches the mock).** Drawn band slimmed to `drawBand = corridorWidth*0.5` with ink/guide/leader/ruled-line inset all derived from it; the trace-colour panel removed (single accent ink); CAPS toggle moved to the left actions for the name; stage uses near-full width (no right panel). Responsive-verified phone/tablet/desktop.
 - [x] **Drop name labels on picture-obvious bubbles** — Puzzles, Tracing Letters & Numbers, and both Colour lists (Colour by Numbers / Colour Your Way) hide the `.bubble-label` (aria-label + spoken name kept). Shapes keep names.
 - [x] **Straight-line split — Down line + Across line** — one horizontal activity became a vertical `trace-line-down` + horizontal `trace-line-across`, each with a matching clay icon (vertical art renamed, across rotated 90°).

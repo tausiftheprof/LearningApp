@@ -256,6 +256,45 @@
   .bubble.bare .glyph-big { filter: drop-shadow(0 4px 5px rgba(74,59,50,0.18)); }
   /* roomier grid for floating glyphs so they don't look squished */
   .bubble-grid.glyph-grid { grid-template-columns: repeat(auto-fit, minmax(128px, 1fr)); gap: clamp(22px, 4.5vw, 44px) clamp(16px, 3.5vw, 34px); padding: 16px 10px 26px; }
+  .sec-toggle { margin-left: auto; border: 2px solid rgba(74,59,50,.15); background: #fff; color: var(--tile-ink, #4A3B32); font-family: inherit; font-weight: 800; font-size: 13px; padding: 8px 14px; border-radius: 999px; cursor: pointer; box-shadow: 0 3px 8px rgba(74,59,50,.12); }
+
+  /* ---- Rewards section (owner-approved mock): star jar, trophies, sticker book, certificate ---- */
+  .rw-scroll { overflow-y: auto; flex: 1; padding: 8px 14px 30px; }
+  .rw-hero { display: flex; align-items: center; gap: 14px; justify-content: center; font-size: 30px; font-weight: 800; border-radius: 22px; padding: 8px 18px; margin-bottom: 14px; }
+  .rw-hero img { width: 54px; height: 54px; object-fit: contain; }
+  .rw-hero img.cheer { animation: cheer 1s ease; }
+  @keyframes cheer { 0%,100%{transform:translateY(0) rotate(0)} 25%{transform:translateY(-12px) rotate(-8deg)} 55%{transform:translateY(-3px) rotate(6deg)} }
+  .rw-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  @media (max-width: 560px) { .rw-grid { grid-template-columns: 1fr; } }
+  .rw-card { background: rgba(255,255,255,.74); border-radius: 22px; padding: 14px 16px; box-shadow: 0 6px 16px rgba(69,61,91,.08); text-align: left; }
+  .rw-card h3 { margin: 0 0 3px; font-size: 16px; }
+  .rw-cardsub { font-size: 11px; color: #7A6A5E; font-weight: 700; margin-bottom: 10px; letter-spacing: .3px; }
+  .rw-jarwrap { display: flex; align-items: center; gap: 14px; }
+  .rw-jar { position: relative; width: 78px; height: 98px; border: 5px solid #D9C7A0; border-radius: 15px 15px 22px 22px; overflow: hidden; background: rgba(255,255,255,.5); flex: 0 0 auto; box-shadow: inset 0 5px 10px rgba(255,255,255,.6); }
+  .rw-jar::before { content:""; position:absolute; top:-13px; left:50%; transform:translateX(-50%); width:44px; height:11px; border-radius:6px; background:#D9C7A0; }
+  .rw-jarfill { position: absolute; left:0; right:0; bottom:0; background: linear-gradient(#FFE08A,#FFC94D); transition: height .5s cubic-bezier(.34,1.4,.6,1); }
+  .rw-jar.pop { animation: pop .6s ease; }
+  .rw-jarmeta { flex:1; }
+  .rw-jarmeta .big { font-size: 22px; font-weight: 800; }
+  .rw-shelf { display: flex; gap: 6px; flex-wrap: wrap; }
+  .rw-tr { width: 78px; text-align: center; }
+  .rw-tr .d { width: 62px; height: 62px; margin: 0 auto; border-radius: 50%; display: grid; place-items: center; font-size: 30px; background: radial-gradient(circle at 35% 30%,#FFF3C9,#FFD86B); box-shadow: 0 5px 10px rgba(74,59,50,.16); }
+  .rw-tr.lock .d { background: #E7E0D9; filter: grayscale(1); box-shadow: none; }
+  .rw-tr .n { font-size: 10px; font-weight: 800; margin-top: 4px; line-height: 1.12; }
+  .rw-tr.lock .n { color: #7A6A5E; }
+  .rw-stk { display: grid; grid-template-columns: repeat(auto-fill,minmax(44px,1fr)); gap: 8px; }
+  .rw-slot { aspect-ratio: 1; border-radius: 50%; display: grid; place-items: center; font-size: 24px; background: rgba(255,255,255,.6); border: 2px dashed rgba(74,59,50,.18); }
+  .rw-slot.f { border: none; background: radial-gradient(circle at 35% 30%,#fff,#FCE3EE); box-shadow: 0 2px 6px rgba(74,59,50,.12); cursor: pointer; }
+  .rw-slot.f .lg-img { width: 30px !important; height: 30px !important; }
+  .rw-cert-tile { display: flex; align-items: center; gap: 12px; background: linear-gradient(120deg,#FFF6E0,#FFE9F1); border-radius: 16px; padding: 12px 14px; cursor: pointer; }
+  .rw-cert-tile.lock { opacity: .55; cursor: default; filter: grayscale(.4); }
+  .rw-cert-tile .rb { font-size: 32px; }
+  .rw-modal { position: fixed; inset: 0; background: rgba(74,59,50,.5); display: none; place-items: center; z-index: 40; padding: 18px; }
+  .rw-modal.show { display: grid; }
+  .rw-cert { background: #fff; border: 8px double #FFC94D; border-radius: 20px; max-width: 400px; width: 100%; padding: 22px; text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,.3); }
+  .rw-cert img { width: 66px; height: 66px; object-fit: contain; }
+  .rw-cert .nm { font-size: 28px; font-weight: 800; color: #E24AA0; margin: 6px 0; }
+  .rw-cert .foot { font-size: 12px; color: #7A6A5E; font-weight: 700; margin-top: 8px; }
   .bubble-label { font-weight: 800; font-size: clamp(13px, 2.4vw, 16px); color: var(--tile-ink, #4A3B32); text-align: center; line-height: 1.12; max-width: 15ch; }
   @keyframes bubBob { 0%, 100% { translate: 0 0; } 50% { translate: 0 -6px; } }
   @keyframes bubPop { 0% { transform: scale(1); } 35% { transform: scale(1.16); } 100% { transform: scale(1); } }
@@ -901,7 +940,7 @@ function renderOnboarding(step = 'welcome', draft = { nickname: '', ageBand: '3-
       await repos.screenTime.save(profile.id, state.screenTime);
       await repos.rewards.save(profile.id, state.rewards);
       persistSoon();
-      speak('Hi ' + profile.nickname + '! Let\'s play!');
+      speak('Hi! Let\'s play!'); // never read the child's name aloud (privacy)
       navigate({ name: 'home' });
     };
     wrap.append(go);
@@ -1008,29 +1047,41 @@ function renderTracingSections() {
   setStatus('Tracing sections', ['content pack tracing']);
   const top = el(`<div class="topbar"></div>`);
   top.append(holdToHomeButton(() => navigate({ name: 'home' })), el(`<div class="hello">What shall we trace?</div>`));
-  const grid = el(`<div class="bubble-grid"></div>`);
   const nick = state.profile?.nickname || '';
+  if (state.secBare === undefined) state.secBare = true; // owner comparing: default floating (bare)
   const sections = [
-    { key: 'tracing-letters', label: 'Letters', glyph: 'A a' },
-    { key: 'tracing-numbers', label: 'Numbers', glyph: '1 2 3' },
-    { key: 'tracing-shapes', label: 'Shapes', glyph: '○ △ □' },
+    { key: 'tracing-letters', label: 'Letters', glyph: 'A a', icon: 'sec-letters' },
+    { key: 'tracing-numbers', label: 'Numbers', glyph: '1 2 3', icon: 'sec-numbers' },
+    { key: 'tracing-shapes', label: 'Shapes', glyph: '○ △ □', icon: 'sec-shapes' },
   ];
   // "My Name" traces the child's own name (from their profile), if it has letters.
   if (LH.nameStrokes(nick).length) {
-    sections.push({ key: 'tracing-name', label: 'My Name', glyph: '✍️' });
+    sections.push({ key: 'tracing-name', label: 'My Name', glyph: '✍️', icon: 'sec-name' });
   }
-  sections.forEach((sct, i) => {
-    grid.append(bubbleTile(`<span class="glyph-big" aria-hidden="true">${sct.glyph}</span>`, sct.label, tiles()[(i + 2) % tiles().length], () => {
-      speak(sct.label);
-      if (sct.key === 'tracing-name') {
-        if (!guardScreenTime()) return;
-        const activity = { type: 'tracing', id: 'trace-name', title: 'My name: ' + nick, category: 'tracing', paths: LH.nameStrokes(nick), closed: false };
-        navigate({ name: 'activity', activity, from: 'picker', pickerCategory: 'tracing' });
-      } else {
-        navigate({ name: 'picker', category: sct.key });
-      }
-    }));
-  });
+  // Demo toggle so the owner can compare the section icons inside a bubble vs floating.
+  const toggle = el(`<button class="sec-toggle">${state.secBare ? 'Floating ✨' : 'Bubbles 🫧'}</button>`);
+  top.append(toggle);
+  const grid = el(`<div class="bubble-grid glyph-grid"></div>`);
+  function build() {
+    grid.innerHTML = '';
+    sections.forEach((sct, i) => {
+      const iconHtml = (RASTER_IMAGES[sct.icon] && !highContrast())
+        ? `<span class="tile-illo" aria-hidden="true">${imgHtml(sct.icon, 72)}</span>`
+        : `<span class="glyph-big" aria-hidden="true">${sct.glyph}</span>`;
+      grid.append(bubbleTile(iconHtml, sct.label, tiles()[(i + 2) % tiles().length], () => {
+        speak(sct.label);
+        if (sct.key === 'tracing-name') {
+          if (!guardScreenTime()) return;
+          const activity = { type: 'tracing', id: 'trace-name', title: 'My name: ' + nick, category: 'tracing', paths: LH.nameStrokes(nick), closed: false };
+          navigate({ name: 'activity', activity, from: 'picker', pickerCategory: 'tracing' });
+        } else {
+          navigate({ name: 'picker', category: sct.key });
+        }
+      }, true, state.secBare));
+    });
+  }
+  toggle.onclick = () => { state.secBare = !state.secBare; toggle.textContent = state.secBare ? 'Floating ✨' : 'Bubbles 🫧'; build(); };
+  build();
   app.append(top, grid);
 }
 
@@ -1387,7 +1438,8 @@ function renderTracing(firstActivity) {
     setStatus('Tracing — ' + next.title, ['tracing.TracingSession (multi-stroke)', 'tracing.tracingConfigFor']);
     note.textContent = '';
     setHeader(next.id);
-    speak(next.title.replace('·', 'and little'));
+    // Never read the child's name aloud (privacy) — say a generic prompt for the name activity.
+    speak(next.id === 'trace-name' ? "Let's write your name!" : next.title.replace('·', 'and little'));
     fit(); // re-fit: the new glyph may have different bounds
   }
 
@@ -3830,27 +3882,98 @@ function renderGame(activity) {
 /* ---------- rewards ---------- */
 const STICKER_EMOJI = { 'sticker-sun': '☀️', 'sticker-koala': '🐨', 'sticker-rainbow': '🌈', 'sticker-rocket': '🚀', 'sticker-wombat': '🦫', 'sticker-star-fish': '⭐', 'sticker-paint-pot': '🎨', 'sticker-kite': '🪁', 'sticker-frog': '🐸', 'sticker-balloon': '🎈', 'sticker-echidna': '🦔', 'sticker-sailboat': '⛵', 'sticker-flower': '🌻', 'sticker-dino': '🦕', 'sticker-moon': '🌙' };
 
+// Emoji/name for a sticker id (reuses the existing base->image/emoji mapping).
+function stickerViz(s) {
+  const base = s.replace(/-\d+$/, '').replace('sticker-', '');
+  const mapped = { 'star-fish': 'fish', koala: 'bear', wombat: 'panda', dino: 'dinosaur', 'paint-pot': null, kite: null, frog: null, echidna: null, sailboat: null, flower: null }[base] ?? base;
+  const inner = mapped && IMAGES[mapped] ? imgHtml(mapped, 30) : (STICKER_EMOJI['sticker-' + base] || '🏵️');
+  return { inner, name: base.replace(/-/g, ' ') };
+}
+
 function renderRewards() {
   setStatus('My Rewards', ['rewards.applyRewardEvent (daily-capped)']);
   const top = el(`<div class="topbar"></div>`);
   top.append(holdToHomeButton(() => navigate({ name: 'home' })), el(`<div class="hello">My Rewards</div>`));
-  const th = theme();
-  const body = el(`<div class="form-scroll" style="text-align:center"></div>`);
-  body.append(el(`<div style="font-size:38px;font-weight:800;background:${highContrast() ? '#fff;border:2px solid #000' : th.rewards.background};border-radius:22px;padding:10px 16px">${th.rewards.icon} ⭐ × ${state.rewards.totalStars}</div>`));
-  body.append(el(`<h2 style="text-align:left">Sticker book</h2>`));
-  const sg = el(`<div class="sticker-grid"></div>`);
-  if (state.rewards.stickers.length === 0) sg.append(el(`<p style="font-size:16px">Play anything to earn your first sticker! 🌟</p>`));
-  for (const s of state.rewards.stickers) {
-    const base = s.replace(/-\d+$/, '').replace('sticker-', '');
-    const mapped = { 'star-fish': 'fish', koala: 'bear', wombat: 'panda', dino: 'dinosaur', 'paint-pot': null, kite: null, frog: null, echidna: null, sailboat: null, flower: null }[base] ?? base;
-    const inner = mapped && IMAGES[mapped] ? imgHtml(mapped, 60) : (STICKER_EMOJI['sticker-' + base] || '🏵️');
-    sg.append(el(`<div class="sticker">${inner}</div>`));
+  const th = theme(); const hc = highContrast();
+  const R = state.rewards;
+  const nick = state.profile?.nickname || 'friend';
+  const JAR = LH.STICKER_EVERY_N_STARS || 5;          // a sticker is earned every JAR stars
+  const inJar = R.totalStars % JAR;
+  const PAGE = 12;
+  const booksFilled = Math.floor(R.stickers.length / PAGE);
+  const pageStickers = R.stickers.slice(booksFilled * PAGE);   // stickers on the current page
+  const trophies = [
+    { e: '🌟', n: 'First star', un: R.totalStars >= 1 },
+    { e: '⭐', n: 'Ten stars', un: R.totalStars >= 10 },
+    { e: '💫', n: 'Star collector', un: R.totalStars >= 25 },
+    { e: '🎟️', n: 'First sticker', un: R.stickers.length >= 1 },
+    { e: '📖', n: 'Filled a book', un: R.stickers.length >= PAGE },
+    { e: '🏅', n: 'Busy learner', un: R.badges.length >= 3 },
+  ];
+  const certUnlocked = R.totalStars >= 10 || R.stickers.length >= 1;
+
+  const mascotImg = RASTER_IMAGES['mascot'] ? `<img src="${RASTER_IMAGES['mascot']}" alt="" aria-hidden="true">` : '';
+  const body = el(`<div class="rw-scroll"></div>`);
+  body.append(el(`<div class="rw-hero" style="background:${hc ? '#fff;border:2px solid #000' : th.rewards.background}">${mascotImg}<span>⭐ × ${R.totalStars}</span></div>`));
+
+  const grid = el(`<div class="rw-grid"></div>`);
+
+  // 1. Star jar
+  const jarCard = el(`<div class="rw-card">
+    <h3>⭐ Star Jar</h3><div class="rw-cardsub">FILL IT UP TO EARN A STICKER</div>
+    <div class="rw-jarwrap">
+      <div class="rw-jar"><div class="rw-jarfill" style="height:${(inJar / JAR * 100).toFixed(0)}%"></div></div>
+      <div class="rw-jarmeta"><div class="big">${inJar} / ${JAR}</div>
+        <p style="font-size:13px;margin:6px 0 0">${JAR - inJar} more ${JAR - inJar === 1 ? 'star' : 'stars'} to a new sticker!</p></div>
+    </div></div>`);
+  grid.append(jarCard);
+
+  // 2. Trophies
+  const trCard = el(`<div class="rw-card"><h3>🏆 Trophies</h3><div class="rw-cardsub">BIG THINGS YOU CAN DO</div>
+    <div class="rw-shelf">${trophies.map((t) => `<div class="rw-tr ${t.un ? '' : 'lock'}"><div class="d">${t.un ? t.e : '🔒'}</div><div class="n">${t.n}</div></div>`).join('')}</div></div>`);
+  grid.append(trCard);
+
+  // 3. Sticker book
+  let slots = '';
+  for (let i = 0; i < PAGE; i++) {
+    const s = pageStickers[i];
+    if (s) { const v = stickerViz(s); slots += `<div class="rw-slot f" data-name="${v.name}">${v.inner}</div>`; }
+    else slots += `<div class="rw-slot"></div>`;
   }
-  body.append(sg, el(`<h2 style="text-align:left">Badges</h2>`));
-  const bg = el(`<div class="sticker-grid"></div>`);
-  if (state.rewards.badges.length === 0) bg.append(el(`<p style="font-size:16px">Badges live here. 🏅</p>`));
-  for (const b of state.rewards.badges) bg.append(el(`<div class="sticker" title="${b}">🏅</div>`));
-  body.append(bg);
+  const stkCard = el(`<div class="rw-card"><h3>💫 Sticker Book</h3>
+    <div class="rw-cardsub">${pageStickers.length} of ${PAGE} on this page${booksFilled > 0 ? ` · 📖 ×${booksFilled} filled!` : ''} · TAP TO HEAR</div>
+    <div class="rw-stk">${slots}</div></div>`);
+  stkCard.querySelector('.rw-stk').addEventListener('click', (e) => {
+    const sl = e.target.closest('.rw-slot.f'); if (!sl) return;
+    const r = sl.getBoundingClientRect(); sparkleBurst(r.left + r.width / 2, r.top + r.height / 2, 5); speak(sl.dataset.name);
+  });
+  grid.append(stkCard);
+
+  // 4. Certificate
+  const certCard = el(`<div class="rw-card"><h3>📜 Certificates</h3><div class="rw-cardsub">SHOW YOUR GROWN-UP</div>
+    <div class="rw-cert-tile ${certUnlocked ? '' : 'lock'}"><span class="rb">🎀</span><div><b>I'm learning so much!</b>
+      <span style="display:block;font-size:12px;color:#7A6A5E;font-weight:700">${certUnlocked ? 'Tap to open · earned 🌟' : 'Play to earn it!'}</span></div></div></div>`);
+  grid.append(certCard);
+  body.append(grid);
+
+  // Certificate modal
+  const modal = el(`<div class="rw-modal"><div class="rw-cert">${mascotImg}
+    <div style="font-size:20px;font-weight:800;margin:4px 0">🌟 Certificate 🌟</div>
+    <div style="font-size:14px">This certificate is proudly awarded to</div>
+    <div class="nm">${nick}</div>
+    <div style="font-size:15px;font-weight:800">for learning so much at Little Grip! 🎉</div>
+    <div class="foot">You did it all by yourself!</div>
+    <button class="btn-primary" style="margin-top:14px;border:none;border-radius:999px;padding:10px 20px;font-family:inherit;font-weight:800;cursor:pointer;background:#FFC94D">Close</button>
+  </div></div>`);
+  body.append(modal);
+  if (certUnlocked) certCard.querySelector('.rw-cert-tile').onclick = () => modal.classList.add('show');
+  modal.querySelector('button').onclick = () => modal.classList.remove('show');
+  modal.onclick = (e) => { if (e.target === modal) modal.classList.remove('show'); };
+
+  // Mascot gives a little cheer on arrival.
+  const mi = body.querySelector('.rw-hero img');
+  if (mi) setTimeout(() => mi.classList.add('cheer'), 250);
+
   app.append(top, body);
 }
 
