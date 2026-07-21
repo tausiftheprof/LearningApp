@@ -1,6 +1,6 @@
-import React, { useMemo, useRef, useState } from 'react';
-import { PanResponder, StyleSheet, Text, View } from 'react-native';
-import { Canvas, Circle, DashPathEffect, Path, Skia } from '@shopify/react-native-skia';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Animated, Easing, PanResponder, StyleSheet, Text, View } from 'react-native';
+import { Canvas, Circle, DashPathEffect, Group, Path, Skia } from '@shopify/react-native-skia';
 import type { TracingActivity } from '@littlegrip/core';
 import {
   defaultAccessibilitySettings,
@@ -11,23 +11,66 @@ import {
 } from '@littlegrip/core';
 import type { Theme } from '../../../ui/theme';
 import { useAppStore } from '../../../state/appStore';
+import { audioService } from '../../../services/audio';
 import { CompletionBanner } from '../ActivityPlayerScreen';
 
 const DESIGN = 1000; // activity design space (core engine coordinates)
 
-interface DesignPoint { x: number; y: number }
+interface DPoint {
+  x: number;
+  y: number;
+}
 
-/**
- * Point (screen) + unit direction along a guide path at arc-fraction `frac`.
- * Scale is uniform with no rotation, so a design-space direction is also the
- * screen direction. `sc`/`ox`/`oy` map design space into the stage.
- */
-function sampleAt(pathD: DesignPoint[], frac: number, sc: number, ox: number, oy: number) {
-  let total = 0;
+/** Design-space bounding box of the glyph strokes + the ruled-line span,
+ *  padded by half the drawn band so nothing is clipped. Mirrors the demo. */
+function contentBounds(strokes: DPoint[][], guides: { top: number; base: number } | null, drawBand: number) {
+  let minx = 1e9;
+  let maxx = -1e9;
+  let miny = 1e9;
+  let maxy = -1e9;
+  for (const s of strokes) {
+    for (const p of s) {
+      minx = Math.min(minx, p.x);
+      maxx = Math.max(maxx, p.x);
+      miny = Math.min(miny, p.y);
+      maxy = Math.max(maxy, p.y);
+    }
+  }
+  if (guides) {
+    const half = drawBand / 2;
+    miny = Math.min(miny, guides.top - half);
+    maxy = Math.max(maxy, guides.base + half);
+  }
+  const pad = drawBand / 2 + 14;
+  return { minx: minx - pad, maxx: maxx + pad, miny: miny - pad, maxy: maxy + pad };
+}
+
+/** Fit the ACTUAL content into the stage (letters fill the screen instead of
+ *  shrinking to the middle of the 1000² box). Uniform scale keeps aspect. */
+function computeFit(strokes: DPoint[][], guides: { top: number; base: number } | null, drawBand: number, w: number, h: number) {
+  const padH = w < 380 ? 16 : 26;
+  const padV = 18;
+  const availW = Math.max(60, w - padH * 2);
+  const availH = Math.max(60, h - padV * 2);
+  const b = contentBounds(strokes, guides, drawBand);
+  const cw = Math.max(1, b.maxx - b.minx);
+  const ch = Math.max(1, b.maxy - b.miny);
+  const scale = Math.min(availW / cw, availH / ch);
+  const ox = padH + (availW - cw * scale) / 2 - b.minx * scale;
+  const oy = padV + (availH - ch * scale) / 2 - b.miny * scale;
+  return { scale, ox, oy };
+}
+
+/** Screen point + unit direction along a design polyline at arc-fraction `frac`. */
+function sampleAt(pathD: DPoint[], frac: number, sc: number, ox: number, oy: number) {
   const segs: { ax: number; ay: number; dx: number; dy: number; len: number }[] = [];
+  let total = 0;
   for (let i = 0; i < pathD.length - 1; i++) {
-    const a = pathD[i]!, b = pathD[i + 1]!;
-    const dx = b.x - a.x, dy = b.y - a.y, len = Math.hypot(dx, dy);
+    const a = pathD[i]!;
+    const b = pathD[i + 1]!;
+    const dx = b.x - a.x;
+    const dy = b.y - a.y;
+    const len = Math.hypot(dx, dy);
     segs.push({ ax: a.x, ay: a.y, dx, dy, len });
     total += len;
   }
@@ -36,40 +79,93 @@ function sampleAt(pathD: DesignPoint[], frac: number, sc: number, ox: number, oy
     return { x: p.x * sc + ox, y: p.y * sc + oy, dx: 1, dy: 0 };
   }
   const target = Math.max(0, Math.min(1, frac)) * total;
-  let acc = 0, seg = segs[0]!, t = 0;
-  for (const s of segs) { if (acc + s.len >= target) { seg = s; t = s.len ? (target - acc) / s.len : 0; break; } acc += s.len; }
+  let acc = 0;
+  let seg = segs[0]!;
+  let t = 0;
+  for (const s of segs) {
+    if (acc + s.len >= target) {
+      seg = s;
+      t = s.len ? (target - acc) / s.len : 0;
+      break;
+    }
+    acc += s.len;
+  }
   const dl = seg.len || 1;
   return { x: (seg.ax + seg.dx * t) * sc + ox, y: (seg.ay + seg.dy * t) * sc + oy, dx: seg.dx / dl, dy: seg.dy / dl };
 }
 
-/**
- * Chevron arrows spaced along the strokes still to trace (from `startIndex`),
- * showing the way to trace a letter/number/shape — more for longer strokes.
- */
-function arrowsPathFor(paths: DesignPoint[][], startIndex: number, sc: number, ox: number, oy: number, corridorWidth: number) {
+/** A Skia path tracing a design polyline from its start up to arc-fraction
+ *  `frac` (screen coords) — used to fill the glyph along its own centre line. */
+function partialPath(pathD: DPoint[], frac: number, sc: number, ox: number, oy: number) {
   const path = Skia.Path.Make();
-  const w = Math.max(9, corridorWidth * 0.6 * sc);
-  for (let i = startIndex; i < paths.length; i++) {
-    const pathD = paths[i]!;
-    let total = 0;
-    for (let j = 0; j < pathD.length - 1; j++) total += Math.hypot(pathD[j + 1]!.x - pathD[j]!.x, pathD[j + 1]!.y - pathD[j]!.y);
-    const count = Math.max(2, Math.min(7, Math.round(total / 180)));
-    for (let k = 0; k < count; k++) {
-      const s = sampleAt(pathD, (k + 0.5) / count, sc, ox, oy);
-      const a = Math.atan2(s.dy, s.dx);
-      const tx = s.x + Math.cos(a) * w * 0.5, ty = s.y + Math.sin(a) * w * 0.5;
-      path.moveTo(tx - Math.cos(a - 0.6) * w, ty - Math.sin(a - 0.6) * w);
-      path.lineTo(tx, ty);
-      path.lineTo(tx - Math.cos(a + 0.6) * w, ty - Math.sin(a + 0.6) * w);
+  if (pathD.length < 2 || frac <= 0) return path;
+  const segs: { a: DPoint; b: DPoint; len: number }[] = [];
+  let total = 0;
+  for (let i = 0; i < pathD.length - 1; i++) {
+    const a = pathD[i]!;
+    const b = pathD[i + 1]!;
+    const len = Math.hypot(b.x - a.x, b.y - a.y);
+    segs.push({ a, b, len });
+    total += len;
+  }
+  const target = Math.min(1, frac) * total;
+  path.moveTo(pathD[0]!.x * sc + ox, pathD[0]!.y * sc + oy);
+  let acc = 0;
+  for (const s of segs) {
+    if (acc + s.len <= target) {
+      path.lineTo(s.b.x * sc + ox, s.b.y * sc + oy);
+      acc += s.len;
+    } else {
+      const t = (target - acc) / s.len;
+      path.lineTo((s.a.x + (s.b.x - s.a.x) * t) * sc + ox, (s.a.y + (s.b.y - s.a.y) * t) * sc + oy);
+      break;
     }
   }
   return path;
 }
 
+const BURST_EMOJI = ['⭐', '✨', '🌟'];
+
+/** A one-shot star burst over the finished glyph (matches the demo's celebrate). */
+function StarBurst({ show }: { show: boolean }): React.JSX.Element | null {
+  const anims = useRef(Array.from({ length: 10 }, () => new Animated.Value(0))).current;
+  useEffect(() => {
+    if (!show) return;
+    Animated.stagger(
+      30,
+      anims.map((a) => {
+        a.setValue(0);
+        return Animated.timing(a, { toValue: 1, duration: 900, easing: Easing.out(Easing.quad), useNativeDriver: true });
+      }),
+    ).start();
+  }, [show, anims]);
+  if (!show) return null;
+  return (
+    <View pointerEvents="none" style={styles.burstLayer}>
+      {anims.map((a, k) => {
+        const ang = (k / anims.length) * Math.PI * 2;
+        const dist = 60 + (k % 3) * 26;
+        const translateX = a.interpolate({ inputRange: [0, 1], outputRange: [0, Math.cos(ang) * dist] });
+        const translateY = a.interpolate({ inputRange: [0, 1], outputRange: [0, Math.sin(ang) * dist] });
+        const opacity = a.interpolate({ inputRange: [0, 0.7, 1], outputRange: [1, 1, 0] });
+        const scale = a.interpolate({ inputRange: [0, 0.4, 1], outputRange: [0.4, 1.2, 0.6] });
+        return (
+          <Animated.Text key={k} style={[styles.burst, { opacity, transform: [{ translateX }, { translateY }, { scale }] }]}>
+            {BURST_EMOJI[k % BURST_EMOJI.length]}
+          </Animated.Text>
+        );
+      })}
+    </View>
+  );
+}
+
 /**
- * Tracing player (FR-005, docs/03 S11). Touch points are mapped into the
- * 0..1000 design space and fed to the core corridor engine. On-path movement
- * sparkles; off-path movement gently fades - never a red cross (PRD section 9).
+ * Tracing player (FR-005) — ported to match the approved demo overhaul: one
+ * seamless grey band per stroke (no skeleton), ink that fills the glyph along
+ * its own centre-line as it is traced, a single glowing leader dot + pulsing
+ * start dot + arrow showing the way, ruled "notebook" lines with the glyph
+ * sitting between them, and a star burst + chime on completion. Touch points
+ * are mapped into the 0..1000 design space and fed to the core corridor engine.
  */
 export function TracingPlayer(props: {
   activity: TracingActivity;
@@ -82,141 +178,183 @@ export function TracingPlayer(props: {
   const { profile } = useAppStore();
   const accessibility = profile?.accessibility ?? defaultAccessibilitySettings();
   const config = useMemo(
-    () =>
-      tracingConfigFor(profile?.difficulty ?? 1, {
-        accessibilityWiderCorridor: accessibility.widerTracingCorridor,
-      }),
+    () => tracingConfigFor(profile?.difficulty ?? 1, { accessibilityWiderCorridor: accessibility.widerTracingCorridor }),
     [profile, accessibility],
   );
-  // Multi-stroke sequencing: letters trace the capital's strokes then the
-  // small letter's (side by side), matching the web demo's behaviour.
-  const [strokeIndex, setStrokeIndex] = useState(0);
-  const session = useRef(new TracingSession(props.activity.paths[0]!, config));
-  const scores = useRef<number[]>([]);
-  const lastRaw = useRef<{ x: number; y: number } | null>(null);
+  // The corridor width is the *tolerance*; the DRAWN band is slimmer (a neat
+  // letter, not a fat blob). Band / ink / dots / ruled-inset derive from it.
+  const drawBand = config.corridorWidth * 0.5;
+  const accent = props.theme.accent;
+
+  const strokes = props.activity.paths;
+  const guides = tracingGuideLines(props.activity.id);
 
   const [size, setSize] = useState({ w: 1, h: 1 });
-  const [childPoints, setChildPoints] = useState<{ x: number; y: number; onPath: boolean }[]>([]);
+  const [strokeIndex, setStrokeIndex] = useState(0);
+  const [lastPos, setLastPos] = useState(0);
   const [done, setDone] = useState(false);
   const [encouragement, setEncouragement] = useState<string | null>(null);
+  const [phase, setPhase] = useState(0);
 
-  const side = Math.min(size.w, size.h);
-  const scale = side / DESIGN;
-  // Centre the square design space in the stage (letters were left-aligned).
-  const ox = (size.w - side) / 2;
-  const oy = (size.h - side) / 2;
-  const toDesign = (x: number, y: number) => ({ x: (x - ox) / scale, y: (y - oy) / scale });
-  const fromDesign = (p: { x: number; y: number }) => ({ x: p.x * scale + ox, y: p.y * scale + oy });
+  // Mutable refs the pan handler reads, so the PanResponder is built once.
+  const session = useRef(new TracingSession(strokes[0]!, config));
+  const scores = useRef<number[]>([]);
+  const lastRaw = useRef<{ x: number; y: number } | null>(null);
+  const lastPosRef = useRef(0);
+  const strokeIndexRef = useRef(0);
+  const doneRef = useRef(false);
+  const geom = useRef({ scale: 1, ox: 0, oy: 0 });
 
-  // One Skia path per stroke, so each can be styled by step (done / current /
-  // upcoming) — the current step is highlighted and later steps stay greyed.
+  const { scale, ox, oy } = useMemo(
+    () => computeFit(strokes, guides, drawBand, size.w, size.h),
+    [strokes, guides, drawBand, size.w, size.h],
+  );
+  geom.current = { scale, ox, oy };
+
+  const toDesign = (x: number, y: number) => ({ x: (x - geom.current.ox) / geom.current.scale, y: (y - geom.current.oy) / geom.current.scale });
+
+  // Full-stroke Skia paths (screen coords) — the seamless grey bands, and the
+  // ink for already-finished strokes.
   const strokePaths = useMemo(() => {
-    return props.activity.paths.map((polyline) => {
+    return strokes.map((poly) => {
       const path = Skia.Path.Make();
-      const first = fromDesign(polyline[0]!);
-      path.moveTo(first.x, first.y);
-      for (const p of polyline.slice(1)) { const s = fromDesign(p); path.lineTo(s.x, s.y); }
+      path.moveTo(poly[0]!.x * scale + ox, poly[0]!.y * scale + oy);
+      for (const p of poly.slice(1)) path.lineTo(p.x * scale + ox, p.y * scale + oy);
       return path;
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [props.activity, scale, ox, oy]);
+  }, [strokes, scale, ox, oy]);
 
-  // Colour the corridor in behind the dot: the child's on-path points are
-  // stroked as one thick rounded trail in the theme accent, broken wherever the
-  // finger strayed off-path, so the glyph visibly fills as it is traced.
-  const fillPath = useMemo(() => {
-    const path = Skia.Path.Make();
-    let started = false;
-    for (const p of childPoints) {
-      if (!p.onPath) { started = false; continue; }
-      if (!started) { path.moveTo(p.x, p.y); started = true; }
-      else path.lineTo(p.x, p.y);
-    }
-    return path;
-  }, [childPoints]);
-  // The traced "ink" is a slim line within the (thick) corridor — thinner than
-  // the traceable band so it reads like a pen, not a fill.
-  const fillWidth = Math.max(4, config.corridorWidth * 0.45 * scale);
-  const tip = childPoints.length ? childPoints[childPoints.length - 1]! : null;
-  // Direction arrows on the current stroke only (the highlighted step).
-  const currentStroke = props.activity.paths[Math.min(strokeIndex, props.activity.paths.length - 1)]!;
-  const arrowsPath = arrowsPathFor([currentStroke], 0, scale, ox, oy, config.corridorWidth);
-
-  // Ruled "notebook" lines behind letters/numbers/name (top + dashed mid + base).
-  const guides = tracingGuideLines(props.activity.id);
-  const ruled = useMemo(() => {
-    if (!guides) return null;
-    const yAt = (dy: number) => dy * scale + oy;
-    const x0 = ox + 40 * scale, x1 = ox + (1000 - 40) * scale;
-    const solid = Skia.Path.Make();
-    for (const k of ['top', 'base'] as const) { solid.moveTo(x0, yAt(guides[k])); solid.lineTo(x1, yAt(guides[k])); }
-    const dash = Skia.Path.Make();
-    dash.moveTo(x0, yAt(guides.mid)); dash.lineTo(x1, yAt(guides.mid));
-    return { solid, dash };
-  }, [guides, scale, ox, oy]);
+  // Leader-dot animation (single glowing dot sweeping the current stroke).
+  useEffect(() => {
+    if (done) return;
+    let raf = 0;
+    let last = 0;
+    const loop = (t: number) => {
+      if (t - last > 33) {
+        setPhase((t % 1600) / 1600);
+        last = t;
+      }
+      raf = requestAnimationFrame(loop);
+    };
+    raf = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(raf);
+  }, [done]);
 
   const pan = useMemo(
     () =>
       PanResponder.create({
-        onStartShouldSetPanResponder: () => !done,
-        onMoveShouldSetPanResponder: () => !done,
-        onPanResponderGrant: () => { lastRaw.current = null; },
+        onStartShouldSetPanResponder: () => !doneRef.current,
+        onMoveShouldSetPanResponder: () => !doneRef.current,
+        onPanResponderGrant: () => {
+          lastRaw.current = null;
+        },
         onPanResponderMove: (e) => {
+          if (doneRef.current) return;
           const { locationX, locationY } = e.nativeEvent;
-          // Interpolate between move events so a fast drag leaves a smooth,
-          // unbroken trail (and the corridor engine gets dense samples).
-          const added: { x: number; y: number; onPath: boolean }[] = [];
           let reachedEnd = false;
+          let maxPos = lastPosRef.current;
           const add = (px: number, py: number) => {
             const res = session.current.addPoint(toDesign(px, py));
             if (res.completed) reachedEnd = true;
-            added.push({ x: px, y: py, onPath: res.onPath });
+            if (res.onPath && typeof res.pathPosition === 'number') maxPos = Math.max(maxPos, res.pathPosition);
           };
           const prev = lastRaw.current;
           if (prev) {
-            const dx = locationX - prev.x, dy = locationY - prev.y, dist = Math.hypot(dx, dy);
-            const steps = Math.min(32, Math.max(1, Math.round(dist / 5)));
+            const dx = locationX - prev.x;
+            const dy = locationY - prev.y;
+            const steps = Math.min(32, Math.max(1, Math.round(Math.hypot(dx, dy) / 5)));
             for (let s = 1; s <= steps; s++) add(prev.x + (dx * s) / steps, prev.y + (dy * s) / steps);
           } else {
             add(locationX, locationY);
           }
           lastRaw.current = { x: locationX, y: locationY };
-          setChildPoints((p) => [...p.slice(-700), ...added]);
-          if (reachedEnd && !done) {
+          lastPosRef.current = maxPos;
+          setLastPos(maxPos);
+          if (reachedEnd) {
             const summary = session.current.endAttempt();
             scores.current.push(summary.accuracyScore);
-            const nextIndex = strokeIndex + 1;
-            if (nextIndex < props.activity.paths.length) {
-              // Next stroke of the same glyph (e.g. capital done, small next).
-              session.current = new TracingSession(props.activity.paths[nextIndex]!, config);
-              setStrokeIndex(nextIndex);
-              setChildPoints([]);
+            const nextIndex = strokeIndexRef.current + 1;
+            if (nextIndex < strokes.length) {
+              session.current = new TracingSession(strokes[nextIndex]!, config);
+              strokeIndexRef.current = nextIndex;
+              lastPosRef.current = 0;
               lastRaw.current = null;
+              setStrokeIndex(nextIndex);
+              setLastPos(0);
               setEncouragement(pickFeedback('completed') + ' Now the next one!');
             } else {
+              doneRef.current = true;
+              lastPosRef.current = 1;
               setDone(true);
-              const avg = Math.round(scores.current.reduce((a, b) => a + b, 0) / scores.current.length);
+              setLastPos(1);
+              void audioService.playEffect('soft-chime');
+              const avg = Math.round(scores.current.reduce((a, b) => a + b, 0) / Math.max(1, scores.current.length));
               props.onComplete({ attempts: summary.attemptNumber, hintCount: 0, accuracyScore: avg });
-              // Flow straight into the next item in the section (no Home prompt).
-              if (props.onAdvance) setTimeout(props.onAdvance, 1300);
+              if (props.onAdvance) setTimeout(props.onAdvance, 1400);
             }
           }
         },
         onPanResponderRelease: () => {
           lastRaw.current = null;
-          if (done) return;
+          if (doneRef.current) return;
           const summary = session.current.endAttempt();
           if (!summary.completed) {
             setEncouragement(pickFeedback(summary.showDemo ? 'hint' : summary.coverage > 0.4 ? 'almost' : 'try-again'));
-            setChildPoints([]);
           }
         },
       }),
+    // Built once; all moving state is read/written through refs.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [done, scale, strokeIndex],
+    [],
   );
 
-  const start = fromDesign(props.activity.paths[Math.min(strokeIndex, props.activity.paths.length - 1)]![0]!);
+  // Derived render values.
+  const filledCount = done ? strokes.length : strokeIndex;
+  const bandWidth = Math.max(6, drawBand * scale);
+  const inkWidth = Math.max(4, drawBand * 0.62 * scale);
+  const trackWidth = Math.max(3, drawBand * 0.28 * scale);
+  const dotR = Math.max(6, drawBand * 0.4 * scale);
+  const arrowH = Math.max(8, drawBand * 0.55 * scale);
+
+  const cur = strokes[Math.min(strokeIndex, strokes.length - 1)]!;
+  const currentInk = !done ? partialPath(cur, lastPos, scale, ox, oy) : null;
+
+  // Directional guide on the current stroke: dotted track + start arrow +
+  // pulsing start dot + a single glowing leader dot sweeping in trace direction.
+  const s0 = sampleAt(cur, 0, scale, ox, oy);
+  const startAng = Math.atan2(s0.dy, s0.dx);
+  const arrow = useMemo(() => {
+    const p = Skia.Path.Make();
+    const axp = s0.x + Math.cos(startAng) * arrowH * 1.7;
+    const ayp = s0.y + Math.sin(startAng) * arrowH * 1.7;
+    p.moveTo(axp + Math.cos(startAng) * arrowH, ayp + Math.sin(startAng) * arrowH);
+    p.lineTo(axp + Math.cos(startAng + 2.4) * arrowH * 0.7, ayp + Math.sin(startAng + 2.4) * arrowH * 0.7);
+    p.lineTo(axp + Math.cos(startAng - 2.4) * arrowH * 0.7, ayp + Math.sin(startAng - 2.4) * arrowH * 0.7);
+    p.close();
+    return p;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [s0.x, s0.y, startAng, arrowH]);
+  const startPulse = dotR + Math.sin(phase * Math.PI * 2) * dotR * 0.28;
+  const leader = sampleAt(cur, phase, scale, ox, oy);
+
+  // Ruled "notebook" lines, inset by half the band so the glyph sits BETWEEN
+  // them; they span the full stage width.
+  const ruled = useMemo(() => {
+    if (!guides) return null;
+    const half = drawBand / 2;
+    const yAt = (dy: number) => dy * scale + oy;
+    const x0 = 12;
+    const x1 = Math.max(x0 + 1, size.w - 12);
+    const solid = Skia.Path.Make();
+    solid.moveTo(x0, yAt(guides.top - half));
+    solid.lineTo(x1, yAt(guides.top - half));
+    solid.moveTo(x0, yAt(guides.base + half));
+    solid.lineTo(x1, yAt(guides.base + half));
+    const dash = Skia.Path.Make();
+    dash.moveTo(x0, yAt(guides.mid));
+    dash.lineTo(x1, yAt(guides.mid));
+    return { solid, dash };
+  }, [guides, scale, oy, drawBand, size.w]);
 
   return (
     <View style={styles.root}>
@@ -226,72 +364,43 @@ export function TracingPlayer(props: {
         {...pan.panHandlers}
       >
         <Canvas style={styles.canvas}>
-          {/* Ruled "notebook" lines so the child writes between the lines. */}
           {ruled && (
-            <>
-              <Path path={ruled.solid} color="rgba(120, 150, 200, 0.45)" style="stroke" strokeWidth={2} />
-              <Path path={ruled.dash} color="rgba(120, 150, 200, 0.4)" style="stroke" strokeWidth={2}>
+            <Group>
+              <Path path={ruled.solid} color="rgba(120, 150, 200, 0.5)" style="stroke" strokeWidth={2} />
+              <Path path={ruled.dash} color="rgba(227, 154, 166, 0.7)" style="stroke" strokeWidth={2}>
                 <DashPathEffect intervals={[10, 10]} />
               </Path>
+            </Group>
+          )}
+          {/* Seamless flat grey band for the whole glyph (no outline/skeleton). */}
+          {strokePaths.map((p, i) => (
+            <Path key={`band-${i}`} path={p} color="#E7DED6" style="stroke" strokeWidth={bandWidth} strokeCap="round" strokeJoin="round" />
+          ))}
+          {/* Ink fills the glyph along its own centre-line: finished strokes full,
+              the current stroke up to how far it's been traced. */}
+          {strokePaths.map((p, i) =>
+            i < filledCount ? (
+              <Path key={`ink-${i}`} path={p} color={accent} style="stroke" strokeWidth={inkWidth} strokeCap="round" strokeJoin="round" opacity={0.95} />
+            ) : null,
+          )}
+          {currentInk && (
+            <Path path={currentInk} color={accent} style="stroke" strokeWidth={inkWidth} strokeCap="round" strokeJoin="round" opacity={0.95} />
+          )}
+          {/* Directional guide on the current stroke. */}
+          {!done && strokePaths[strokeIndex] && (
+            <>
+              <Path path={strokePaths[strokeIndex]!} color="rgba(255,255,255,0.95)" style="stroke" strokeWidth={trackWidth} strokeCap="round">
+                <DashPathEffect intervals={[1.5, Math.max(9, drawBand * 1.1 * scale)]} />
+              </Path>
+              <Path path={arrow} color={accent} style="fill" />
+              <Circle cx={s0.x} cy={s0.y} r={startPulse} color={accent} />
+              {/* Leader dot with a soft glow halo. */}
+              <Circle cx={leader.x} cy={leader.y} r={dotR * 1.9} color={accent} opacity={0.18} />
+              <Circle cx={leader.x} cy={leader.y} r={dotR} color={accent} />
             </>
           )}
-          {/* Corridor halo behind the CURRENT stroke only (the highlighted step). */}
-          {!done && strokePaths[strokeIndex] && (
-            <Path
-              path={strokePaths[strokeIndex]!}
-              color="#D7CCC8"
-              style="stroke"
-              strokeWidth={config.corridorWidth * 2 * scale}
-              strokeCap="round"
-              strokeJoin="round"
-              opacity={0.5}
-            />
-          )}
-          {/* Per-stroke centre line: done strokes glow accent, the current step
-              is bold brown, upcoming steps stay greyed until their turn. */}
-          {strokePaths.map((p, i) => {
-            const finished = done || i < strokeIndex;
-            const current = !done && i === strokeIndex;
-            return (
-              <Path
-                key={i}
-                path={p}
-                color={finished ? props.theme.accent : current ? '#8D6E63' : '#D7CCC8'}
-                style="stroke"
-                strokeWidth={finished ? 6 : current ? 4 : 3}
-                strokeCap="round"
-                strokeJoin="round"
-              />
-            );
-          })}
-          {/* Direction arrows along the current stroke (covered by the fill as
-              the child passes each one) */}
-          {!done && (
-            <Path
-              path={arrowsPath}
-              color={props.theme.accent}
-              style="stroke"
-              strokeWidth={Math.max(3, config.corridorWidth * 0.6 * scale * 0.34)}
-              strokeCap="round"
-              strokeJoin="round"
-              opacity={0.9}
-            />
-          )}
-          {/* Traced fill: the corridor colours in with the theme accent */}
-          <Path
-            path={fillPath}
-            color={props.theme.accent}
-            style="stroke"
-            strokeWidth={fillWidth}
-            strokeCap="round"
-            strokeJoin="round"
-            opacity={0.85}
-          />
-          {/* Faint off-path breadcrumbs (gentle, never a red "wrong" mark) */}
-          {childPoints.map((p, i) => (p.onPath ? null : <Circle key={i} cx={p.x} cy={p.y} r={5} color="#BDBDBD" opacity={0.4} />))}
-          {/* The guide dot: it marks the start point, then follows the finger tip */}
-          {!done && <Circle cx={(tip ?? start).x} cy={(tip ?? start).y} r={16} color={props.theme.accent} />}
         </Canvas>
+        <StarBurst show={done} />
       </View>
       {encouragement && !done && (
         <Text accessibilityLiveRegion="polite" style={[styles.encouragement, { color: props.theme.text }]}>
@@ -308,4 +417,6 @@ const styles = StyleSheet.create({
   canvasWrap: { flex: 1, margin: 8, borderRadius: 16, overflow: 'hidden', backgroundColor: '#FFFFFF' },
   canvas: { flex: 1 },
   encouragement: { fontSize: 22, fontWeight: '700', textAlign: 'center', padding: 8 },
+  burstLayer: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, alignItems: 'center', justifyContent: 'center' },
+  burst: { position: 'absolute', fontSize: 30 },
 });
