@@ -17,6 +17,7 @@ placed your own files, then run `node web-demo/build.mjs` for the demo / rebuild
 | `scene-*.png` | Colour section: full-page flood-fill scenes (solar system, rocket, unicorn, monkey, rabbit, whale) |
 | `trace-letter-{a..z}.png` | Tracing section: owner clay-art "letter cue" header (capital+small pair) shown above each letter |
 | `trace-number-{1..10}.png` | Tracing section: owner clay-art "number cue" header shown above each number |
+| `trace-{circle,square,triangle,rectangle,oval,pentagon,hexagon,curve,zigzag,line-straight}.png` | Tracing section: owner clay-art "shape cue" header (file named after the activity id) |
 
 ## Full-page colouring scenes (`scene-*.png`)
 

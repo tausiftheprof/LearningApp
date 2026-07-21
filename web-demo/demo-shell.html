@@ -1326,10 +1326,9 @@ function renderTracing(firstActivity) {
   // The owner's clay letter/number art (transparent-cleaned) shown as a small
   // "this is the letter" header cue. Shapes and the name have no clay art.
   function setHeader(id) {
-    let m, key = null;
-    if ((m = /^trace-letter-(.)/.exec(id))) key = 'trace-letter-' + m[1].toLowerCase();
-    else if ((m = /^trace-number-(\d+)/.exec(id))) key = 'trace-number-' + m[1];
-    if (key && RASTER_IMAGES[key]) { headerImg = new Image(); headerImg.onload = draw; headerImg.src = RASTER_IMAGES[key]; }
+    // Each clay art file is named exactly after its activity id (trace-letter-a,
+    // trace-number-5, trace-circle, ...), so a direct lookup covers every glyph.
+    if (RASTER_IMAGES[id]) { headerImg = new Image(); headerImg.onload = draw; headerImg.src = RASTER_IMAGES[id]; }
     else headerImg = null;
   }
 
