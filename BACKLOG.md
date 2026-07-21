@@ -14,10 +14,13 @@ Status key: `[ ]` open · `[~]` in progress · `[x]` done (move to the bottom or
   (the `trace-number-0` tracing activity already exists — it currently falls back to a plain black "0"
   in the picker). Confirm it appears in the Numbers list with the clay art after cleanup + rebuild.
 
-- [ ] **Rewards section — simple, proud, industry-standard (all four pieces chosen).** Keep it
-  uncomplicated and pressure-free; build on the existing `rewards/rewardsEngine.ts` (daily-capped
-  ledger) + `renderRewards`. **Deliberately avoid** (owner + industry direction for under-7s):
-  leaderboards/ranking, harsh streaks, coins/purchases, anything competitive.
+- [ ] **Rewards section — simple, proud, industry-standard (all four pieces chosen).** Owner approved
+  the interactive mockup (scratchpad artifact `1381b8f0-02ec-444d-ac9f-88b676d780e8`, "I like it for
+  now"). Keep it uncomplicated and pressure-free; build on the existing `rewards/rewardsEngine.ts`
+  (daily-capped ledger) + `renderRewards`. Four cards (2×2 grid, responsive to 1-col on phone):
+  Star Jar · Trophies · Sticker Book · Certificates, with the mascot cheering in the corner.
+  **Deliberately avoid** (owner + industry direction for under-7s): leaderboards/ranking, harsh
+  streaks, coins/purchases, anything competitive.
   - **Star jar / meter** — stars collect into a jar that visibly fills; when it's full it "pops"
     (confetti + chime) and awards a new sticker, then resets. The satisfying fill-it-up loop; drives
     off the existing `totalStars` ledger (e.g. jar holds N stars → sticker).
@@ -25,8 +28,10 @@ Status key: `[ ]` open · `[~]` in progress · `[x]` done (move to the bottom or
     "Traced every letter", "First puzzle", "Counted to 10", "Wrote my name", "Coloured a picture".
     Each unlocks once; shown on a trophy shelf in `renderRewards`. (Replaces/augments the current
     generic badges — make them concrete and proud-worthy.)
-  - **Sticker book (polish)** — keep the book; make it nicer: fill pages, tap a sticker to hear its
-    name (spoken), a sparkle when a new one lands, gentle "X to collect" progress.
+  - **Sticker book (polish)** — a page of slots (mock uses 12); collected stickers fill in, empty
+    slots show dashed circles, sparkle when a new one lands, tap a sticker to hear its name (spoken).
+    **When a page fills, celebrate ("You filled the whole book! 🏆") and start a fresh blank page**
+    (endless, no dead end), with a "📖 ×N filled!" tally the child can be proud of.
   - **Name certificate** — a simple screenshot-friendly card ("I can write my name!" / "I know my
     letters!") the parent can capture, shown when the matching milestone trophy is earned. Pride +
     involves the grown-up. (No sharing/upload — purely on-device visual.)
