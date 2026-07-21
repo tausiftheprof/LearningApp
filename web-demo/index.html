@@ -1570,15 +1570,19 @@ function renderPicker(category) {
     // Games without their own art fall back to a per-game emoji, never the
     // shared category illustration/chick.
     if (!hasPicture(imgName)) imgName = a.type === 'game' ? null : th.tileImages?.[catIndex[a.category] ?? 0] ?? null;
-    // Letter/number tracing tiles show just the big glyph pair, no icon or
-    // "Letter" prefix (owner direction): "A a", "B b", ... "9".
+    // Tracing tiles use the owner's clay art (the file is named after the
+    // activity id — trace-letter-a, trace-number-5, trace-circle) instead of the
+    // dark glyph text. High-contrast mode keeps the big glyph/outline for legibility.
     const letterM = /^trace-letter-(.)$/.exec(a.id);
     const numberM = /^trace-number-(\d+)$/.exec(a.id);
     const glyph = letterM ? `${letterM[1].toUpperCase()} ${letterM[1]}` : numberM ? numberM[1] : null;
-    // Shape-tracing tiles show a tiny outline of the shape itself, not a pencil.
+    // Shape-tracing tiles fall back to a tiny outline of the shape, not a pencil.
     const isShape = a.type === 'tracing' && !letterM && !numberM;
+    const trArt = a.type === 'tracing' && !highContrast() && RASTER_IMAGES[a.id] ? a.id : null;
     // Round "bubble" tile: art/emoji/glyph bursting out, plain-text name below.
-    const iconHtml = glyph
+    const iconHtml = trArt
+      ? `<span class="tile-illo" aria-hidden="true">${imgHtml(trArt, 64)}</span>`
+      : glyph
       ? `<span class="glyph-big" aria-hidden="true">${glyph}</span>`
       : isShape
         ? `<span class="tile-illo" aria-hidden="true">${shapeIconSvg(a, 62)}</span>`
