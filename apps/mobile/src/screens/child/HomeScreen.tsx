@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Animated, Easing, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Animated, Easing, Image, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import {
   dayKeyFrom,
   canStartNewActivity,
@@ -84,15 +84,17 @@ function FloatingTile({
   artSource,
   label,
   index,
-  littlest,
   textColour,
+  cellW,
+  artSize,
   onPress,
 }: {
   artSource: number;
   label: string;
   index: number;
-  littlest: boolean;
   textColour: string;
+  cellW: number;
+  artSize: number;
   onPress: () => void;
 }): React.JSX.Element {
   const bob = useRef(new Animated.Value(0)).current;
@@ -111,7 +113,7 @@ function FloatingTile({
   }, [bob, index]);
   const translateY = bob.interpolate({ inputRange: [0, 1], outputRange: [0, -6] });
   return (
-    <Animated.View style={[styles.tileCell, littlest && styles.tileCellLittlest, { transform: [{ translateY }] }]}>
+    <Animated.View style={[styles.tileCell, { width: cellW, transform: [{ translateY }] }]}>
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={label}
@@ -123,7 +125,7 @@ function FloatingTile({
       >
         <Image
           source={artSource}
-          style={[styles.tileArt, littlest && styles.tileArtLittlest]}
+          style={{ width: artSize, height: artSize }}
           resizeMode="contain"
           accessibilityElementsHidden
         />
@@ -152,6 +154,21 @@ export function HomeScreen(): React.JSX.Element {
   const ageBand = profile?.ageBand ?? '3-5';
   const visibleTiles = homeTilesForAge(ageBand);
   const littlest = ageBand === '2-3';
+
+  // Responsive tile sizing from the live viewport (phone → tablet → web, and
+  // rotation), mirroring the demo's CSS auto-fit minmax grid: fit as many
+  // columns of minTile..maxTile as the width allows, but never more than the
+  // number of doors, and stretch each column up to maxTile.
+  const { width: winW } = useWindowDimensions();
+  const GAP = 12;
+  const H_PAD = 20;
+  const avail = Math.max(260, winW - H_PAD);
+  const minTile = littlest ? 150 : 128;
+  const maxTile = littlest ? 220 : 184;
+  const fitCols = Math.max(1, Math.floor((avail + GAP) / (minTile + GAP)));
+  const cols = Math.min(Math.max(1, visibleTiles.length), Math.max(2, fitCols));
+  const cellW = Math.min(maxTile, Math.floor((avail - GAP * (cols - 1)) / cols));
+  const artSize = Math.max(64, Math.round(cellW - 24));
 
   function open(target: HomeTarget, label: string): void {
     void audioService.playInstruction(`label/${label}`);
@@ -224,8 +241,9 @@ export function HomeScreen(): React.JSX.Element {
                 artSource={artSource}
                 label={tile.label}
                 index={i}
-                littlest={littlest}
                 textColour={theme.text}
+                cellW={cellW}
+                artSize={artSize}
                 onPress={() => open(tile.target, tile.label)}
               />
             );
@@ -267,16 +285,13 @@ const styles = StyleSheet.create({
   grid: { flexDirection: 'row', flexWrap: 'wrap', padding: 8 },
   cell: { width: '50%', minHeight: 130 },
   cellLittlest: { minHeight: 168 },
-  // Candy: floating art tiles, centre-packed & size-capped. Fixed pixel art
-  // sizes (RN won't reliably resolve % width through the Animated wrapper, and
-  // views don't clip by default, so an unconstrained image overflows hugely).
+  // Candy: floating art tiles, centre-packed. Cell/art sizes are computed from
+  // the live viewport in HomeScreen (responsive) and applied inline; the image
+  // is always given explicit numeric dimensions so it can never overflow.
   gridCandy: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', alignItems: 'flex-start', paddingHorizontal: 10, paddingBottom: 28, paddingTop: 4, gap: 12 },
-  tileCell: { width: 160, alignItems: 'center' },
-  tileCellLittlest: { width: 188 },
+  tileCell: { alignItems: 'center' },
   homeTile: { alignItems: 'center', padding: 6 },
   homeTilePressed: { transform: [{ scale: 0.94 }] },
-  tileArt: { width: 128, height: 128 },
-  tileArtLittlest: { width: 150, height: 150 },
   tileLabel: { fontSize: 16, fontWeight: '800', marginTop: 2, textAlign: 'center' },
   sparkLayer: { position: 'absolute', top: '30%', left: 0, right: 0, alignItems: 'center', justifyContent: 'center' },
   spark: { position: 'absolute', fontSize: 20 },
