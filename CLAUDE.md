@@ -20,6 +20,12 @@ keep that cheap:
 - **Batch related tweaks.** Ten fixes in one request ≈ one read + one `node web-demo/build.mjs`
   + one verify pass. The same ten fixes split across ten requests multiplies all three. When
   the owner sends a list, do the whole list before rebuilding/verifying once.
+- **One canonical demo artifact.** There is a single live product-demo artifact,
+  `ad14d5cb-effe-480d-a58f-890dc36a4e5a` — republish only that one after a rebuild. (An older
+  duplicate `aa33398b-…` exists; ignore it — do NOT keep it in sync. Republishing two identical
+  artifacts every change is pure waste.)
+- **Don't waste tokens on redundant work** (owner direction): no re-reading files already in context,
+  no re-verifying an unchanged surface, no double-publishing, no narrating options you won't take.
 - **Prefer a visual reference over prose for shape/direction work.** "Left to right" was
   ambiguous enough to cause several wrong-direction rebuilds; a marked-up screenshot or "like a
   school handwriting worksheet" resolves it in one pass. When a request is visual and the
