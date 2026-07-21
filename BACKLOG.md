@@ -9,6 +9,11 @@ Status key: `[ ]` open · `[~]` in progress · `[x]` done (move to the bottom or
 
 ## Open
 
+- [ ] **Wire the number 0 clay art.** Owner uploaded `Tracing - 0.png` (still has the checkerboard
+  background). Clean it with the region-size key-out pipeline → `trace-number-0.png`, then it auto-wires
+  (the `trace-number-0` tracing activity already exists — it currently falls back to a plain black "0"
+  in the picker). Confirm it appears in the Numbers list with the clay art after cleanup + rebuild.
+
 - [ ] **Port the recent demo-first work to the mobile app.** These all shipped and are verified in
   the web demo but are not yet in the Expo app (mobile needs a device/emulator to drive + verify):
   - The two new games — **Cutting Practice** (`cut-along`) and **Number Path Hop** (`number-hop`)
