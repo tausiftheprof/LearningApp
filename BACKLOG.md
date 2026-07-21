@@ -9,6 +9,14 @@ Status key: `[ ]` open · `[~]` in progress · `[x]` done (move to the bottom or
 
 ## Open
 
+- [ ] **Swap the Games tile to the revised (pastel) Play badge.** Owner uploaded
+  `assets/images/Icon - Games home screen 3.png` — same composition as the shipped one
+  (trophy / coins / rocket / rainbow / clouds / stars) but in a softer pastel palette that
+  matches the Candy-Clouds theme better. Build step: check alpha (looks transparent already,
+  but confirm — if it's the baked checkerboard, region-size key-out), trim + cap ~560px,
+  overwrite `assets/images/tile-toddler.png` (the key the Games tile is already wired to),
+  delete the messy-named source, `node web-demo/build.mjs`, republish `ad14d5cb`.
+
 - [ ] **Port the recent demo-first work to the mobile app.** These all shipped and are verified in
   the web demo but are not yet in the Expo app (mobile needs a device/emulator to drive + verify):
   - The two new games — **Cutting Practice** (`cut-along`) and **Number Path Hop** (`number-hop`)
