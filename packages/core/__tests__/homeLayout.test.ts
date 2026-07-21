@@ -5,12 +5,12 @@ describe('homeTilesForAge', () => {
   const labelsFor = (band: AgeBand) => homeTilesForAge(band).map((t) => t.label);
 
   it('gives each band exactly the expected doors, in order', () => {
-    expect(labelsFor('2-3')).toEqual(['Daily Adventure', 'Draw', 'Colour', 'Tracing', 'Puzzles', 'Little Games']);
+    expect(labelsFor('2-3')).toEqual(['Daily Adventure', 'Draw', 'Colour', 'Tracing', 'Puzzles', 'Games']);
     expect(labelsFor('3-5')).toEqual([
-      'Daily Adventure', 'Draw', 'Colour', 'Tracing', 'Puzzles', 'Little Games',
+      'Daily Adventure', 'Draw', 'Colour', 'Tracing', 'Puzzles', 'Games',
     ]);
     expect(labelsFor('5-7')).toEqual([
-      'Daily Adventure', 'Draw', 'Colour', 'Tracing', 'Puzzles', 'Little Games', 'Think & Solve',
+      'Daily Adventure', 'Draw', 'Colour', 'Tracing', 'Puzzles', 'Games', 'Think & Solve',
     ]);
   });
 
@@ -26,10 +26,11 @@ describe('homeTilesForAge', () => {
     expect(labels).not.toContain('Think & Solve');
   });
 
-  it('keeps Little Games and adds Think & Solve at 5-7 (Big Kid Games retired)', () => {
+  it('keeps Games and adds Think & Solve at 5-7 (Big Kid Games retired)', () => {
     const labels = labelsFor('5-7');
-    expect(labels).toEqual(expect.arrayContaining(['Little Games', 'Think & Solve']));
+    expect(labels).toEqual(expect.arrayContaining(['Games', 'Think & Solve']));
     expect(labels).not.toContain('Big Kid Games');
+    expect(labels).not.toContain('Little Games');
   });
 
   it('has no duplicate labels within a band and keeps every idx in 0..7', () => {

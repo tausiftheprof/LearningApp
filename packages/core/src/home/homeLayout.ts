@@ -36,16 +36,16 @@ export interface HomeTile {
 
 // Canonical tiles. `idx` matches the historical category order so existing
 // theme icon/image/photo arrays keep resolving:
-// 0 Draw · 1 Colour · 2 Puzzles · 3 Tracing · 4 Little Games · 5 Big Kid Games
+// 0 Draw · 1 Colour · 2 Puzzles · 3 Tracing · 4 Games · 5 Big Kid Games
 // · 6 Think & Solve · 7 Daily Adventure.
 const DAILY: HomeTile = { label: 'Daily Adventure', idx: 7, target: { special: 'daily' } };
 const DRAW: HomeTile = { label: 'Draw', idx: 0, target: { category: 'drawing' } };
 const COLOUR: HomeTile = { label: 'Colour', idx: 1, target: { category: 'colouring' } };
 const PUZZLES: HomeTile = { label: 'Puzzles', idx: 2, target: { category: 'puzzles' } };
 const TRACING: HomeTile = { label: 'Tracing', idx: 3, target: { category: 'tracing' } };
-const LITTLE_GAMES: HomeTile = { label: 'Little Games', idx: 4, target: { category: 'toddler' } };
+const LITTLE_GAMES: HomeTile = { label: 'Games', idx: 4, target: { category: 'toddler' } };
 // "Big Kid Games" retired (owner direction, July 2026): those games were really
-// little-kid games, so they now live under Little Games; a genuine big-kid set
+// little-kid games, so they now live under Games; a genuine big-kid set
 // will be designed separately. Only Think & Solve remains as an older-child door.
 const THINK_SOLVE: HomeTile = { label: 'Think & Solve', idx: 6, target: { category: 'logic' } };
 
@@ -63,7 +63,7 @@ export function homeTilesForAge(ageBand: AgeBand): HomeTile[] {
     case '3-5':
       return [DAILY, DRAW, COLOUR, TRACING, PUZZLES, LITTLE_GAMES];
     case '5-7':
-      // Older children keep Little Games (now home to the former "Big Kid Games")
+      // Older children keep Games (now home to the former "Big Kid Games")
       // and additionally get the Think & Solve door.
       return [DAILY, DRAW, COLOUR, TRACING, PUZZLES, LITTLE_GAMES, THINK_SOLVE];
   }

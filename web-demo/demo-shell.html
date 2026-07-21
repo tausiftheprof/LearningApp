@@ -1266,8 +1266,19 @@ function renderTracing(firstActivity) {
   let session = new LH.TracingSession(strokes[0], config);
   let scores = [];
   let scale = 1, ox = 0, oy = 0, dots = [], filledStrokes = [], done = false, tracing = false, lastPos = 0;
+  let phase = 0, headerImg = null;
   // Inside-screen accent follows the active theme (start affordance, arrows).
   const accent = highContrast() ? '#0000CC' : theme().accent;
+
+  // The owner's clay letter/number art (transparent-cleaned) shown as a small
+  // "this is the letter" header cue. Shapes and the name have no clay art.
+  function setHeader(id) {
+    let m, key = null;
+    if ((m = /^trace-letter-(.)/.exec(id))) key = 'trace-letter-' + m[1].toLowerCase();
+    else if ((m = /^trace-number-(\d+)/.exec(id))) key = 'trace-number-' + m[1];
+    if (key && RASTER_IMAGES[key]) { headerImg = new Image(); headerImg.onload = draw; headerImg.src = RASTER_IMAGES[key]; }
+    else headerImg = null;
+  }
 
   // Tracing-colour options (owner direction). Rainbow is the default; the trail
   // the child leaves is painted in the chosen colour.
@@ -1300,6 +1311,7 @@ function renderTracing(firstActivity) {
     if (bar) bar.textContent = next.title;
     setStatus('Tracing — ' + next.title, ['tracing.TracingSession (multi-stroke)', 'tracing.tracingConfigFor']);
     note.textContent = '';
+    setHeader(next.id);
     speak(next.title.replace('·', 'and little'));
     draw();
   }
@@ -1425,50 +1437,71 @@ function renderTracing(firstActivity) {
     // baseline), so the child writes between the lines like in a book.
     const guides = LH.tracingGuideLines(activity.id);
     if (guides) {
-      const lineX0 = ox + 40 * scale, lineX1 = ox + (1000 - 40) * scale;
+      // Push the top/base lines out by half the drawn band so the letters sit
+      // BETWEEN the lines (band edge just touches them, never spilling over).
+      const half = config.corridorWidth;
+      const lineX0 = ox + 26 * scale, lineX1 = ox + (1000 - 26) * scale;
       const yAt = (dy) => dy * scale + oy;
-      ctx.strokeStyle = 'rgba(120, 150, 200, 0.45)';
-      ctx.lineWidth = 2;
-      for (const key of ['top', 'base']) {
-        ctx.setLineDash([]); ctx.beginPath();
-        ctx.moveTo(lineX0, yAt(guides[key])); ctx.lineTo(lineX1, yAt(guides[key])); ctx.stroke();
-      }
-      ctx.setLineDash([10, 10]); ctx.beginPath();
-      ctx.moveTo(lineX0, yAt(guides.mid)); ctx.lineTo(lineX1, yAt(guides.mid)); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.strokeStyle = 'rgba(120, 150, 200, 0.5)'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(lineX0, yAt(guides.top - half)); ctx.lineTo(lineX1, yAt(guides.top - half)); ctx.stroke();
+      ctx.strokeStyle = 'rgba(227, 154, 166, 0.7)'; ctx.lineWidth = 2.5;   // soft-red baseline
+      ctx.beginPath(); ctx.moveTo(lineX0, yAt(guides.base + half)); ctx.lineTo(lineX1, yAt(guides.base + half)); ctx.stroke();
+      ctx.strokeStyle = 'rgba(120, 150, 200, 0.5)'; ctx.lineWidth = 2; ctx.setLineDash([10, 10]);
+      ctx.beginPath(); ctx.moveTo(lineX0, yAt(guides.mid)); ctx.lineTo(lineX1, yAt(guides.mid)); ctx.stroke();
       ctx.setLineDash([]);
     }
-    strokes.forEach((path, i) => {
-      // corridor for the current stroke only; others shown as guides
-      if (i === strokeIndex && !done) {
-        strokePath(path);
-        ctx.strokeStyle = 'rgba(215, 204, 200, 0.55)';
-        ctx.lineWidth = config.corridorWidth * 2 * scale;
-        ctx.stroke();
-      }
+    // The whole glyph is one flat, seamless grey band (no outline / skeleton
+    // line) — the child fills it in with ink as they trace.
+    strokes.forEach((path) => {
       strokePath(path);
-      if (i < strokeIndex || done) { ctx.strokeStyle = tracePrimary(); ctx.lineWidth = 8; } // finished strokes glow in the trace colour
-      else if (i === strokeIndex) { ctx.strokeStyle = '#8D6E63'; ctx.lineWidth = 6; }
-      else { ctx.strokeStyle = '#D7CCC8'; ctx.lineWidth = 5; } // strokes still to come
+      ctx.strokeStyle = '#E7DED6';
+      ctx.lineWidth = config.corridorWidth * 2 * scale;
       ctx.stroke();
     });
-    // Direction arrows along the CURRENT stroke only — the step in progress is
-    // highlighted; upcoming strokes stay greyed until it is their turn. The
-    // traced fill is drawn over the arrows next, covering each as it is passed.
-    if (!done) drawArrows(strokes[strokeIndex], 0.95);
-    // The traced fill sits above the guide + arrows.
+    // The traced fill (child's ink) sits above the band.
     drawFill();
-    // Faint off-path breadcrumbs (gentle, never a red "wrong" mark).
-    for (const d of dots) {
-      if (d.on) continue;
-      ctx.beginPath(); ctx.arc(d.x, d.y, 4, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(189,189,189,0.4)'; ctx.fill();
+    // Directional guide on the CURRENT stroke: dotted track + a single glowing
+    // dot leading the way, a pulsing start dot and a start arrow.
+    if (!done) drawGuide();
+    // The owner's clay letter/number art as a small header cue (top-left).
+    if (headerImg && headerImg.complete && headerImg.naturalWidth) {
+      const hh = Math.min(r.height * 0.16, 84), hw = hh * (headerImg.naturalWidth / headerImg.naturalHeight);
+      ctx.drawImage(headerImg, 10, 8, hw, hh);
     }
-    // The guide dot: it marks the start point, then follows the finger tip.
-    if (!done) {
-      const sp = strokes[strokeIndex][0];
-      const cur = dots.length ? dots[dots.length - 1] : { x: sp.x * scale + ox, y: sp.y * scale + oy };
-      ctx.beginPath(); ctx.arc(cur.x, cur.y, 11, 0, Math.PI * 2); ctx.fillStyle = tracePrimary(); ctx.fill();
-    }
+  }
+
+  // The directional guide for the stroke in progress.
+  function drawGuide() {
+    const path = strokes[strokeIndex];
+    // dotted white track along the current stroke
+    strokePath(path);
+    ctx.strokeStyle = 'rgba(255,255,255,0.95)';
+    ctx.lineWidth = Math.max(3, config.corridorWidth * 0.26 * scale);
+    ctx.lineCap = 'round';
+    ctx.setLineDash([1.5, Math.max(9, config.corridorWidth * 0.7 * scale)]);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    // start cue: a pulsing dot + a small direction arrow
+    const s0 = sampleAt(path, 0);
+    const ah = Math.max(9, config.corridorWidth * 0.5 * scale);
+    const a = Math.atan2(s0.dy, s0.dx);
+    const axp = s0.x + Math.cos(a) * ah * 1.6, ayp = s0.y + Math.sin(a) * ah * 1.6;
+    ctx.fillStyle = accent;
+    ctx.beginPath();
+    ctx.moveTo(axp + Math.cos(a) * ah, ayp + Math.sin(a) * ah);
+    ctx.lineTo(axp + Math.cos(a + 2.4) * ah * 0.7, ayp + Math.sin(a + 2.4) * ah * 0.7);
+    ctx.lineTo(axp + Math.cos(a - 2.4) * ah * 0.7, ayp + Math.sin(a - 2.4) * ah * 0.7);
+    ctx.closePath(); ctx.fill();
+    const pr = 10 + Math.sin(phase * Math.PI * 2) * 3;
+    ctx.beginPath(); ctx.arc(s0.x, s0.y, pr, 0, Math.PI * 2); ctx.fillStyle = accent; ctx.fill();
+    // one glowing dot leading the way along the stroke, in the trace direction
+    const lp = sampleAt(path, phase);
+    ctx.save();
+    ctx.shadowColor = accent; ctx.shadowBlur = 12;
+    ctx.beginPath(); ctx.arc(lp.x, lp.y, Math.max(7, config.corridorWidth * 0.5 * scale), 0, Math.PI * 2);
+    ctx.fillStyle = accent; ctx.fill();
+    ctx.restore();
   }
 
   function strokeDone(summary) {
@@ -1647,6 +1680,16 @@ function renderTracing(firstActivity) {
 
   requestAnimationFrame(fit);
   new ResizeObserver(fit).observe(stage);
+  // Animate the leading guide dot; self-terminates once the screen is gone.
+  let rafId = 0;
+  function animate(t) {
+    if (!document.body.contains(canvas)) { cancelAnimationFrame(rafId); return; }
+    phase = (t % 1600) / 1600;
+    if (!done) draw();
+    rafId = requestAnimationFrame(animate);
+  }
+  setHeader(activity.id);
+  rafId = requestAnimationFrame(animate);
   speak(activity.title.replace('·', 'and little'));
 }
 

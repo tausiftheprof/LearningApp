@@ -15,6 +15,8 @@ placed your own files, then run `node web-demo/build.mjs` for the demo / rebuild
 | `star.svg`, `sun.svg`, `moon.svg` | rewards/stickers, sequences, patterns |
 | `rocket.svg`, `balloon.svg`, `car.svg`, `treehouse.svg` | jigsaws, sequences |
 | `scene-*.png` | Colour section: full-page flood-fill scenes (solar system, rocket, unicorn, monkey, rabbit, whale) |
+| `trace-letter-{a..z}.png` | Tracing section: owner clay-art "letter cue" header (capital+small pair) shown above each letter |
+| `trace-number-{1..10}.png` | Tracing section: owner clay-art "number cue" header shown above each number |
 
 ## Full-page colouring scenes (`scene-*.png`)
 
