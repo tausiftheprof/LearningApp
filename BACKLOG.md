@@ -27,6 +27,11 @@ Status key: `[ ]` open · `[~]` in progress · `[x]` done (move to the bottom or
     lives in that panel; either relocate it to the left actions or drop it. `fillPaint()`/`traceColor`
     state can go.
 
+- [ ] **Puzzle bubbles — drop the name label.** In the Puzzles picker the jigsaw picture already
+  says what it is, so the plain-text name under the bubble is redundant. Hide the `.bubble-label` for
+  puzzle tiles (in `renderPicker`, pass a flag / empty label when `category === 'puzzles'`, keeping the
+  bubble's `aria-label` for screen readers). Other pickers keep their labels. Demo + mobile.
+
 - [ ] **Port the recent demo-first work to the mobile app.** These all shipped and are verified in
   the web demo but are not yet in the Expo app (mobile needs a device/emulator to drive + verify):
   - The two new games — **Cutting Practice** (`cut-along`) and **Number Path Hop** (`number-hop`)
