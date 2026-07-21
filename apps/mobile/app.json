@@ -2,7 +2,7 @@
   "expo": {
     "name": "Little Grip - big learning adventures",
     "slug": "little-grip",
-    "owner": "Justraji",
+    "owner": "justraji",
     "version": "0.1.0",
     "orientation": "default",
     "userInterfaceStyle": "light",
@@ -34,6 +34,9 @@
       "favicon": "./assets/favicon.png"
     },
     "extra": {
+      "eas": {
+        "projectId": "60813396-0dd1-4573-ab6a-198dc7700077"
+      },
       "childSafety": {
         "note": "No analytics, advertising, crash-reporting or social SDKs may be added without the assessment in docs/07 section 7.7."
       }
