@@ -9,6 +9,33 @@ Status key: `[ ]` open · `[~]` in progress · `[x]` done (move to the bottom or
 
 ## Open
 
+- [ ] **Consistent "bubble" visual language across all inner screens.** Owner approved the bubble-tile
+  mockup for the games picker (round balloon tiles + plain-text names, gentle bob, pop + sparkle on
+  tap) and wants that look carried through every inner page for one coherent app. **Home screen stays
+  unchanged** — it's the approved landing; bubbles are the language for everything *inside* it.
+  Build-ready spec:
+  - **Bubble tiles + plain-text labels on every "pick something" grid** (replaces the current
+    `.big-tile` rectangles in the picker): Little Games, Puzzles, Think & Solve; the choosers —
+    Colour (2 doors), Draw (3 sections), Tracing chooser; and the Tracing lists (shapes / letters /
+    numbers). Round tile, artwork/emoji bursting out, name as **plain bold text under** the bubble
+    (no white pill — owner chose plain text over ribbon/inside/none). Each game keeps its own art
+    (feed→mascot, cut→scissors, hop→lily-pad); shape tiles show the shape outline inside the bubble,
+    letter/number tiles show the big glyph pair. Tile/bubble colours rotate from the **active theme
+    palette** (`tiles()`), so Candy/Storybook/Aussie each stay coherent.
+  - **Shared chrome on every "do the activity" screen** (workspaces — tracing, colouring, feed, cut,
+    hop, draw, puzzles): NOT bubbles. Unify the frame instead — same rounded home button, white pill
+    buttons, one completion-card style (the "play again + back" card), and **accent/success colours
+    pulled from the child's active theme** instead of the hardcoded orange/green. (This folds in the
+    already-drafted "theme-matched inside screens" plan — the start-dot, tool highlight, banner, and
+    primary buttons become `var(--accent)`/`var(--success)`.)
+  - **One shared tap language everywhere**: gentle idle bob on tiles, a pop-scale + sparkle burst on
+    tap (respect `prefers-reduced-motion`), matching the mockup.
+  - **Reference mockup**: scratchpad artifact `91d4579a-a1d3-494c-8c23-128e0071cc30`
+    (styling lives in `demo-shell.html`'s `.big-tile`/`.picker-grid` block).
+  - **Surfaces**: demo-first (`web-demo/demo-shell.html` picker + player chrome, then
+    `node web-demo/build.mjs`); mobile port (`ActivityPickerScreen.tsx` `BigTile` + players) folds
+    into the existing mobile-port item. No core/schema change — this is renderer styling only.
+
 - [ ] **Port the recent demo-first work to the mobile app.** These all shipped and are verified in
   the web demo but are not yet in the Expo app (mobile needs a device/emulator to drive + verify):
   - The two new games — **Cutting Practice** (`cut-along`) and **Number Path Hop** (`number-hop`)
