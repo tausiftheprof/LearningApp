@@ -308,6 +308,15 @@
   @keyframes homeBob { 0%, 100% { translate: 0 0; } 50% { translate: 0 -5px; } }
   .greeting-card .mascot-slot { display: inline-block; transform-origin: 50% 90%; animation: mascotHop 3.6s ease-in-out infinite; }
   @keyframes mascotHop { 0%, 72%, 100% { transform: translateY(0) rotate(0); } 82% { transform: translateY(-7px) rotate(-5deg); } 92% { transform: translateY(0) rotate(3deg); } }
+  /* Home tiles to the approved mockup: floating blob-card art + label under,
+     size-capped & centre-packed so they stay tidy on tablets. */
+  .home-grid.capped { grid-template-columns: repeat(auto-fit, minmax(122px, 168px)); justify-content: center; gap: clamp(14px, 2.6vw, 24px); }
+  .home-tile { border: none; background: none; cursor: pointer; padding: 4px; display: flex; flex-direction: column; align-items: center; gap: 5px; animation: homeBob var(--hb, 4s) ease-in-out var(--hd, 0s) infinite; transition: transform .16s cubic-bezier(.34,1.56,.64,1); }
+  .home-tile:hover { transform: translateY(-4px) scale(1.03); }
+  .home-tile:active { transform: scale(0.94); }
+  .home-tile .tile-art { width: 100%; aspect-ratio: 1; object-fit: contain; filter: drop-shadow(0 8px 10px rgba(74,59,50,.18)); display: block; }
+  .home-tile .label { font-weight: 800; font-size: clamp(14px, 2.6vw, 17px); color: var(--ink, #4A3B32); text-align: center; }
+  .greeting-card .mascot-slot img { width: 62px; height: 62px; object-fit: contain; }
   @media (prefers-reduced-motion: reduce) { .home-grid .big-tile, .greeting-card .mascot-slot { animation: none; } }
 
   /* ---- Colour section layout (owner direction): right-aligned collapsible
@@ -985,7 +994,11 @@ function renderHome() {
   }
 
   const top = el(`<div class="home-top"></div>`);
-  const mascotHtml = th.greeting.mascotImage && (IMAGES[th.greeting.mascotImage] || RASTER_IMAGES[th.greeting.mascotImage])
+  // The brand mascot (teal Little Grip) greets the child, matching the approved
+  // home mockup; falls back to the theme's greeting mascot / emoji.
+  const mascotHtml = (!hc && RASTER_IMAGES['mascot'])
+    ? imgHtml('mascot', 62)
+    : th.greeting.mascotImage && (IMAGES[th.greeting.mascotImage] || RASTER_IMAGES[th.greeting.mascotImage])
     ? imgHtml(th.greeting.mascotImage, 64)
     : `<span class="mascot" aria-hidden="true">${th.greeting.mascot}</span>`;
   // Star + rewards total sit next to the child's name (owner direction, July 2026).
@@ -1006,9 +1019,9 @@ function renderHome() {
 
   // Age-adaptive doors from core; the littlest band (2-3) gets a roomier grid.
   const ageBand = state.profile?.ageBand ?? '3-5';
-  const grid = el(`<div class="tile-grid home-grid${ageBand === '2-3' ? ' age-littlest' : ''}"></div>`);
-  // Candy Clouds ships full illustrated tile photos - each already contains its
-  // own coloured card + decoration, so it replaces the background + medallion.
+  // Candy home matches the approved mockup: floating blob-card art with the label
+  // under, size-capped & centre-packed (`capped`).
+  const grid = el(`<div class="tile-grid home-grid${ageBand === '2-3' ? ' age-littlest' : ''}${candy ? ' capped' : ''}"></div>`);
   LH.homeTilesForAge(ageBand).forEach((t, i) => {
     const isDaily = t.target.special === 'daily';
     const category = homeTileCategory(t);
@@ -1016,15 +1029,22 @@ function renderHome() {
     const usePhoto = photoName && RASTER_IMAGES[photoName];
     const imgName = t.image && IMAGES[t.image] ? t.image : th.tileImages?.[t.idx];
     const icon = t.icon ?? th.tileIcons[t.idx];
-    const iconHtml = usePhoto
-      ? `<span class="tile-photo" aria-hidden="true">${imgHtml(photoName, 96)}</span>`
-      : imgName && IMAGES[imgName] && !hc
-      ? `<span class="tile-illo" aria-hidden="true">${imgHtml(imgName, 64)}</span>`
-      : `<span class="medallion" style="background:${surface}" aria-hidden="true">${icon}</span>`;
-    const tile = el(`<button class="big-tile ${usePhoto ? 'has-photo' : ''}" style="background:${usePhoto ? 'none' : tiles()[i % tiles().length]}">
-      ${iconHtml}
-      <span class="tile-text"><span class="label" style="${usePhoto ? `color:${th.text}` : ''}">${t.label}</span></span>
-    </button>`);
+    let tile;
+    if (usePhoto) {
+      // Approved mockup tile: art fills the tile, label underneath, floating.
+      tile = el(`<button class="home-tile" aria-label="${t.label}">
+        <img class="tile-art" src="${RASTER_IMAGES[photoName]}" alt="" aria-hidden="true">
+        <span class="label">${t.label}</span>
+      </button>`);
+    } else {
+      const iconHtml = imgName && IMAGES[imgName] && !hc
+        ? `<span class="tile-illo" aria-hidden="true">${imgHtml(imgName, 64)}</span>`
+        : `<span class="medallion" style="background:${surface}" aria-hidden="true">${icon}</span>`;
+      tile = el(`<button class="big-tile" style="background:${tiles()[i % tiles().length]}">
+        ${iconHtml}
+        <span class="tile-text"><span class="label">${t.label}</span></span>
+      </button>`);
+    }
     // Stagger the idle bob so the doors don't pulse in lock-step.
     tile.style.setProperty('--hb', (3.6 + (i % 4) * 0.5).toFixed(1) + 's');
     tile.style.setProperty('--hd', (i * 0.18).toFixed(2) + 's');
@@ -1354,7 +1374,14 @@ function instructionFor(a) {
   if (a.type === 'tracing') return 'Follow the path with your finger, starting at the orange dot.';
   if (a.type === 'colouring') return a.mode === 'by-number' ? 'Match the numbers! Pick a colour, then tap its number.' : 'Pick a colour and tap a space to fill it in.';
   if (a.type === 'jigsaw') return 'Drag each piece to its home.';
-  if (a.type === 'game') return ({ 'pop-bubbles': 'Pop all the bubbles!', 'tap-target': 'Tap what I ask for!', 'match-pairs': 'Find the pairs!', 'memory-cards': 'Remember where the friends hide!', counting: 'Count the apples and tap the number.', 'odd-one-out': 'Which one is different?', 'dot-to-dot': 'Tap the numbers in order to reveal the picture!' })[a.template] || a.title;
+  if (a.type === 'game') {
+    if (a.template === 'counting') {
+      const item = a.params && a.params.item;                 // say the real item, not "apples"
+      const plural = item ? (item === 'fish' ? 'fish' : item + 's') : 'them';
+      return 'Count the ' + plural + ' and tap the number.';
+    }
+    return ({ 'pop-bubbles': 'Pop all the bubbles!', 'tap-target': 'Tap what I ask for!', 'match-pairs': 'Find the pairs!', 'memory-cards': 'Remember where the friends hide!', 'odd-one-out': 'Which one is different?', 'dot-to-dot': 'Tap the numbers in order to reveal the picture!' })[a.template] || a.title;
+  }
   if (a.type === 'guided-drawing' && a.steps.length > 1) return 'Follow the lines with your favourite colour to draw a picture!';
   return 'Draw anything you like! Tap save to keep it.';
 }
@@ -3730,6 +3757,8 @@ function renderGame(activity) {
         if (nextIndex > 0) {
           ctx.beginPath();
           dots.slice(0, nextIndex).forEach((p, i) => { const s = toScreen(p); i ? ctx.lineTo(s.x, s.y) : ctx.moveTo(s.x, s.y); });
+          // Close the loop for shapes (params.closed) once every dot is joined.
+          if (doneAll && params.closed && dots.length > 2) { const s0 = toScreen(dots[0]); ctx.lineTo(s0.x, s0.y); }
           ctx.strokeStyle = '#5C8FD6'; ctx.lineWidth = 6; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
           ctx.stroke();
         }

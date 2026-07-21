@@ -9,11 +9,6 @@ Status key: `[ ]` open · `[~]` in progress · `[x]` done (move to the bottom or
 
 ## Open
 
-- [ ] **Bug: "Count the fish" game speaks "count the apples".** The spoken instruction doesn't match
-  the game's name/visuals. Fix the instruction text/audio key for the counting game so the voice says
-  the right item (fish). Check `instructionFor()` / the counting activity's `instructionAudio` in
-  `starterPack.ts` + the demo's `speak()` for that template.
-
 - [ ] **Port the recent demo-first work to the mobile app.** These all shipped and are verified in
   the web demo but are not yet in the Expo app (mobile needs a device/emulator to drive + verify):
   - The two new games — **Cutting Practice** (`cut-along`) and **Number Path Hop** (`number-hop`)
@@ -45,6 +40,9 @@ swap in cute art whenever ready.
 
 ## Done
 
+- [x] **Home matches the approved mockup** — Candy home tiles are now the floating blob-card art with the label underneath, size-capped & centre-packed (`repeat(auto-fit, minmax(122px,168px))`), the teal Little Grip mascot greeter (hop), inline star, idle bob + tap sparkle. (Earlier "home polish" only added motion; this rebuilds the layout to the mockup.)
+- [x] **Dot-to-Dot shapes** — new "Make a star / triangle / square" activities in Draw → Dot to Dot; joining the numbered dots closes into the shape (renderer closes the loop for `params.closed`).
+- [x] **Bug fix: counting instruction** — the counting game spoke "count the apples" for every item; now says the real item ("Count the fish…") from `params.item`.
 - [x] **Rewards section (demo)** — four-card My Rewards screen (Star Jar filling to the next sticker · Trophies with locked/unlocked milestones · Sticker Book paged by 12 with tap-to-hear + "book filled" tally · Certificate keepsake with the child's name), mascot cheer, driven off the existing rewards ledger. No core change.
 - [x] **Tracing section icons** — owner clay cloud-badges for Letters/Numbers/Shapes/My Name in the chooser, with a Bubbles ⇄ Floating toggle to compare (default floating, matching the lists).
 - [x] **Don't read the child's name aloud** — the home greeting and the name-tracing prompt now speak a generic phrase; the name stays on-screen only. (Demo; mobile in port item.)

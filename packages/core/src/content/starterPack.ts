@@ -535,12 +535,51 @@ const drawingActivities: Activity[] = [
 
 /** Dot-to-dot pilot (owner direction, July 2026): tap the numbered dots in
  *  order to reveal the outline, same subject as the guided-drawing pilot. */
+/** Ordered points that trace a shape outline for a "join the dots to make a
+ *  shape" dot-to-dot (owner direction). Closed loop, evenly numbered. */
+function polygonDots(sides: number, r = 360, cx = 500, cy = 500, startDeg = -90): Point[] {
+  const pts: Point[] = [];
+  for (let i = 0; i < sides; i++) {
+    const a = ((startDeg + (360 / sides) * i) * Math.PI) / 180;
+    pts.push({ x: Math.round(cx + r * Math.cos(a)), y: Math.round(cy + r * Math.sin(a)) });
+  }
+  return pts;
+}
+function starDots(cx = 500, cy = 500, outer = 380, inner = 160): Point[] {
+  const pts: Point[] = [];
+  for (let i = 0; i < 10; i++) {
+    const a = ((-90 + i * 36) * Math.PI) / 180;
+    const r = i % 2 === 0 ? outer : inner;
+    pts.push({ x: Math.round(cx + r * Math.cos(a)), y: Math.round(cy + r * Math.sin(a)) });
+  }
+  return pts;
+}
+
 const dotToDotActivities: Activity[] = [
   {
     type: 'game', id: 'draw-dotdot-whale', title: 'Whale', category: 'drawing',
     ageBands: ['3-5', '5-7'], difficulty: 2, motorSkills: ['tapping', 'controlled-movement'],
     estimatedMinutes: 3, theme: 'underwater', locale: 'en-AU', instructionAudio: audio('dot-to-dot'),
     template: 'dot-to-dot', params: { image: 'images/whale.svg', dots: whaleDotSequence() },
+  },
+  // Join the dots to make a SHAPE (owner direction): a star, a triangle, a square.
+  {
+    type: 'game', id: 'draw-dotdot-star', title: 'Make a star', category: 'drawing',
+    ageBands: ['3-5', '5-7'], difficulty: 2, motorSkills: ['tapping', 'controlled-movement'],
+    estimatedMinutes: 2, theme: 'shapes-patterns', locale: 'en-AU', instructionAudio: audio('dot-to-dot'),
+    template: 'dot-to-dot', params: { image: 'images/star.svg', dots: starDots(), closed: true },
+  },
+  {
+    type: 'game', id: 'draw-dotdot-triangle', title: 'Make a triangle', category: 'drawing',
+    ageBands: ['2-3', '3-5'], difficulty: 1, motorSkills: ['tapping', 'controlled-movement'],
+    estimatedMinutes: 1, theme: 'shapes-patterns', locale: 'en-AU', instructionAudio: audio('dot-to-dot'),
+    template: 'dot-to-dot', params: { dots: polygonDots(3), closed: true },
+  },
+  {
+    type: 'game', id: 'draw-dotdot-square', title: 'Make a square', category: 'drawing',
+    ageBands: ['2-3', '3-5'], difficulty: 1, motorSkills: ['tapping', 'controlled-movement'],
+    estimatedMinutes: 1, theme: 'shapes-patterns', locale: 'en-AU', instructionAudio: audio('dot-to-dot'),
+    template: 'dot-to-dot', params: { dots: polygonDots(4, 330, 500, 500, -45), closed: true },
   },
 ];
 
