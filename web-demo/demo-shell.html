@@ -1367,23 +1367,36 @@ function renderTracing(firstActivity) {
     note.textContent = '';
     setHeader(next.id);
     speak(next.title.replace('·', 'and little'));
-    draw();
+    fit(); // re-fit: the new glyph may have different bounds
   }
 
   function fit() {
     const r = stage.getBoundingClientRect();
     canvas.width = r.width * devicePixelRatio; canvas.height = r.height * devicePixelRatio;
     ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
-    // Leave room for the left actions (undo/trash) only — there's no right
-    // colour panel anymore, so the glyph uses nearly the full width. Everything
-    // is measured off the live stage size, so it scales to any device.
-    const padL = r.width < 380 ? 54 : 68, padR = r.width < 380 ? 12 : 22;
+    // Fit the ACTUAL content (the glyph strokes + ruled-line span) into the
+    // stage — not the whole 1000x1000 authoring box — so the letters fill the
+    // screen instead of shrinking to the middle. Uniform scale keeps aspect.
+    const padL = r.width < 380 ? 52 : 66, padR = r.width < 380 ? 12 : 20, padV = 22;
     const availW = Math.max(60, r.width - padL - padR);
-    const side = Math.min(availW, r.height);
-    scale = side / 1000;
-    ox = padL + (availW - side) / 2;
-    oy = (r.height - side) / 2;
+    const availH = Math.max(60, r.height - padV * 2);
+    const b = contentBounds();
+    const cw = Math.max(1, b.maxx - b.minx), ch = Math.max(1, b.maxy - b.miny);
+    scale = Math.min(availW / cw, availH / ch);
+    ox = padL + (availW - cw * scale) / 2 - b.minx * scale;
+    oy = padV + (availH - ch * scale) / 2 - b.miny * scale;
     draw();
+  }
+
+  // Design-space bounding box of everything drawn (glyph strokes + the ruled
+  // lines' vertical span), padded by half the band so edges aren't clipped.
+  function contentBounds() {
+    let minx = 1e9, maxx = -1e9, miny = 1e9, maxy = -1e9;
+    for (const s of strokes) for (const p of s) { minx = Math.min(minx, p.x); maxx = Math.max(maxx, p.x); miny = Math.min(miny, p.y); maxy = Math.max(maxy, p.y); }
+    const guides = LH.tracingGuideLines(activity.id);
+    if (guides) { const half = drawBand / 2; miny = Math.min(miny, guides.top - half); maxy = Math.max(maxy, guides.base + half); }
+    const pad = drawBand / 2 + 14;
+    return { minx: minx - pad, maxx: maxx + pad, miny: miny - pad, maxy: maxy + pad };
   }
 
   function strokePath(path) {
