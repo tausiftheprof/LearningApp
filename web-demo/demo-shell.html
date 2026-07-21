@@ -1113,14 +1113,17 @@ function renderDrawSections() {
   setStatus('Draw sections', ['content pack drawing']);
   const top = el(`<div class="topbar"></div>`);
   top.append(holdToHomeButton(() => navigate({ name: 'home' })), el(`<div class="hello">What shall we draw?</div>`));
-  const grid = el(`<div class="bubble-grid"></div>`);
+  const grid = el(`<div class="bubble-grid glyph-grid"></div>`);
   const sections = [
-    { key: 'draw-blank', label: 'Blank Canvas', glyph: '🖍️' },
-    { key: 'draw-guided', label: 'Guided Drawing', glyph: '✏️' },
-    { key: 'draw-dotdot', label: 'Dot to Dot', glyph: '🔢' },
+    { key: 'draw-blank', label: 'Blank Canvas', glyph: '🖍️', icon: 'sec-draw-blank' },
+    { key: 'draw-guided', label: 'Guided Drawing', glyph: '✏️', icon: 'sec-draw-guided' },
+    { key: 'draw-dotdot', label: 'Dot to Dot', glyph: '🔢', icon: 'sec-draw-dotdot' },
   ];
   sections.forEach((sct, i) => {
-    grid.append(bubbleTile(`<span class="glyph-big" aria-hidden="true">${sct.glyph}</span>`, sct.label, tiles()[(i + 2) % tiles().length], () => {
+    const iconHtml = (RASTER_IMAGES[sct.icon] && !highContrast())
+      ? `<span class="tile-illo" aria-hidden="true">${imgHtml(sct.icon, 74, 'filter:drop-shadow(0 6px 9px rgba(74,59,50,.28))')}</span>`
+      : `<span class="glyph-big" aria-hidden="true">${sct.glyph}</span>`;
+    grid.append(bubbleTile(iconHtml, sct.label, tiles()[(i + 2) % tiles().length], () => {
       speak(sct.label);
       // Blank Canvas has a single destination, so skip the intermediate picker
       // and open the canvas straight away (owner direction, July 2026).
@@ -1140,13 +1143,16 @@ function renderColourSections() {
   setStatus('Colour sections', ['content pack colouring']);
   const top = el(`<div class="topbar"></div>`);
   top.append(holdToHomeButton(() => navigate({ name: 'home' })), el(`<div class="hello">How shall we colour?</div>`));
-  const grid = el(`<div class="bubble-grid"></div>`);
+  const grid = el(`<div class="bubble-grid glyph-grid"></div>`);
   const sections = [
-    { key: 'colour-bynum', label: 'Colour by Numbers', glyph: '🔢' },
-    { key: 'colour-yourway', label: 'Colour Your Way', glyph: '🌈' },
+    { key: 'colour-bynum', label: 'Colour by Numbers', glyph: '🔢', icon: 'sec-colour-bynum' },
+    { key: 'colour-yourway', label: 'Colour Your Way', glyph: '🌈', icon: 'sec-colour-yourway' },
   ];
   sections.forEach((sct, i) => {
-    grid.append(bubbleTile(`<span class="glyph-big" aria-hidden="true">${sct.glyph}</span>`, sct.label, tiles()[(i + 1) % tiles().length], () => {
+    const iconHtml = (RASTER_IMAGES[sct.icon] && !highContrast())
+      ? `<span class="tile-illo" aria-hidden="true">${imgHtml(sct.icon, 74, 'filter:drop-shadow(0 6px 9px rgba(74,59,50,.28))')}</span>`
+      : `<span class="glyph-big" aria-hidden="true">${sct.glyph}</span>`;
+    grid.append(bubbleTile(iconHtml, sct.label, tiles()[(i + 1) % tiles().length], () => {
       speak(sct.label); navigate({ name: 'picker', category: sct.key });
     }));
   });
