@@ -207,10 +207,15 @@ them (the top-bar home button is the exit). Behind letters/numbers/name the play
 "notebook" lines (`tracingGuideLines` returns the top/mid/base y in design space). **Trace-name**
 is a runtime-built activity (`nameStrokes(nickname)` lays the child's own name out on the baseline)
 — it is not in the static pack, so each renderer builds it from the active profile. The
-`tracingConfigFor` widths above control how thick the traceable *band* is; the trail the finger
-leaves ("ink") is drawn thinner than that band. The web demo's tracing screen also has a
-trace-colour picker (rainbow default · black · grey · glitter · colour-blind-safe) and, on the
-name, a CAPS toggle (these UI controls are demo-first; mobile shares the core + widths). Any glyph/shape edit must keep every stroke completable — the
+`tracingConfigFor` widths above control how thick the traceable *band* is (the flat seamless grey
+band the child colours in), while the **ink** is a single theme-accent colour (`ink = accent`, the
+active theme's accent — no colour picker; that was removed) drawn thinner than the band and, crucially,
+**filling the glyph along its own centre-line** rather than tracking the raw finger: `drawFill()`/
+`inkPath()` fill each finished stroke fully and the current stroke up to `lastPos` (monotonic
+arc-length progress), so the letter visibly colours in as it's traced. On final completion the glyph
+fills whole, a bigger `celebrate(24)` star burst fires, and `playChime()` sounds (see the audio note
+below). The name keeps a CAPS toggle in the left actions (demo-first; mobile shares the core + widths).
+Any glyph/shape edit must keep every stroke completable — the
 `packages/core/__tests__/tracing.test.ts` "every glyph is completable" test simulates a finger
 following each stroke and is the guard.
 
@@ -237,6 +242,15 @@ ordered set of doors for a band (fewest, largest tiles for `2-3`; more for `3-5`
 renderers consume it, so the home content always matches the profile. Tiles are icon + label only
 (no per-tile subtitle) to keep reading load off pre-readers.
 
+**Theme reaches the inside screens too** (not just Home): the demo's `render()` publishes the active
+theme onto `#app` as CSS custom properties — `--accent`, `--success`, `--tile-ink` (high-contrast
+overrides them to `#0000CC`/`#006600`/`#FFFFFF`). Player chrome then inherits the theme via
+`var(--accent, …)` / `var(--success, …)` with the old hardcoded orange/green kept only as fallback
+(start dot / holding button / tool-active tint / primary button / card border → `--accent`; banners →
+`--success`; `.danger`/`.teal` parent affordances stay fixed). So a Candy child sees pink chrome and an
+Aussie child green — one look end-to-end. When adding a player surface, colour it from these vars, not a
+new literal. Mobile already threads `theme.accent`/`theme.success` through its players for the same reason.
+
 ## Key constraints when changing things
 
 - No child accounts, credentials, or login of any kind, ever — the parent `account` module is
@@ -246,7 +260,13 @@ renderers consume it, so the home content always matches the profile. Tiles are 
   reference: sound **effects** are real (procedurally-generated `assets/sounds/*.wav` played via
   `expo-audio` — no plugin, so no mic/RECORD_AUDIO permission), while instruction **voice**
   (`playInstruction`) stays a documented silent no-op until the CMS ships the soft-female-voice
-  recordings (docs/12).
+  recordings (docs/12). The **web demo** synthesises its own effects live in WebAudio instead of
+  shipping an audio file — `playChime()` (a soft ascending C5·E5·G5·C6 triangle-wave arpeggio, fired
+  from `completeActivity()` and at each tracing/CBN completion) and `playPop()` (a one-shot bite blip)
+  — both gated on the active profile's `sound.effects` toggle and scaled by `sound.volume`, mirroring
+  how `speak()` honours the voice toggle; a no-op where WebAudio is unavailable. So effects are
+  audible/testable in the browser with no bundled asset, while the mobile `audioService` chime stays
+  the documented silent scaffold until the CMS audio lands.
 - `strict: true`, `noUncheckedIndexedAccess`, and `exactOptionalPropertyTypes` are on
   (`tsconfig.base.json`) — array/object indexing needs explicit narrowing or `!`.
 - Shared content artwork lives in `assets/images/` (`README.md` there documents which filename
