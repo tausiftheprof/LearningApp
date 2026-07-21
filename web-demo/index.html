@@ -233,7 +233,7 @@
   /* ---- Bubble tiles (owner-approved): round balloon tiles + plain-text names,
      a gentle bob, and a pop + sparkle on tap. Used on every "pick something"
      grid (games, choosers, tracing lists). ---- */
-  .bubble-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(118px, 1fr)); gap: clamp(12px, 3vw, 26px) clamp(8px, 2.4vw, 18px); justify-items: center; padding: 6px 4px 16px; }
+  .bubble-grid { flex: 1; overflow-y: auto; display: grid; grid-template-columns: repeat(auto-fit, minmax(118px, 1fr)); gap: clamp(12px, 3vw, 26px) clamp(8px, 2.4vw, 18px); justify-items: center; padding: 6px 4px 20px; align-content: start; }
   .bubble-wrap { display: flex; flex-direction: column; align-items: center; gap: 7px; width: 100%; }
   .bubble {
     position: relative; width: clamp(96px, 22vw, 138px); aspect-ratio: 1; border: none; border-radius: 50%;

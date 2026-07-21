@@ -37,12 +37,6 @@ Status key: `[ ]` open · `[~]` in progress · `[x]` done (move to the bottom or
   In `renderPicker`, pass an empty/suppressed label when `category` is `puzzles`, `tracing-letters` or
   `tracing-numbers`. Demo + mobile.
 
-- [ ] **Bug: can't scroll the Letters list past ~J.** The bubble picker doesn't scroll, so long
-  lists (26 letters) are clipped. Cause: the old `.tile-grid` had `flex: 1; overflow-y: auto;` but the
-  new `.bubble-grid` (demo-shell.html CSS) has neither, so it can't scroll inside the picker. Fix:
-  add `flex: 1; overflow-y: auto;` (and a little bottom padding) to `.bubble-grid`. One-line fix;
-  affects Letters/Numbers/any long bubble list. (Mobile picker already uses a ScrollView.)
-
 - [ ] **Straight-line tracing — vertical AND horizontal (fix icon/screen mismatch).** The clay icon is
   a **vertical** line but the activity geometry is **horizontal** (`trace-line-straight` =
   `line(150,500 → 850,500)` in `starterPack.ts`). Both a down-stroke `|` and an across-stroke `—` are
@@ -87,6 +81,11 @@ swap in cute art whenever ready.
 
 ## Done
 
+- [x] **Bug fix: bubble picker now scrolls** — `.bubble-grid` gained `flex: 1; overflow-y: auto`
+  (+ `align-content: start`), so long lists (all 26 letters, 10 numbers) scroll instead of clipping
+  at ~J. Verified the Letters list reaches Z.
+- [x] **Tracing picker uses clay art on the bubbles** — letters/numbers/shapes show the owner's clay
+  art instead of dark glyph text (high-contrast keeps the glyph/outline).
 - [x] **Tracing upgrade (demo)** — seamless flat grey guide (no outline), a dotted track with a
   single glowing dot leading the trace direction + pulsing start dot + arrow, ruled notebook lines
   pushed out so glyphs sit BETWEEN the lines, school-correct start points (round bowl-first glyphs
