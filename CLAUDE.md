@@ -44,7 +44,15 @@ keep that cheap:
   the borders (tolerance ~42-44, corners as the background seed, feather edge pixels) so interior
   whites survive, trim, cap width ~560px, and save under a clean `assets/images/` key (e.g.
   `feed-mascot-open`, `cut-scissors-open`, `hop-stone`). Then view the result to confirm the
-  cutout is clean before wiring it in.
+  cutout is clean before wiring it in. **Some uploads have a checkerboard baked in as the
+  "transparent" background** (alternating white + light-grey squares — e.g. `Tracing - A.png`), which
+  is *not* real transparency and which a border flood-fill can't fully clear (enclosed counters like
+  A's triangle or a's ring are walled off from the border). For those, key the checkerboard out by
+  **connected-region size**: classify low-saturation light pixels (`sat < ~0.18 && light > ~0.66`) as
+  background, label bg regions, drop every region larger than ~220px (removes the exterior *and* the
+  enclosed holes) while small clay highlights survive; feather one ring; then trim/cap/save. Verify by
+  compositing over a solid colour and viewing. Ask the owner to enable "transparent background" on
+  export to skip all this.
 
 ## Commands
 
@@ -175,10 +183,17 @@ or a per-template emoji (`GAME_EMOJI` maps in both pickers).
 **Tracing glyphs & flow**: letter (A-Z capital+small pair) and number (0-10) stroke skeletons are
 authored as polylines in `content/glyphs.ts` (`digitStrokes`/`letterStrokes`), shape strokes in
 `content/starterPack.ts`; both feed the same corridor engine. Stroke direction follows the
-"school way" the owner chose — round glyphs/shapes (o a d g q O Q, 0, circle, oval) **start at the
-top and curve anticlockwise** (left first, so the bottom is traced left-to-right); capital A starts
-at the apex (left diagonal, right diagonal, crossbar); the triangle starts at the apex with its
-base left-to-right. Strokes render one at a time — the **current** step is highlighted (bold guide
+"school way" the owner chose — round glyphs/shapes curve **anticlockwise**, starting at about
+**2 o'clock (top-right), not 12 o'clock**: the pen goes up-and-over to the left first ("c, then
+close"), so `a c d g o q` (and `0`, circle, oval) begin on the right and sweep all the way around —
+lowercase **a** specifically is the reference the owner corrected (**start right, around, then the
+down-stem — never from the top**). Capital A starts at the apex (left diagonal, right diagonal,
+crossbar); the triangle starts at the apex with its base left-to-right. When authoring/adjusting any
+skeleton, put the **start point where a teacher starts it** and order the strokes so the leading
+guide dot follows that path. **Glyphs must also sit BETWEEN the ruled lines** — size each so the
+traceable *band's outer edge* only touches the lines (inset the centre-line geometry by ~half the
+band width): capitals span top-line→baseline, x-height letters span midline→baseline, nothing spills
+past a line. Strokes render one at a time — the **current** step is highlighted (bold guide
 + direction arrows drawn from the stroke's own tangents, chevrons pointing the trace direction),
 earlier steps glow "done", later steps stay greyed until their turn. On completion the player **auto-advances to the next item in the same
 section** (letters / numbers / shapes), wrapping after the last, with no "Home" prompt between
