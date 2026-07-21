@@ -9,11 +9,23 @@ Status key: `[ ]` open · `[~]` in progress · `[x]` done (move to the bottom or
 
 ## Open
 
-- [ ] **Tracing — clay art for the Shapes (owner uploading).** Letters (A-Z) and numbers (1-10) clay
-  header art is in and wired (`trace-letter-*`, `trace-number-*`). Shapes still need art — when the
-  owner uploads them, run the checkerboard-cleanup pipeline (region-size key-out) and wire each to its
-  shape id as the header cue, same as letters/numbers. The pre-writing strokes (line/curve/zigzag) may
-  not need art.
+- [ ] **Tracing polish — thinner band + drop the colour picker (match the mock).** Two owner
+  corrections to the shipped tracing screen (mock reference: scratchpad artifact
+  `27410411-324f-4437-b5ae-3500d6f6006e`). Both are in `renderTracing()` in `web-demo/demo-shell.html`
+  (rebuild + mobile `TracingPlayer.tsx` after):
+  - **Band is far too thick.** The drawn band is `config.corridorWidth * 2` (= 240 design units at
+    default difficulty, ~75% of a capital's height) — the mock's band was ~19%. Fix: introduce a
+    `drawBand = config.corridorWidth * 0.5` and derive EVERY drawn size from it so they stay in scale —
+    band `lineWidth = drawBand*scale`; ruled-line inset `half = drawBand/2`; ink `= drawBand*0.62`;
+    dotted track `= drawBand*0.28`; leader/start dot radius `= drawBand*0.4`; start arrow
+    `ah = drawBand*0.55`. (Tolerance stays `corridorWidth` — only the *drawn* guide gets slimmer, so
+    it's still forgiving.) A ready diff was drafted this session; reapply it.
+  - **Remove the trace-colour picker.** Owner: "colour is not needed in tracing anymore — I want it as
+    in the mock." The mock has a single accent-coloured ink and no right-side colour panel. Drop the
+    `.trace-panel` colour swatches (rainbow/black/grey/glitter/colour-blind) and paint the ink in one
+    colour (the theme accent, like the mock). Decide the **CAPS toggle** (name tracing) — it currently
+    lives in that panel; either relocate it to the left actions or drop it. `fillPaint()`/`traceColor`
+    state can go.
 
 - [ ] **Port the recent demo-first work to the mobile app.** These all shipped and are verified in
   the web demo but are not yet in the Expo app (mobile needs a device/emulator to drive + verify):
@@ -24,8 +36,8 @@ Status key: `[ ]` open · `[~]` in progress · `[x]` done (move to the bottom or
   - **Draw panel redesign** (Magic drawer) — demo `renderDrawing` done; port to mobile `DrawingBoard`.
   - **Colour by Numbers number-locked flow** — core data + demo done; mobile has no line-art
     colouring pipeline at all yet (line-art scenes are filtered from the mobile picker).
-  - **Tracing upgrade** — seamless guide, leading dot, ruled-between-lines, clay art header — demo
-    done; port to `TracingPlayer.tsx` (plus the trace-colour picker / CAPS controls).
+  - **Tracing upgrade** — seamless guide, leading dot, ruled-between-lines, clay art header, thinner
+    band, single-colour ink (no colour picker) — demo done; port to `TracingPlayer.tsx`.
   - **Bubble-tile pickers + home motion** — demo done; port to `ActivityPickerScreen.tsx` (`BigTile`
     → bubble) and `HomeScreen` (idle bob / mascot hop / tap sparkle).
   - **"What comes next?" pattern pages** — new `seq-*` activities are in core, so they ship to mobile
@@ -50,8 +62,9 @@ swap in cute art whenever ready.
   single glowing dot leading the trace direction + pulsing start dot + arrow, ruled notebook lines
   pushed out so glyphs sit BETWEEN the lines, school-correct start points (round bowl-first glyphs
   `a c d g o q`, `O Q`, `0` start at ~2 o'clock and sweep anticlockwise), the owner's clay
-  letter/number art as a header cue, no pop-out reward. 26 letters + 10 numbers cleaned of their
-  baked-in checkerboard (region-size key-out) → `trace-letter-*` / `trace-number-*`.
+  letter/number/shape art as a header cue, no pop-out reward. 26 letters + 10 numbers + 10 shapes
+  cleaned of their baked-in checkerboard (region-size key-out) → `trace-letter-*` / `trace-number-*` /
+  `trace-<shape>` (each art file named after its activity id; `setHeader` is a direct id lookup).
 - [x] **Bubble-tile pickers (demo)** — round balloon tiles + plain-text names, idle bob, pop +
   sparkle on tap, on the Games/Puzzles/Think&Solve picker and the Colour/Draw/Tracing choosers
   (shared `bubbleTile` + `sparkleBurst`).
