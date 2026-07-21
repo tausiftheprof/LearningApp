@@ -14,6 +14,12 @@ Status key: `[ ]` open · `[~]` in progress · `[x]` done (move to the bottom or
   (the `trace-number-0` tracing activity already exists — it currently falls back to a plain black "0"
   in the picker). Confirm it appears in the Numbers list with the clay art after cleanup + rebuild.
 
+- [ ] **Don't read the child's name aloud.** Suppress the child's name in any spoken/voice output
+  (privacy). Audit every `speak(...)` call that includes the nickname — e.g. the home greeting and the
+  "My name" tracing activity (`loadActivity` speaks `next.title` = "My name: <nick>", and the name
+  tile). Speak a generic phrase instead ("your name", "Let's write your name"), and keep the name
+  only on-screen (visual), never in TTS. Demo + mobile (`audioService`/`playInstruction`).
+
 - [ ] **Port the recent demo-first work to the mobile app.** These all shipped and are verified in
   the web demo but are not yet in the Expo app (mobile needs a device/emulator to drive + verify):
   - The two new games — **Cutting Practice** (`cut-along`) and **Number Path Hop** (`number-hop`)
