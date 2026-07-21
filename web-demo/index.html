@@ -249,6 +249,11 @@
   .bubble .emoji { font-size: clamp(40px, 9vw, 60px); line-height: 1; filter: drop-shadow(0 3px 3px rgba(0,0,0,0.14)); }
   .bubble .tile-illo .lg-img, .bubble .tile-illo svg { width: clamp(54px, 12vw, 82px) !important; height: clamp(54px, 12vw, 82px) !important; }
   .bubble .glyph-big { font-size: clamp(40px, 9vw, 62px); }
+  /* bare: no coloured circle — the clay art floats, animations kept */
+  .bubble.bare { background: none; box-shadow: none; }
+  .bubble.bare::before { display: none; }
+  .bubble.bare .tile-illo .lg-img, .bubble.bare .tile-illo svg { width: clamp(72px, 17vw, 118px) !important; height: clamp(72px, 17vw, 118px) !important; filter: drop-shadow(0 6px 8px rgba(74,59,50,0.2)); }
+  .bubble.bare .glyph-big { filter: drop-shadow(0 4px 5px rgba(74,59,50,0.18)); }
   .bubble-label { font-weight: 800; font-size: clamp(13px, 2.4vw, 16px); color: var(--tile-ink, #4A3B32); text-align: center; line-height: 1.12; max-width: 15ch; }
   @keyframes bubBob { 0%, 100% { translate: 0 0; } 50% { translate: 0 -6px; } }
   @keyframes bubPop { 0% { transform: scale(1); } 35% { transform: scale(1.16); } 100% { transform: scale(1); } }
@@ -1461,11 +1466,13 @@ function sparkleBurst(x, y, n = 6) {
 }
 // A round bubble tile: icon bursting out, plain-text label below, a gentle idle
 // bob, and a pop + sparkle on tap (owner-approved picker style).
-function bubbleTile(iconHtml, label, colourCss, onClick, showLabel = true) {
+function bubbleTile(iconHtml, label, colourCss, onClick, showLabel = true, bare = false) {
   // When the picture already says what it is (puzzles, letter/number tracing),
   // the visible label is hidden but the button keeps its aria-label + spoken name.
+  // `bare` drops the coloured circle so the art floats (owner: tracing glyphs),
+  // keeping the bob / pop / sparkle.
   const labelHtml = showLabel ? `<div class="bubble-label">${label}</div>` : '';
-  const wrap = el(`<div class="bubble-wrap"><button class="bubble" aria-label="${label}" style="--bub:${colourCss}">${iconHtml}</button>${labelHtml}</div>`);
+  const wrap = el(`<div class="bubble-wrap"><button class="bubble${bare ? ' bare' : ''}" aria-label="${label}" style="--bub:${colourCss}">${iconHtml}</button>${labelHtml}</div>`);
   const btn = wrap.querySelector('.bubble');
   const i = Math.floor(Math.random() * 4);
   btn.style.setProperty('--bd', (3.6 + i * 0.5).toFixed(1) + 's');
@@ -1597,9 +1604,12 @@ function renderPicker(category) {
     // Hide the redundant name under bubbles whose picture already says it all:
     // puzzles, letter/number tracing, and both Colour lists (owner direction).
     const showLabel = !['puzzles', 'tracing-letters', 'tracing-numbers', 'colour-bynum', 'colour-yourway'].includes(category);
+    // Tracing glyphs float without the coloured circle (owner direction) — just
+    // the clay letter/number/shape art, keeping the bob/pop/sparkle.
+    const bare = ['tracing-letters', 'tracing-numbers', 'tracing-shapes'].includes(category);
     grid.append(bubbleTile(iconHtml, a.title, tiles()[i % tiles().length], () => {
       speak(a.title); if (guardScreenTime()) navigate({ name: 'activity', activity: a, from: 'picker', pickerCategory: category });
-    }, showLabel));
+    }, showLabel, bare));
   });
   if (ranked.length === 0) {
     grid.append(el(`<p style="grid-column:1/-1;font-size:17px;text-align:center;padding:20px">New activities are on their way! Try another door on the home screen. 🏠</p>`));
