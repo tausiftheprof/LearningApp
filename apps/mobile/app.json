@@ -2,6 +2,7 @@
   "expo": {
     "name": "Little Grip - big learning adventures",
     "slug": "little-grip",
+    "owner": "Justraji",
     "version": "0.1.0",
     "orientation": "default",
     "userInterfaceStyle": "light",
