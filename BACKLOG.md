@@ -55,6 +55,41 @@ Status key: `[ ]` open · `[~]` in progress · `[x]` done (move to the bottom or
   any hardcoded "Little Games" string in `demo-shell.html` / mobile and the homeLayout test
   expectations; update copy + tests together. Renderer/copy only — no mechanic change.
 
+- [ ] **Tracing upgrade — cleaner guide, directional dot, ruled lines, school-correct strokes.**
+  Owner approved the redesigned tracing screen (mock: scratchpad artifact
+  `27410411-324f-4437-b5ae-3500d6f6006e`, "neat, clean, light, seamless"). Apply to the real tracing
+  engine — `renderTracing()` in `web-demo/demo-shell.html` first (then `node web-demo/build.mjs`),
+  then mobile `TracingPlayer.tsx` (mobile-port item). Build-ready spec:
+  - **Seamless grey guide**: the traceable band is ONE flat soft-grey shape (no darker outline/rim),
+    thick and rounded. The child's ink trail is drawn thinner than the band, in the theme accent,
+    turning "done" green per stroke (this matches `tracingConfigFor` widths — keep band > ink).
+  - **Directional guide = glowing dots + one leading colour dot**: the current stroke shows a static
+    dotted white track plus a **single accent-coloured dot that travels along the stroke in the trace
+    direction** (start → end), with a pulsing start dot + a small direction arrow at the start. Drop
+    the old scattered trailing dots and the "sweeping trail" variant — owner chose the single leader
+    dot. One stroke active at a time; finishing one lights up the next.
+  - **Ruled "notebook" lines** (`tracingGuideLines` already returns top/mid/base y): draw a top line,
+    a **dashed midline** (x-height) and a baseline. **Letters must sit BETWEEN the lines** — size each
+    glyph so the band's *outer edge* only touches the lines, never crosses: capitals span top→base,
+    x-height letters span midline→base, so account for half the band width as inset when laying out
+    glyph geometry (`glyphs.ts` / shape strokes).
+  - **School-correct start point & direction for EVERY glyph** (owner emphasis): e.g. lowercase **a**
+    starts on the **right (~2 o'clock)** and goes **all the way around anticlockwise** ("c then close"),
+    then the down-stem — NOT from the top. Round glyphs/shapes start top-and-anticlockwise per the
+    existing CLAUDE.md rule; audit every letter/number/shape skeleton in `glyphs.ts` +
+    `starterPack.ts` so each begins where a teacher would start it and the leader dot follows that
+    order. The `tracing.test.ts` "every glyph is completable" guard must still pass.
+  - **No pop-out reward** on finish (owner dropped it) — keep the existing name/word-finish celebration
+    (sparkle + advance to next item in the section).
+  - **Per-letter clay art (owner uploading)**: owner is supplying 3D-clay letter/number/shape art
+    (e.g. `Tracing - A.png`) shown as the small header "this is the letter" label (and available if we
+    ever want a reward image). **These uploads have a checkerboard baked in as the background, NOT real
+    transparency** — process each with the art pipeline (flood-fill/region-remove the white+grey
+    checker to transparent by region size so enclosed counters like A's triangle & a's ring clear too,
+    keep clay highlights, trim, cap width, save clean `assets/images/` keys). Ask owner to enable
+    "transparent background" on export to skip this.
+  - Demo-first; mobile port folds into the existing mobile-port item.
+
 - [ ] **Home screen — add life & polish (keep the approved art/layout).** Owner approved a mockup
   (scratchpad artifact `f1349581-e720-422d-a309-4a0c05faf86c`) that keeps the existing Candy-Clouds
   illustrated tiles and colours but adds motion and tightens the top bar. Build-ready spec:
