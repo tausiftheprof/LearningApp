@@ -59,7 +59,17 @@ function polygonPath(sides: number, radius: number): Point[] {
 
 const tracingActivities: Activity[] = [
   {
-    type: 'tracing', id: 'trace-line-straight', title: 'Straight line', category: 'tracing',
+    // Straight lines are split into a down-stroke and an across-stroke (owner
+    // direction): both are core pre-writing skills, and each tile's clay icon
+    // then matches the direction actually traced.
+    type: 'tracing', id: 'trace-line-down', title: 'Down line', category: 'tracing',
+    ageBands: ['2-3', '3-5'], difficulty: 1, motorSkills: ['tracing', 'controlled-movement'],
+    estimatedMinutes: 1, theme: 'shapes-patterns', locale: 'en-AU',
+    instructionAudio: audio('trace-line'), demoAnimation: 'demo/trace-line.json',
+    paths: [line(500, 150, 500, 850)], closed: false,
+  },
+  {
+    type: 'tracing', id: 'trace-line-across', title: 'Across line', category: 'tracing',
     ageBands: ['2-3', '3-5'], difficulty: 1, motorSkills: ['tracing', 'controlled-movement'],
     estimatedMinutes: 1, theme: 'shapes-patterns', locale: 'en-AU',
     instructionAudio: audio('trace-line'), demoAnimation: 'demo/trace-line.json',

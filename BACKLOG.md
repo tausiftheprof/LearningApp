@@ -9,47 +9,6 @@ Status key: `[ ]` open · `[~]` in progress · `[x]` done (move to the bottom or
 
 ## Open
 
-- [ ] **Tracing polish — thinner band + drop the colour picker (match the mock).** Two owner
-  corrections to the shipped tracing screen (mock reference: scratchpad artifact
-  `27410411-324f-4437-b5ae-3500d6f6006e`). Both are in `renderTracing()` in `web-demo/demo-shell.html`
-  (rebuild + mobile `TracingPlayer.tsx` after):
-  - **Band is far too thick.** The drawn band is `config.corridorWidth * 2` (= 240 design units at
-    default difficulty, ~75% of a capital's height) — the mock's band was ~19%. Fix: introduce a
-    `drawBand = config.corridorWidth * 0.5` and derive EVERY drawn size from it so they stay in scale —
-    band `lineWidth = drawBand*scale`; ruled-line inset `half = drawBand/2`; ink `= drawBand*0.62`;
-    dotted track `= drawBand*0.28`; leader/start dot radius `= drawBand*0.4`; start arrow
-    `ah = drawBand*0.55`. (Tolerance stays `corridorWidth` — only the *drawn* guide gets slimmer, so
-    it's still forgiving.) A ready diff was drafted this session; reapply it.
-  - **Remove the trace-colour picker.** Owner: "colour is not needed in tracing anymore — I want it as
-    in the mock." The mock has a single accent-coloured ink and no right-side colour panel. Drop the
-    `.trace-panel` colour swatches (rainbow/black/grey/glitter/colour-blind) and paint the ink in one
-    colour (the theme accent, like the mock). Decide the **CAPS toggle** (name tracing) — it currently
-    lives in that panel; either relocate it to the left actions or drop it. `fillPaint()`/`traceColor`
-    state can go.
-
-- [ ] **Drop the name label on picture-obvious bubbles.** Where the bubble image already says what it
-  is, the plain-text name under it is redundant — hide `.bubble-label` for those (keep the bubble's
-  `aria-label` for screen readers; label still spoken on tap). Applies to:
-  - **Puzzles** picker (the jigsaw picture is enough).
-  - **Tracing → Letters and Numbers** lists (the clay `A a` / `5` art is enough — owner direction).
-    Shapes keep their names for now (pentagon vs hexagon clay blobs are easy to confuse) unless owner
-    says otherwise.
-  In `renderPicker`, pass an empty/suppressed label when `category` is `puzzles`, `tracing-letters` or
-  `tracing-numbers`. Demo + mobile.
-
-- [ ] **Straight-line tracing — vertical AND horizontal (fix icon/screen mismatch).** The clay icon is
-  a **vertical** line but the activity geometry is **horizontal** (`trace-line-straight` =
-  `line(150,500 → 850,500)` in `starterPack.ts`). Both a down-stroke `|` and an across-stroke `—` are
-  core pre-writing skills, so give the child both. Options considered:
-  - (a) a **rotate toggle** on the activity — extra UI/comprehension load for 2-5s; not recommended.
-  - (b) **two separate activities** — "Down line" (vertical) + "Across line" (horizontal), each a
-    single clean stroke. Cleanest for the littlest band. Needs a horizontal icon (rotate the vertical
-    clay art 90° via the art pipeline; the vertical art keys the down-line).
-  - (c) **two strokes in one activity** (vertical then horizontal) — one tile/icon, teaches both, but
-    the single vertical icon only hints at the first stroke.
-  **Recommendation: (b)** two separate activities (vertical + horizontal), horizontal icon derived by
-  rotating the clay art. Keep them first in the Shapes list (2-3 pre-writing warm-ups).
-
 - [ ] **Port the recent demo-first work to the mobile app.** These all shipped and are verified in
   the web demo but are not yet in the Expo app (mobile needs a device/emulator to drive + verify):
   - The two new games — **Cutting Practice** (`cut-along`) and **Number Path Hop** (`number-hop`)
@@ -81,6 +40,9 @@ swap in cute art whenever ready.
 
 ## Done
 
+- [x] **Tracing polish — thinner band + no colour picker (matches the mock).** Drawn band slimmed to `drawBand = corridorWidth*0.5` with ink/guide/leader/ruled-line inset all derived from it; the trace-colour panel removed (single accent ink); CAPS toggle moved to the left actions for the name; stage uses near-full width (no right panel). Responsive-verified phone/tablet/desktop.
+- [x] **Drop name labels on picture-obvious bubbles** — Puzzles, Tracing Letters & Numbers, and both Colour lists (Colour by Numbers / Colour Your Way) hide the `.bubble-label` (aria-label + spoken name kept). Shapes keep names.
+- [x] **Straight-line split — Down line + Across line** — one horizontal activity became a vertical `trace-line-down` + horizontal `trace-line-across`, each with a matching clay icon (vertical art renamed, across rotated 90°).
 - [x] **Bug fix: bubble picker now scrolls** — `.bubble-grid` gained `flex: 1; overflow-y: auto`
   (+ `align-content: start`), so long lists (all 26 letters, 10 numbers) scroll instead of clipping
   at ~J. Verified the Letters list reaches Z.

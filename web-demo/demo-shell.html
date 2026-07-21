@@ -1100,8 +1100,11 @@ function sparkleBurst(x, y, n = 6) {
 }
 // A round bubble tile: icon bursting out, plain-text label below, a gentle idle
 // bob, and a pop + sparkle on tap (owner-approved picker style).
-function bubbleTile(iconHtml, label, colourCss, onClick) {
-  const wrap = el(`<div class="bubble-wrap"><button class="bubble" aria-label="${label}" style="--bub:${colourCss}">${iconHtml}</button><div class="bubble-label">${label}</div></div>`);
+function bubbleTile(iconHtml, label, colourCss, onClick, showLabel = true) {
+  // When the picture already says what it is (puzzles, letter/number tracing),
+  // the visible label is hidden but the button keeps its aria-label + spoken name.
+  const labelHtml = showLabel ? `<div class="bubble-label">${label}</div>` : '';
+  const wrap = el(`<div class="bubble-wrap"><button class="bubble" aria-label="${label}" style="--bub:${colourCss}">${iconHtml}</button>${labelHtml}</div>`);
   const btn = wrap.querySelector('.bubble');
   const i = Math.floor(Math.random() * 4);
   btn.style.setProperty('--bd', (3.6 + i * 0.5).toFixed(1) + 's');
@@ -1230,9 +1233,12 @@ function renderPicker(category) {
       : (hasPicture(imgName) && !highContrast()
         ? `<span class="tile-illo" aria-hidden="true">${imgHtml(imgName, 62)}</span>`
         : `<span class="emoji">${(a.type === 'game' && GAME_EMOJI[a.template]) || emojiFor[a.category]}</span>`);
+    // Hide the redundant name under bubbles whose picture already says it all:
+    // puzzles, letter/number tracing, and both Colour lists (owner direction).
+    const showLabel = !['puzzles', 'tracing-letters', 'tracing-numbers', 'colour-bynum', 'colour-yourway'].includes(category);
     grid.append(bubbleTile(iconHtml, a.title, tiles()[i % tiles().length], () => {
       speak(a.title); if (guardScreenTime()) navigate({ name: 'activity', activity: a, from: 'picker', pickerCategory: category });
-    }));
+    }, showLabel));
   });
   if (ranked.length === 0) {
     grid.append(el(`<p style="grid-column:1/-1;font-size:17px;text-align:center;padding:20px">New activities are on their way! Try another door on the home screen. 🏠</p>`));
@@ -1309,6 +1315,11 @@ function renderTracing(firstActivity) {
   const config = LH.tracingConfigFor(state.profile?.difficulty ?? 1, {
     accessibilityWiderCorridor: Boolean(state.profile?.accessibility.widerTracingCorridor),
   });
+  // The corridor width is the *tolerance* (how forgiving the trace is). The
+  // DRAWN band is slimmer than that — a neat letter, not a fat blob — matching
+  // the approved mock (~0.5x the tolerance vs the old 2x). Band, ink, guide dots
+  // and the ruled-line inset all derive from this so they stay in scale.
+  const drawBand = config.corridorWidth * 0.5;
 
   const stage = el(`<div class="play-stage"></div>`);
   const canvas = el(`<canvas class="stage" aria-label="Tracing area"></canvas>`);
@@ -1336,22 +1347,9 @@ function renderTracing(firstActivity) {
     else headerImg = null;
   }
 
-  // Tracing-colour options (owner direction). Rainbow is the default; the trail
-  // the child leaves is painted in the chosen colour.
-  if (!state.traceColor) state.traceColor = 'rainbow';
-  const CB_PALETTE = ['#E69F00', '#56B4E9', '#009E73', '#0072B2', '#D55E00', '#CC79A7']; // Okabe-Ito, colour-blind safe
-  const GLITTER_PALETTE = ['#F7A8D8', '#C9A7F0', '#A7D8F0', '#F6C177', '#B7F0C0'];
-  const traceColor = () => state.traceColor || 'rainbow';
-  function fillPaint(k) {
-    const m = traceColor();
-    if (m === 'black') return '#333333';
-    if (m === 'grey') return '#9AA3AD';
-    if (m === 'cb') return CB_PALETTE[Math.floor(k / 9) % CB_PALETTE.length];
-    if (m === 'glitter') return GLITTER_PALETTE[Math.floor(k / 5) % GLITTER_PALETTE.length];
-    return `hsl(${(k * 7) % 360} 85% 58%)`; // rainbow
-  }
-  // Representative solid for the start dot + finished-stroke glow.
-  const tracePrimary = () => ({ rainbow: '#E24AA0', cb: '#0072B2', glitter: '#EC7FB4', black: '#333333', grey: '#9AA3AD' }[traceColor()] || accent);
+  // Single-colour ink (owner direction, matching the approved mock): the trail
+  // the child leaves is painted in the one theme accent — no colour picker.
+  const ink = accent;
 
   function loadActivity(next) {
     activity = next;
@@ -1376,9 +1374,10 @@ function renderTracing(firstActivity) {
     const r = stage.getBoundingClientRect();
     canvas.width = r.width * devicePixelRatio; canvas.height = r.height * devicePixelRatio;
     ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
-    // Leave room for the left actions and the right colour panel so the glyph
-    // is never hidden under them.
-    const padL = 76, padR = 84;
+    // Leave room for the left actions (undo/trash) only — there's no right
+    // colour panel anymore, so the glyph uses nearly the full width. Everything
+    // is measured off the live stage size, so it scales to any device.
+    const padL = r.width < 380 ? 54 : 68, padR = r.width < 380 ? 12 : 22;
     const availW = Math.max(60, r.width - padL - padR);
     const side = Math.min(availW, r.height);
     scale = side / 1000;
@@ -1453,19 +1452,18 @@ function renderTracing(firstActivity) {
   // broken wherever the finger strayed off the path, so the letter visibly
   // fills as it is traced.
   function drawFill() {
-    // The "ink" the finger leaves is a slim line within the (thick) corridor —
-    // thinner than the traceable band so it reads like a pen, not a fill.
-    const w = Math.max(4, config.corridorWidth * 0.45 * scale);
+    // The "ink" the finger leaves is a slim line within the band — thinner than
+    // the band so it reads like a pen filling it in, not a flood.
+    const w = Math.max(4, drawBand * 0.62 * scale);
     ctx.lineWidth = w;
     ctx.lineCap = ctx.lineJoin = 'round';
     ctx.globalAlpha = 0.95;
-    let hue = 0;
+    ctx.strokeStyle = ink; ctx.fillStyle = ink;
     const drawTrail = (pts) => {
       let prev = null;
       for (const d of pts) {
-        const c = fillPaint(hue++);
-        if (prev) { ctx.strokeStyle = c; ctx.beginPath(); ctx.moveTo(prev.x, prev.y); ctx.lineTo(d.x, d.y); ctx.stroke(); }
-        else { ctx.fillStyle = c; ctx.beginPath(); ctx.arc(d.x, d.y, w / 2, 0, Math.PI * 2); ctx.fill(); }
+        if (prev) { ctx.beginPath(); ctx.moveTo(prev.x, prev.y); ctx.lineTo(d.x, d.y); ctx.stroke(); }
+        else { ctx.beginPath(); ctx.arc(d.x, d.y, w / 2, 0, Math.PI * 2); ctx.fill(); }
         prev = d;
       }
     };
@@ -1474,14 +1472,6 @@ function renderTracing(firstActivity) {
     let seg = [];
     for (const d of dots) { if (d.on) seg.push(d); else { if (seg.length) drawTrail(seg); seg = []; } }
     if (seg.length) drawTrail(seg);
-    // Glitter: scatter a few white sparkles along the ink.
-    if (traceColor() === 'glitter') {
-      ctx.fillStyle = 'rgba(255,255,255,0.9)';
-      let n = 0;
-      const spark = (pts) => { for (const d of pts) { if (n++ % 6 === 0) { ctx.beginPath(); ctx.arc(d.x, d.y, w * 0.18, 0, Math.PI * 2); ctx.fill(); } } };
-      for (const t of filledStrokes) spark(t);
-      spark(dots.filter((d) => d.on));
-    }
     ctx.globalAlpha = 1;
   }
 
@@ -1495,7 +1485,7 @@ function renderTracing(firstActivity) {
     if (guides) {
       // Push the top/base lines out by half the drawn band so the letters sit
       // BETWEEN the lines (band edge just touches them, never spilling over).
-      const half = config.corridorWidth;
+      const half = drawBand / 2;
       const lineX0 = ox + 26 * scale, lineX1 = ox + (1000 - 26) * scale;
       const yAt = (dy) => dy * scale + oy;
       ctx.setLineDash([]);
@@ -1512,7 +1502,7 @@ function renderTracing(firstActivity) {
     strokes.forEach((path) => {
       strokePath(path);
       ctx.strokeStyle = '#E7DED6';
-      ctx.lineWidth = config.corridorWidth * 2 * scale;
+      ctx.lineWidth = drawBand * scale;
       ctx.stroke();
     });
     // The traced fill (child's ink) sits above the band.
@@ -1533,29 +1523,30 @@ function renderTracing(firstActivity) {
     // dotted white track along the current stroke
     strokePath(path);
     ctx.strokeStyle = 'rgba(255,255,255,0.95)';
-    ctx.lineWidth = Math.max(3, config.corridorWidth * 0.26 * scale);
+    ctx.lineWidth = Math.max(3, drawBand * 0.28 * scale);
     ctx.lineCap = 'round';
-    ctx.setLineDash([1.5, Math.max(9, config.corridorWidth * 0.7 * scale)]);
+    ctx.setLineDash([1.5, Math.max(9, drawBand * 1.1 * scale)]);
     ctx.stroke();
     ctx.setLineDash([]);
     // start cue: a pulsing dot + a small direction arrow
     const s0 = sampleAt(path, 0);
-    const ah = Math.max(9, config.corridorWidth * 0.5 * scale);
+    const ah = Math.max(8, drawBand * 0.55 * scale);
     const a = Math.atan2(s0.dy, s0.dx);
-    const axp = s0.x + Math.cos(a) * ah * 1.6, ayp = s0.y + Math.sin(a) * ah * 1.6;
+    const axp = s0.x + Math.cos(a) * ah * 1.7, ayp = s0.y + Math.sin(a) * ah * 1.7;
     ctx.fillStyle = accent;
     ctx.beginPath();
     ctx.moveTo(axp + Math.cos(a) * ah, ayp + Math.sin(a) * ah);
     ctx.lineTo(axp + Math.cos(a + 2.4) * ah * 0.7, ayp + Math.sin(a + 2.4) * ah * 0.7);
     ctx.lineTo(axp + Math.cos(a - 2.4) * ah * 0.7, ayp + Math.sin(a - 2.4) * ah * 0.7);
     ctx.closePath(); ctx.fill();
-    const pr = 10 + Math.sin(phase * Math.PI * 2) * 3;
+    const dr = Math.max(7, drawBand * 0.4 * scale);
+    const pr = dr + Math.sin(phase * Math.PI * 2) * dr * 0.28;
     ctx.beginPath(); ctx.arc(s0.x, s0.y, pr, 0, Math.PI * 2); ctx.fillStyle = accent; ctx.fill();
     // one glowing dot leading the way along the stroke, in the trace direction
     const lp = sampleAt(path, phase);
     ctx.save();
     ctx.shadowColor = accent; ctx.shadowBlur = 12;
-    ctx.beginPath(); ctx.arc(lp.x, lp.y, Math.max(7, config.corridorWidth * 0.5 * scale), 0, Math.PI * 2);
+    ctx.beginPath(); ctx.arc(lp.x, lp.y, dr, 0, Math.PI * 2);
     ctx.fillStyle = accent; ctx.fill();
     ctx.restore();
   }
@@ -1693,27 +1684,14 @@ function renderTracing(firstActivity) {
     return card;
   }
 
-  // Colour panel on the RIGHT (rainbow default · black · grey · glitter ·
-  // colour-blind), plus a CAPS toggle for the name. Selected swatch is
-  // highlighted with a ring (no dark border).
-  const panel = el(`<div class="trace-panel" role="group" aria-label="Tracing colour"></div>`);
-  const COLOURS = [
-    { k: 'rainbow', label: 'Rainbow', css: 'conic-gradient(from 90deg, #FF6B6B, #FFD93D, #6BCB77, #4D96FF, #B983FF, #FF6B6B)' },
-    { k: 'black', label: 'Black', css: '#333333' },
-    { k: 'grey', label: 'Grey', css: '#9AA3AD' },
-    { k: 'glitter', label: 'Glitter', css: 'radial-gradient(circle at 32% 30%, #FFFFFF, #F5C8DF 55%, #C9A7F0)' },
-    { k: 'cb', label: 'Colour-blind friendly', css: 'linear-gradient(90deg, #E69F00, #56B4E9, #009E73, #0072B2, #D55E00)' },
-  ];
-  COLOURS.forEach((c) => {
-    const sw = el(`<button class="trace-swatch ${traceColor() === c.k ? 'active' : ''}" style="background:${c.css}" aria-label="Trace in ${c.label}"></button>`);
-    sw.onclick = () => {
-      state.traceColor = c.k;
-      panel.querySelectorAll('.trace-swatch').forEach((s) => s.classList.remove('active'));
-      sw.classList.add('active');
-      draw();
-    };
-    panel.append(sw);
-  });
+  // No colour picker (owner direction — single-colour ink, matching the mock).
+  // Undo + Trash on the LEFT, plus a CAPS toggle for the name activity only.
+  const actions = el(`<div class="trace-actions"></div>`);
+  const undoBtn = el(`<button class="icon-btn" aria-label="Undo">↩️</button>`);
+  undoBtn.onclick = undo;
+  const trashBtn = el(`<button class="icon-btn" aria-label="Start this one over">🗑️</button>`);
+  trashBtn.onclick = trash;
+  actions.append(undoBtn, trashBtn);
   if (activity.id === 'trace-name') {
     const nick = state.profile?.nickname || '';
     const capsBtn = el(`<button class="trace-caps ${state.traceCaps ? 'active' : ''}" aria-label="Capital letters">ABC</button>`);
@@ -1723,16 +1701,9 @@ function renderTracing(firstActivity) {
       const nm = state.traceCaps ? nick.toUpperCase() : nick;
       loadActivity({ ...activity, title: 'My name: ' + nm, paths: LH.nameStrokes(nm) });
     };
-    panel.append(capsBtn);
+    actions.append(capsBtn);
   }
-  // Undo + Trash on the LEFT.
-  const actions = el(`<div class="trace-actions"></div>`);
-  const undoBtn = el(`<button class="icon-btn" aria-label="Undo">↩️</button>`);
-  undoBtn.onclick = undo;
-  const trashBtn = el(`<button class="icon-btn" aria-label="Start this one over">🗑️</button>`);
-  trashBtn.onclick = trash;
-  actions.append(undoBtn, trashBtn);
-  stage.append(panel, actions);
+  stage.append(actions);
 
   requestAnimationFrame(fit);
   new ResizeObserver(fit).observe(stage);
