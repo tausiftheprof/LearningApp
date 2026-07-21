@@ -27,10 +27,15 @@ Status key: `[ ]` open · `[~]` in progress · `[x]` done (move to the bottom or
     lives in that panel; either relocate it to the left actions or drop it. `fillPaint()`/`traceColor`
     state can go.
 
-- [ ] **Puzzle bubbles — drop the name label.** In the Puzzles picker the jigsaw picture already
-  says what it is, so the plain-text name under the bubble is redundant. Hide the `.bubble-label` for
-  puzzle tiles (in `renderPicker`, pass a flag / empty label when `category === 'puzzles'`, keeping the
-  bubble's `aria-label` for screen readers). Other pickers keep their labels. Demo + mobile.
+- [ ] **Drop the name label on picture-obvious bubbles.** Where the bubble image already says what it
+  is, the plain-text name under it is redundant — hide `.bubble-label` for those (keep the bubble's
+  `aria-label` for screen readers; label still spoken on tap). Applies to:
+  - **Puzzles** picker (the jigsaw picture is enough).
+  - **Tracing → Letters and Numbers** lists (the clay `A a` / `5` art is enough — owner direction).
+    Shapes keep their names for now (pentagon vs hexagon clay blobs are easy to confuse) unless owner
+    says otherwise.
+  In `renderPicker`, pass an empty/suppressed label when `category` is `puzzles`, `tracing-letters` or
+  `tracing-numbers`. Demo + mobile.
 
 - [ ] **Port the recent demo-first work to the mobile app.** These all shipped and are verified in
   the web demo but are not yet in the Expo app (mobile needs a device/emulator to drive + verify):
