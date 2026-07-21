@@ -14,6 +14,27 @@ Status key: `[ ]` open · `[~]` in progress · `[x]` done (move to the bottom or
   (the `trace-number-0` tracing activity already exists — it currently falls back to a plain black "0"
   in the picker). Confirm it appears in the Numbers list with the clay art after cleanup + rebuild.
 
+- [ ] **Rewards section — simple, proud, industry-standard (all four pieces chosen).** Keep it
+  uncomplicated and pressure-free; build on the existing `rewards/rewardsEngine.ts` (daily-capped
+  ledger) + `renderRewards`. **Deliberately avoid** (owner + industry direction for under-7s):
+  leaderboards/ranking, harsh streaks, coins/purchases, anything competitive.
+  - **Star jar / meter** — stars collect into a jar that visibly fills; when it's full it "pops"
+    (confetti + chime) and awards a new sticker, then resets. The satisfying fill-it-up loop; drives
+    off the existing `totalStars` ledger (e.g. jar holds N stars → sticker).
+  - **Milestone trophies** — a small set of big, *nameable* achievements with cute art: e.g.
+    "Traced every letter", "First puzzle", "Counted to 10", "Wrote my name", "Coloured a picture".
+    Each unlocks once; shown on a trophy shelf in `renderRewards`. (Replaces/augments the current
+    generic badges — make them concrete and proud-worthy.)
+  - **Sticker book (polish)** — keep the book; make it nicer: fill pages, tap a sticker to hear its
+    name (spoken), a sparkle when a new one lands, gentle "X to collect" progress.
+  - **Name certificate** — a simple screenshot-friendly card ("I can write my name!" / "I know my
+    letters!") the parent can capture, shown when the matching milestone trophy is earned. Pride +
+    involves the grown-up. (No sharing/upload — purely on-device visual.)
+  - **Mascot celebrates** — the Little Grip mascot cheers on reward moments (jar pop, new trophy),
+    reusing the existing celebrate()/sound effects. Emotional reward, no new engine.
+  - Surfaces: core `rewardsEngine` (jar threshold, trophy unlock rules) + `renderRewards` (demo) then
+    mobile `RewardsScreen`. Keep it demo-first; mobile port folds into the mobile-port item.
+
 - [ ] **Don't read the child's name aloud.** Suppress the child's name in any spoken/voice output
   (privacy). Audit every `speak(...)` call that includes the nickname — e.g. the home greeting and the
   "My name" tracing activity (`loadActivity` speaks `next.title` = "My name: <nick>", and the name
