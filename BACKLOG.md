@@ -48,6 +48,13 @@ Status key: `[ ]` open · `[~]` in progress · `[x]` done (move to the bottom or
   - **Tracing controls** (colour picker / CAPS / undo-trash / name-finish) — still demo-only.
   - **Stylus behaviour on-device** — pen-first fixes shipped (see Done); verify with the real stylus.
 
+- [ ] **Rename "Little Games" → "Games".** The home door labelled **Little Games** becomes just
+  **Games** (and "Big Kid Games" is already retired, so there's one games door). Change the `label`
+  in `packages/core/src/home/homeLayout.ts` (`LITTLE_GAMES`), update the "Little Games" wording in
+  code comments / `themes.ts` notes, and the `renderPicker` "Pick one!" flow is unaffected. Check for
+  any hardcoded "Little Games" string in `demo-shell.html` / mobile and the homeLayout test
+  expectations; update copy + tests together. Renderer/copy only — no mechanic change.
+
 - [ ] **Home screen — add life & polish (keep the approved art/layout).** Owner approved a mockup
   (scratchpad artifact `f1349581-e720-422d-a309-4a0c05faf86c`) that keeps the existing Candy-Clouds
   illustrated tiles and colours but adds motion and tightens the top bar. Build-ready spec:
