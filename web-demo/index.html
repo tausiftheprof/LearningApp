@@ -254,6 +254,8 @@
   .bubble.bare::before { display: none; }
   .bubble.bare .tile-illo .lg-img, .bubble.bare .tile-illo svg { width: clamp(72px, 17vw, 118px) !important; height: clamp(72px, 17vw, 118px) !important; filter: drop-shadow(0 6px 8px rgba(74,59,50,0.2)); }
   .bubble.bare .glyph-big { filter: drop-shadow(0 4px 5px rgba(74,59,50,0.18)); }
+  /* roomier grid for floating glyphs so they don't look squished */
+  .bubble-grid.glyph-grid { grid-template-columns: repeat(auto-fit, minmax(128px, 1fr)); gap: clamp(22px, 4.5vw, 44px) clamp(16px, 3.5vw, 34px); padding: 16px 10px 26px; }
   .bubble-label { font-weight: 800; font-size: clamp(13px, 2.4vw, 16px); color: var(--tile-ink, #4A3B32); text-align: center; line-height: 1.12; max-width: 15ch; }
   @keyframes bubBob { 0%, 100% { translate: 0 0; } 50% { translate: 0 -6px; } }
   @keyframes bubPop { 0% { transform: scale(1); } 35% { transform: scale(1.16); } 100% { transform: scale(1); } }
@@ -1553,7 +1555,10 @@ function renderPicker(category) {
     top.append(back);
   }
   top.append(el(`<div class="hello">Pick one!</div>`));
-  const grid = el(`<div class="bubble-grid"></div>`);
+  // Floating glyph lists (letters/numbers/shapes) get roomier spacing so the
+  // clay art breathes instead of looking squished.
+  const glyphGrid = /^tracing-/.test(category);
+  const grid = el(`<div class="bubble-grid${glyphGrid ? ' glyph-grid' : ''}"></div>`);
   // Category order matches home tiles, so each category reuses its illustration.
   const catIndex = { drawing: 0, colouring: 1, puzzles: 2, tracing: 3, toddler: 4, preschool: 5, logic: 6 };
   const emojiFor = { drawing: '🖍️', colouring: '🎨', puzzles: '🧩', tracing: '✏️', toddler: '🐣', preschool: '🦘', logic: '💡' };
