@@ -1,5 +1,5 @@
-import React from 'react';
-import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { Animated, Easing, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import {
   dayKeyFrom,
   canStartNewActivity,
@@ -12,22 +12,137 @@ import { childTheme } from '../../ui/theme';
 import { BigTile } from '../../ui/components';
 import { audioService } from '../../services/audio';
 
-// The brand mascot (shared artwork in assets/images/). Metro resolves only
-// literal require paths, and there is a single mascot across all themes, so it
-// is required once here; themes opt in via `greeting.mascotImage`.
+// Shared artwork in the repo-root assets/images/. Metro only resolves literal
+// require paths, so every home tile image is required up-front by its key. The
+// Candy home uses these floating art tiles (approved mockup); other themes and
+// high-contrast fall back to the emoji BigTile.
 const MASCOT_IMAGE = require('../../../../../assets/images/mascot.png');
+const TILE_ART: Record<string, number> = {
+  'tile-daily': require('../../../../../assets/images/tile-daily.png'),
+  'tile-draw': require('../../../../../assets/images/tile-draw.png'),
+  'tile-colour': require('../../../../../assets/images/tile-colour.png'),
+  'tile-tracing': require('../../../../../assets/images/tile-tracing.png'),
+  'tile-puzzles': require('../../../../../assets/images/tile-puzzles.png'),
+  'tile-toddler': require('../../../../../assets/images/tile-toddler.png'),
+  'tile-logic': require('../../../../../assets/images/tile-logic.png'),
+};
+// Category → tile-art key (mirrors the demo's CANDY_TILE_PHOTOS mapping).
+const CATEGORY_ART: Record<string, string> = {
+  drawing: 'tile-draw',
+  colouring: 'tile-colour',
+  puzzles: 'tile-puzzles',
+  tracing: 'tile-tracing',
+  toddler: 'tile-toddler',
+  logic: 'tile-logic',
+};
+
+const SPARK_EMOJI = ['✨', '⭐', '🌟'];
+
+/** A short outward burst of sparkles, retriggered whenever `trigger` changes. */
+function Sparkles({ trigger }: { trigger: number }): React.JSX.Element | null {
+  const anims = useRef(Array.from({ length: 5 }, () => new Animated.Value(0))).current;
+  const [show, setShow] = useState(false);
+  useEffect(() => {
+    if (trigger === 0) return;
+    setShow(true);
+    Animated.parallel(
+      anims.map((a) => {
+        a.setValue(0);
+        return Animated.timing(a, {
+          toValue: 1,
+          duration: 650,
+          easing: Easing.out(Easing.quad),
+          useNativeDriver: true,
+        });
+      }),
+    ).start(() => setShow(false));
+  }, [trigger, anims]);
+  if (!show) return null;
+  return (
+    <View pointerEvents="none" style={styles.sparkLayer}>
+      {anims.map((a, k) => {
+        const ang = (k / anims.length) * Math.PI * 2;
+        const translateX = a.interpolate({ inputRange: [0, 1], outputRange: [0, Math.cos(ang) * 46] });
+        const translateY = a.interpolate({ inputRange: [0, 1], outputRange: [0, Math.sin(ang) * 46] });
+        const opacity = a.interpolate({ inputRange: [0, 0.7, 1], outputRange: [1, 1, 0] });
+        const scale = a.interpolate({ inputRange: [0, 1], outputRange: [1, 0.4] });
+        return (
+          <Animated.Text
+            key={k}
+            style={[styles.spark, { opacity, transform: [{ translateX }, { translateY }, { scale }] }]}
+          >
+            {SPARK_EMOJI[k % SPARK_EMOJI.length]}
+          </Animated.Text>
+        );
+      })}
+    </View>
+  );
+}
+
+/** Candy home door: floating art (no card), label underneath, idle bob + tap sparkle. */
+function FloatingTile({
+  artSource,
+  label,
+  index,
+  littlest,
+  textColour,
+  onPress,
+}: {
+  artSource: number;
+  label: string;
+  index: number;
+  littlest: boolean;
+  textColour: string;
+  onPress: () => void;
+}): React.JSX.Element {
+  const bob = useRef(new Animated.Value(0)).current;
+  const [sparkKey, setSparkKey] = useState(0);
+  useEffect(() => {
+    // Stagger the idle bob so the doors don't pulse in lock-step.
+    const dur = 1700 + (index % 4) * 200;
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(bob, { toValue: 1, duration: dur, delay: index * 160, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+        Animated.timing(bob, { toValue: 0, duration: dur, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [bob, index]);
+  const translateY = bob.interpolate({ inputRange: [0, 1], outputRange: [0, -6] });
+  return (
+    <Animated.View style={[styles.tileCell, littlest && styles.tileCellLittlest, { transform: [{ translateY }] }]}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={label}
+        onPress={() => {
+          setSparkKey((k) => k + 1);
+          onPress();
+        }}
+        style={({ pressed }) => [styles.homeTile, pressed && styles.homeTilePressed]}
+      >
+        <Image source={artSource} style={styles.tileArt} resizeMode="contain" accessibilityElementsHidden />
+        <Text style={[styles.tileLabel, { color: textColour }]}>{label}</Text>
+        <Sparkles trigger={sparkKey} />
+      </Pressable>
+    </Animated.View>
+  );
+}
 
 /**
  * Child Home — age-adaptive design (Direction C, July 2026): greeting card with
- * mascot and theme subtitle, star pill + Grown-ups lock on the right, then an
- * icon+label tile grid whose doors are chosen by the profile's age band
- * (`homeTilesForAge`), and a full-width "My Rewards" banner. The littlest band
- * (2-3) gets fewer, larger tiles; older children get more doors.
+ * the teal mascot and an inline star pill next to the child's name, Rewards +
+ * Grown-ups on the right, then the age-adaptive doors. On the Candy theme the
+ * doors are floating art tiles (approved mockup); other themes / high-contrast
+ * keep the emoji tiles.
  */
 export function HomeScreen(): React.JSX.Element {
   const { profile, screenTime, navigate, rewards } = useAppStore();
-  const theme = childTheme(profile?.accessibility ?? defaultAccessibilitySettings(), profile?.themeId);
+  const accessibility = profile?.accessibility ?? defaultAccessibilitySettings();
+  const theme = childTheme(accessibility, profile?.themeId);
   const app = theme.app;
+  const hc = accessibility.highContrast;
+  const candy = !hc && app.id === 'candy';
 
   const ageBand = profile?.ageBand ?? '3-5';
   const visibleTiles = homeTilesForAge(ageBand);
@@ -43,31 +158,37 @@ export function HomeScreen(): React.JSX.Element {
     else if ('category' in target) navigate({ name: 'picker', category: target.category });
   }
 
+  function artFor(tile: HomeTile): number | undefined {
+    if (!candy) return undefined;
+    const isDaily = 'special' in tile.target && tile.target.special === 'daily';
+    const key = isDaily ? 'tile-daily' : 'category' in tile.target ? CATEGORY_ART[tile.target.category] : undefined;
+    return key ? TILE_ART[key] : undefined;
+  }
+
   return (
     <View style={styles.root}>
       <View style={styles.topRow}>
         <View style={[styles.greetingCard, { backgroundColor: app.greeting.background, borderRadius: theme.radius }]}>
           <View style={styles.greetingText}>
-            <Text style={[styles.hello, { color: app.greeting.titleColor ?? theme.text }]}>
-              Hi, {profile?.nickname ?? 'friend'}!
-            </Text>
+            <View style={styles.hiRow}>
+              <Text style={[styles.hello, { color: app.greeting.titleColor ?? theme.text }]}>
+                Hi, {profile?.nickname ?? 'friend'}!
+              </Text>
+              <View style={[styles.starPill, { backgroundColor: app.starPill }]} accessibilityLabel={`${rewards.totalStars} stars earned`}>
+                <Text style={[styles.starPillText, { color: theme.text }]}>⭐ {rewards.totalStars}</Text>
+              </View>
+            </View>
             <Text style={[styles.subtitle, { color: theme.text }]}>{app.greeting.subtitle}</Text>
           </View>
-          {app.greeting.mascotImage ? (
-            <Image source={MASCOT_IMAGE} style={styles.mascotImg} resizeMode="contain" accessibilityElementsHidden />
-          ) : (
+          {hc ? (
             <Text style={styles.mascot} accessibilityElementsHidden>
               {app.greeting.mascot}
             </Text>
+          ) : (
+            <Image source={MASCOT_IMAGE} style={styles.mascotImg} resizeMode="contain" accessibilityElementsHidden />
           )}
         </View>
         <View style={styles.topRight}>
-          <View
-            style={[styles.starPill, { backgroundColor: app.starPill }]}
-            accessibilityLabel={`${rewards.totalStars} stars earned`}
-          >
-            <Text style={[styles.starPillText, { color: theme.text }]}>⭐ {rewards.totalStars}</Text>
-          </View>
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="My Rewards. Stickers, badges and stars!"
@@ -81,26 +202,41 @@ export function HomeScreen(): React.JSX.Element {
             accessibilityRole="button"
             accessibilityLabel="For grown-ups: open parent settings"
             onPress={() => navigate({ name: 'gate' })}
-            style={[styles.grownUpsButton, { backgroundColor: theme.surface }]}
+            style={[styles.grownUpsButton, { backgroundColor: candy ? '#F7CFE4' : theme.surface }]}
           >
             <Text style={styles.grownUpsIcon}>🔒</Text>
             <Text style={[styles.grownUpsText, { color: theme.text }]}>Grown-ups</Text>
           </Pressable>
         </View>
       </View>
-      <ScrollView contentContainerStyle={styles.grid}>
-        {visibleTiles.map((tile: HomeTile, i) => (
-          <View key={tile.label} style={[styles.cell, littlest && styles.cellLittlest]}>
-            <BigTile
-              label={tile.label}
-              emoji={tile.icon ?? app.tileIcons[tile.idx] ?? '⭐'}
-              colour={theme.tileColours[i % theme.tileColours.length]!}
-              theme={theme}
-              onPress={() => open(tile.target, tile.label)}
-            />
-          </View>
-        ))}
-        {/* My Rewards now lives in the top bar next to Grown-ups. */}
+      <ScrollView contentContainerStyle={candy ? styles.gridCandy : styles.grid}>
+        {visibleTiles.map((tile: HomeTile, i) => {
+          const artSource = artFor(tile);
+          if (candy && artSource != null) {
+            return (
+              <FloatingTile
+                key={tile.label}
+                artSource={artSource}
+                label={tile.label}
+                index={i}
+                littlest={littlest}
+                textColour={theme.text}
+                onPress={() => open(tile.target, tile.label)}
+              />
+            );
+          }
+          return (
+            <View key={tile.label} style={[styles.cell, littlest && styles.cellLittlest]}>
+              <BigTile
+                label={tile.label}
+                emoji={tile.icon ?? app.tileIcons[tile.idx] ?? '⭐'}
+                colour={theme.tileColours[i % theme.tileColours.length]!}
+                theme={theme}
+                onPress={() => open(tile.target, tile.label)}
+              />
+            </View>
+          );
+        })}
       </ScrollView>
     </View>
   );
@@ -111,32 +247,29 @@ const styles = StyleSheet.create({
   topRow: { flexDirection: 'row', alignItems: 'stretch', padding: 12, gap: 10 },
   greetingCard: { flex: 1, flexDirection: 'row', alignItems: 'center', padding: 14 },
   greetingText: { flex: 1 },
+  hiRow: { flexDirection: 'row', alignItems: 'center', gap: 10, flexWrap: 'wrap' },
   hello: { fontSize: 24, fontWeight: '800' },
   subtitle: { fontSize: 14, opacity: 0.8, marginTop: 2 },
+  starPill: { borderRadius: 999, paddingHorizontal: 12, paddingVertical: 4, elevation: 1 },
+  starPillText: { fontSize: 15, fontWeight: '800' },
   mascot: { fontSize: 40, marginLeft: 8 },
-  mascotImg: { width: 60, height: 60, marginLeft: 8 },
-  topRight: { alignItems: 'center', justifyContent: 'space-between', gap: 8 },
-  starPill: { borderRadius: 999, paddingHorizontal: 14, paddingVertical: 6, elevation: 1 },
-  starPillText: { fontSize: 16, fontWeight: '800' },
-  grownUpsButton: { alignItems: 'center', borderRadius: 14, paddingHorizontal: 10, paddingVertical: 6 },
+  mascotImg: { width: 62, height: 62, marginLeft: 8 },
+  topRight: { alignItems: 'center', justifyContent: 'flex-start', gap: 8 },
+  grownUpsButton: { alignItems: 'center', borderRadius: 14, paddingHorizontal: 10, paddingVertical: 6, minWidth: 76 },
   grownUpsIcon: { fontSize: 18 },
   grownUpsText: { fontSize: 11, marginTop: 2 },
+  // Non-candy / high-contrast: emoji BigTile grid.
   grid: { flexDirection: 'row', flexWrap: 'wrap', padding: 8 },
   cell: { width: '50%', minHeight: 130 },
-  // Littlest band (2-3): fewer doors, so give each tile more room.
   cellLittlest: { minHeight: 168 },
-  rewardsBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginHorizontal: 8,
-    marginTop: 4,
-    marginBottom: 12,
-    padding: 14,
-    width: '96%',
-  },
-  rewardsIcon: { fontSize: 34, marginRight: 12 },
-  rewardsText: { flex: 1 },
-  rewardsTitle: { fontSize: 20, fontWeight: '800' },
-  rewardsSubtitle: { fontSize: 13, opacity: 0.75, marginTop: 2 },
-  rewardsChevron: { fontSize: 28, fontWeight: '800', marginLeft: 8 },
+  // Candy: floating art tiles, centre-packed & size-capped.
+  gridCandy: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', paddingHorizontal: 10, paddingBottom: 28, paddingTop: 4, gap: 12 },
+  tileCell: { width: 150, alignItems: 'center' },
+  tileCellLittlest: { width: 172 },
+  homeTile: { alignItems: 'center', padding: 4, width: '100%' },
+  homeTilePressed: { transform: [{ scale: 0.94 }] },
+  tileArt: { width: '100%', aspectRatio: 1 },
+  tileLabel: { fontSize: 16, fontWeight: '800', marginTop: 2, textAlign: 'center' },
+  sparkLayer: { position: 'absolute', top: '38%', left: 0, right: 0, alignItems: 'center', justifyContent: 'center' },
+  spark: { position: 'absolute', fontSize: 20 },
 });
