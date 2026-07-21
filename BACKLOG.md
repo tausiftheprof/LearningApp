@@ -9,6 +9,19 @@ Status key: `[ ]` open · `[~]` in progress · `[x]` done (move to the bottom or
 
 ## Open
 
+- [ ] **Use the updated 1/2/3 clay art.** Owner uploaded `Tracing - 1 updated.png` / `2 updated` /
+  `3 updated` (redrawn to fix the too-big sizing). Clean each with the region-size key-out pipeline →
+  replace `trace-number-1/2/3.png`, and **drop the manual vertical padding** I added earlier (the new
+  source fixes the size at the art level). Re-check the Numbers list reads consistently after rebuild.
+
+- [ ] **Section icons for the Tracing chooser (Letters / Numbers / Shapes / My Name).** Owner uploaded
+  `Icon - Letters.png` / `Icon - Numbers.png` / `Icon - Shapes.png` / `Icon - My Name.png` (likely
+  checkerboard bg — clean with the region-size pipeline). Wire them into `renderTracingSections`
+  (the "What shall we trace?" chooser), replacing the current glyph text (`A a` / `1 2 3` / `○ △ □` /
+  `✍️`). **Owner wants to compare bubble vs bare (no circle)** — build the chooser both ways (or a
+  quick toggle) so the owner can pick, matching whichever the glyph lists ended up using. Suggested
+  clean keys: `sec-letters` / `sec-numbers` / `sec-shapes` / `sec-name`.
+
 - [ ] **Wire the number 0 clay art.** Owner uploaded `Tracing - 0.png` (still has the checkerboard
   background). Clean it with the region-size key-out pipeline → `trace-number-0.png`, then it auto-wires
   (the `trace-number-0` tracing activity already exists — it currently falls back to a plain black "0"
