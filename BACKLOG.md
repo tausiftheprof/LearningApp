@@ -9,6 +9,27 @@ Status key: `[ ]` open · `[~]` in progress · `[x]` done (move to the bottom or
 
 ## Open
 
+- [ ] **Fix tracing fill "jump" + enforce start-from-the-dot.** Touching near the END of a
+  shape (especially closed polygons, where the last corner sits near the start) fills almost
+  the whole glyph for a moment — confusing. Cause: `lastPos = max(lastPos, result.pathPosition)`
+  accepts *any* nearest-point fraction, so a far touch leaps the fill ahead. Fix: only advance
+  the fill **contiguously** — accept a new `pathPosition` only when it's within ~0.12 of the
+  current `lastPos` (tune), so the ink can only grow by tracing forward from the start dot;
+  a touch at the end does nothing. This also enforces "start on the dot" visually with no voice.
+  **Shared logic — apply to BOTH `web-demo/demo-shell.html` (`renderTracing`) and mobile
+  `TracingPlayer.tsx`.** (Optional later: once CMS instruction-voice ships, add a spoken "Start
+  on the dot!" — today mobile's `playInstruction` is a documented silent scaffold, so voice
+  won't play yet.)
+
+- [ ] **Polygon tracing start points — use the school convention (top vertex, clockwise).**
+  Hexagon, pentagon and rectangle currently start partway along the right side. There's no strict
+  school standard for polygons, but the teaching norm is **start at the top and trace clockwise**
+  (rectangle: top-left corner, across the top first). Round shapes (circle/oval) + triangle
+  (apex → base L-to-R) are already school-correct; re-author the polygon skeletons in
+  `content/starterPack.ts` so their start vertex is at the top and stroke order is clockwise, and
+  keep every stroke completable (the `tracing.test.ts` "every glyph is completable" guard). Owner
+  to confirm "top-start, clockwise" before the geometry change.
+
 - [ ] **Swap the Games tile to the revised (pastel) Play badge.** Owner uploaded
   `assets/images/Icon - Games home screen 3.png` — same composition as the shipped one
   (trophy / coins / rocket / rainbow / clouds / stars) but in a softer pastel palette that
