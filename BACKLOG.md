@@ -21,6 +21,14 @@ Status key: `[ ]` open · `[~]` in progress · `[x]` done (move to the bottom or
   on the dot!" — today mobile's `playInstruction` is a documented silent scaffold, so voice
   won't play yet.)
 
+- [ ] **Section-complete card for tracing (numbers/letters/shapes).** When a child finishes the
+  whole set (e.g. 0→10 numbers), don't just silently wrap to the start — celebrate: give a star +
+  show a two-button card **"Play again" (restart the set from the first item) / "Back (one screen)"**,
+  mirroring the game-completion pattern (Feed the Animal is the reference). Today tracing
+  auto-advances and wraps after the last item with no end-of-set moment. Applies to demo
+  (`renderTracing` `letterQueue` wrap) + mobile (`TracingPlayer` / `ActivityPlayerScreen` advance),
+  for all three sets (letters / numbers / shapes).
+
 - [ ] **Polygon tracing start points — use the school convention (top vertex, clockwise).**
   Hexagon, pentagon and rectangle currently start partway along the right side. There's no strict
   school standard for polygons, but the teaching norm is **start at the top and trace clockwise**
