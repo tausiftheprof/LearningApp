@@ -67,8 +67,20 @@ export const SECTION_ICONS: ArtMap = {
   "sec-colour-yourway": require("../../../../assets/images/sec-colour-yourway.png"),
 };
 
+// The "make a shape" dot-to-dot games reuse the clay shapes (+ the clay star)
+// as their picker icons instead of the generic number emoji.
+export const SHAPE_GAME_ART: ArtMap = {
+  'draw-dotdot-star': require('../../../../assets/images/shape-star.png'),
+  'draw-dotdot-triangle': require('../../../../assets/images/trace-triangle.png'),
+  'draw-dotdot-square': require('../../../../assets/images/trace-square.png'),
+};
+
 export function tracingArtFor(id: string): number | undefined {
   return TRACING_ART[id];
+}
+
+export function gameArtFor(id: string): number | undefined {
+  return SHAPE_GAME_ART[id];
 }
 
 export function sectionIcon(key: string): number | undefined {

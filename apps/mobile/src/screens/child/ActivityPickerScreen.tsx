@@ -6,7 +6,7 @@ import { useAppStore } from '../../state/appStore';
 import { childTheme } from '../../ui/theme';
 import { HoldToHomeButton } from '../../ui/components';
 import { IMPLEMENTED_GAME_TEMPLATES } from './games/registry';
-import { tracingArtFor, sectionIcon } from '../../ui/tracingArt';
+import { tracingArtFor, gameArtFor, sectionIcon } from '../../ui/tracingArt';
 
 const SPARK_EMOJI = ['✨', '⭐', '🌟'];
 
@@ -283,6 +283,9 @@ export function ActivityPickerScreen(props: { category: PickerCategory }): React
           // Tracing lists float the owner's clay art bare (no bubble): letters &
           // numbers drop the label (picture-obvious); shapes keep the name.
           const traceArt = activity.type === 'tracing' ? tracingArtFor(activity.id) : undefined;
+          // "Make a shape" dot-to-dot games show their clay shape art in a bubble.
+          const gameArt = activity.type === 'game' ? gameArtFor(activity.id) : undefined;
+          const art = traceArt ?? gameArt;
           const bare = (isGlyphList || isShapeList) && traceArt != null;
           return (
             <BubbleTile
@@ -292,9 +295,9 @@ export function ActivityPickerScreen(props: { category: PickerCategory }): React
               bare={bare}
               colour={theme.tileColours[i % theme.tileColours.length]!}
               textColour={theme.text}
-              artSource={traceArt}
-              emoji={traceArt ? undefined : emojiFor(activity)}
-              glyph={traceArt ? undefined : glyphFor(activity.id)}
+              artSource={art}
+              emoji={art ? undefined : emojiFor(activity)}
+              glyph={art ? undefined : glyphFor(activity.id)}
               index={i}
               cellW={cellW}
               onPress={() => navigate({ name: 'activity', activity })}

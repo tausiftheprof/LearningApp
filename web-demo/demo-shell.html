@@ -1290,6 +1290,11 @@ function renderPicker(category) {
     sequence: '➡️', 'stack-blocks': '🧱', 'shadow-match': '👥', 'reveal-wipe': '✨',
     'pattern-complete': '🔷', 'dot-to-dot': '🔢', 'feed-animal': '🍓', 'cut-along': '✂️', 'number-hop': '🐸',
   };
+  // The "make a shape" dot-to-dots get their own clay shape art (reusing the
+  // tracing shapes + the clay star) instead of the generic number emoji.
+  const DOTDOT_ICON = {
+    'draw-dotdot-star': 'shape-star', 'draw-dotdot-triangle': 'trace-triangle', 'draw-dotdot-square': 'trace-square',
+  };
   ranked.forEach((a, i) => {
     // Prefer the activity's own picture (jigsaw image, sketch to draw over);
     // otherwise use the category illustration from the theme.
@@ -1298,7 +1303,7 @@ function renderPicker(category) {
     else if (a.type === 'guided-drawing') imgName = imageNameFromRef(a.steps?.[0]?.prompt || '');
     else if (a.type === 'colouring' && a.mode === 'line-art') imgName = imageNameFromRef(a.image);
     else if (a.type === 'colouring') imgName = (/^colour-([a-z]+)/.exec(a.id) || [])[1] || null;
-    else if (category === 'draw-dotdot') imgName = imageNameFromRef(a.params?.image || '');
+    else if (category === 'draw-dotdot') imgName = DOTDOT_ICON[a.id] || imageNameFromRef(a.params?.image || '');
     else if (a.type === 'game' && a.template === 'feed-animal') imgName = imageNameFromRef(a.params?.open || '');
     else if (a.type === 'game' && a.template === 'cut-along') imgName = 'cut-scissors-open';
     else if (a.type === 'game' && a.template === 'number-hop') imgName = 'hop-stone';
