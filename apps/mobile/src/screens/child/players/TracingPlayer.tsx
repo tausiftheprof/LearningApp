@@ -256,7 +256,12 @@ export function TracingPlayer(props: {
           const add = (px: number, py: number) => {
             const res = session.current.addPoint(toDesign(px, py));
             if (res.completed) reachedEnd = true;
-            if (res.onPath && typeof res.pathPosition === 'number') maxPos = Math.max(maxPos, res.pathPosition);
+            // Only advance the fill CONTIGUOUSLY: accept a new position when it's
+            // just ahead of where we are, never a far jump. This stops a touch
+            // near the end (e.g. a closed shape's last corner) from filling the
+            // whole glyph, and enforces "start on the dot" (a mid/end touch does
+            // nothing until the child traces forward from the start).
+            if (res.onPath && res.pathPosition > maxPos && res.pathPosition - maxPos < 0.15) maxPos = res.pathPosition;
           };
           const prev = lastRaw.current;
           if (prev) {

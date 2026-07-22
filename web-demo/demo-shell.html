@@ -1734,7 +1734,11 @@ function renderTracing(firstActivity) {
     let result;
     const add = (px, py) => {
       result = session.addPoint({ x: (px - ox) / scale, y: (py - oy) / scale });
-      if (result.onPath) lastPos = Math.max(lastPos, result.pathPosition);
+      // Advance the ink fill only CONTIGUOUSLY — a new position must be just
+      // ahead of the current one, never a far jump — so touching near the end
+      // (a closed shape's last corner sits by the start) can't fill the whole
+      // glyph, and the child must trace forward from the start dot.
+      if (result.onPath && result.pathPosition > lastPos && result.pathPosition - lastPos < 0.15) lastPos = result.pathPosition;
       dots.push({ x: px, y: py, on: result.onPath });
       if (dots.length > 800) dots.shift();
     };
