@@ -1,40 +1,126 @@
-import React, { useMemo } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { Canvas, Path, Skia } from '@shopify/react-native-skia';
-import type { Activity, ActivityCategory, Point } from '@littlegrip/core';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Animated, Easing, Image, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import type { Activity, ActivityCategory } from '@littlegrip/core';
 import { defaultAccessibilitySettings, recommendActivities, ACTIVITY_CATEGORIES, nameStrokes } from '@littlegrip/core';
 import { useAppStore } from '../../state/appStore';
 import { childTheme } from '../../ui/theme';
-import { BigTile, HoldToHomeButton } from '../../ui/components';
+import { HoldToHomeButton } from '../../ui/components';
 import { IMPLEMENTED_GAME_TEMPLATES } from './games/registry';
+import { tracingArtFor, sectionIcon } from '../../ui/tracingArt';
 
-/** A tiny outline of a shape-tracing activity, drawn from its own guide paths. */
-function ShapeIcon({ paths, size, color }: { paths: Point[][]; size: number; color: string }): React.JSX.Element {
-  const skPath = useMemo(() => {
-    let minx = 1e9, miny = 1e9, maxx = -1e9, maxy = -1e9;
-    for (const s of paths) for (const p of s) { minx = Math.min(minx, p.x); miny = Math.min(miny, p.y); maxx = Math.max(maxx, p.x); maxy = Math.max(maxy, p.y); }
-    const pad = 90, w = (maxx - minx || 1) + 2 * pad, h = (maxy - miny || 1) + 2 * pad;
-    const sc = size / Math.max(w, h);
-    const offx = (size - w * sc) / 2, offy = (size - h * sc) / 2;
-    const map = (p: Point) => ({ x: offx + (p.x - (minx - pad)) * sc, y: offy + (p.y - (miny - pad)) * sc });
-    const path = Skia.Path.Make();
-    for (const s of paths) {
-      const f = map(s[0]!); path.moveTo(f.x, f.y);
-      for (const p of s.slice(1)) { const m = map(p); path.lineTo(m.x, m.y); }
-    }
-    return path;
-  }, [paths, size]);
+const SPARK_EMOJI = ['✨', '⭐', '🌟'];
+
+/** A short outward sparkle burst, retriggered whenever `trigger` changes. */
+function Sparkles({ trigger }: { trigger: number }): React.JSX.Element | null {
+  const anims = useRef(Array.from({ length: 5 }, () => new Animated.Value(0))).current;
+  const [show, setShow] = useState(false);
+  useEffect(() => {
+    if (trigger === 0) return;
+    setShow(true);
+    Animated.parallel(
+      anims.map((a) => {
+        a.setValue(0);
+        return Animated.timing(a, { toValue: 1, duration: 620, easing: Easing.out(Easing.quad), useNativeDriver: true });
+      }),
+    ).start(() => setShow(false));
+  }, [trigger, anims]);
+  if (!show) return null;
   return (
-    <Canvas style={{ width: size, height: size }}>
-      <Path path={skPath} color={color} style="stroke" strokeWidth={Math.max(3, size * 0.08)} strokeCap="round" strokeJoin="round" />
-    </Canvas>
+    <View pointerEvents="none" style={styles.sparkLayer}>
+      {anims.map((a, k) => {
+        const ang = (k / anims.length) * Math.PI * 2;
+        const translateX = a.interpolate({ inputRange: [0, 1], outputRange: [0, Math.cos(ang) * 44] });
+        const translateY = a.interpolate({ inputRange: [0, 1], outputRange: [0, Math.sin(ang) * 44] });
+        const opacity = a.interpolate({ inputRange: [0, 0.7, 1], outputRange: [1, 1, 0] });
+        const scale = a.interpolate({ inputRange: [0, 1], outputRange: [1, 0.4] });
+        return (
+          <Animated.Text key={k} style={[styles.spark, { opacity, transform: [{ translateX }, { translateY }, { scale }] }]}>
+            {SPARK_EMOJI[k % SPARK_EMOJI.length]}
+          </Animated.Text>
+        );
+      })}
+    </View>
+  );
+}
+
+/**
+ * A round balloon "bubble" door (approved demo look). `bare` drops the coloured
+ * circle so clay art floats on its own (used for the letter/number/shape lists);
+ * otherwise the icon sits in a soft colour bubble. Idle bob + pop + tap sparkle.
+ */
+function BubbleTile(props: {
+  label: string;
+  showLabel: boolean;
+  bare: boolean;
+  colour: string;
+  textColour: string;
+  artSource?: number | undefined;
+  emoji?: string | undefined;
+  glyph?: string | undefined;
+  index: number;
+  cellW: number;
+  onPress: () => void;
+}): React.JSX.Element {
+  const bob = useRef(new Animated.Value(0)).current;
+  const [spark, setSpark] = useState(0);
+  useEffect(() => {
+    const dur = 1800 + (props.index % 4) * 220;
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(bob, { toValue: 1, duration: dur, delay: props.index * 140, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+        Animated.timing(bob, { toValue: 0, duration: dur, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [bob, props.index]);
+  const translateY = bob.interpolate({ inputRange: [0, 1], outputRange: [0, -5] });
+
+  const diameter = props.cellW - 14;
+  const iconSize = props.bare ? props.cellW - 16 : Math.round(diameter * 0.62);
+  const icon = props.artSource ? (
+    <Image source={props.artSource} style={{ width: iconSize, height: iconSize }} resizeMode="contain" accessibilityElementsHidden />
+  ) : props.glyph ? (
+    <Text style={{ fontSize: iconSize * 0.5, fontWeight: '800', color: props.textColour }}>{props.glyph}</Text>
+  ) : (
+    <Text style={{ fontSize: iconSize * 0.55 }}>{props.emoji ?? '⭐'}</Text>
+  );
+
+  return (
+    <Animated.View style={[styles.bCell, { width: props.cellW, transform: [{ translateY }] }]}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={props.label}
+        onPress={() => {
+          setSpark((k) => k + 1);
+          props.onPress();
+        }}
+        style={({ pressed }) => [styles.bPress, pressed && styles.bPressed]}
+      >
+        {props.bare ? (
+          <View style={[styles.bareIcon, { width: iconSize, height: iconSize }]}>{icon}</View>
+        ) : (
+          <View style={[styles.bubble, { width: diameter, height: diameter, borderRadius: diameter / 2, backgroundColor: props.colour }]}>
+            {icon}
+          </View>
+        )}
+        {props.showLabel && (
+          <Text style={[styles.bLabel, { color: props.textColour }]} numberOfLines={1}>
+            {props.label}
+          </Text>
+        )}
+        <Sparkles trigger={spark} />
+      </Pressable>
+    </Animated.View>
   );
 }
 
 /**
  * Activity picker (docs/03 S09). Only playable content is shown: game
  * templates not yet implemented in this scaffold are filtered out entirely -
- * children never see locked or broken teasers.
+ * children never see locked or broken teasers. Round bubble tiles (approved
+ * demo look), with the owner's cloud section icons on the tracing chooser and
+ * clay glyph art on the letter/number/shape bubbles.
  */
 type PickerCategory = ActivityCategory | 'tracing-letters' | 'tracing-numbers' | 'tracing-shapes';
 
@@ -46,12 +132,23 @@ export function ActivityPickerScreen(props: { category: PickerCategory }): React
   // Shapes - letters/numbers stay a 3-5+ experience (owner direction, July 2026).
   const category: PickerCategory = props.category === 'tracing' && littlest ? 'tracing-shapes' : props.category;
 
+  // Responsive bubble sizing from the live viewport (phone → tablet → web).
+  const { width: winW } = useWindowDimensions();
+  const GAP = 12;
+  const avail = Math.max(260, winW - 20);
+  const minTile = 118;
+  const maxTile = 168;
+  const fitCols = Math.max(2, Math.floor((avail + GAP) / (minTile + GAP)));
+  const gridFor = (count: number) => {
+    const cols = Math.min(Math.max(1, count), fitCols);
+    return Math.min(maxTile, Math.floor((avail - GAP * (cols - 1)) / Math.max(1, cols)));
+  };
+
   const playable = catalogue.filter(
     (a) =>
       (a.type !== 'game' || IMPLEMENTED_GAME_TEMPLATES.includes(a.template)) &&
       // Line-art colouring scenes flood-fill a rasterised SVG - shipped in the
-      // web demo only for now, since the native app has no SVG pipeline yet
-      // (tracked as a follow-up; see ColouringPlayer.tsx for the same guard).
+      // web demo only for now, since the native app has no SVG pipeline yet.
       !(a.type === 'colouring' && a.mode === 'line-art'),
   );
   // Tracing splits into Letters / Numbers / Shapes (owner direction).
@@ -60,28 +157,29 @@ export function ActivityPickerScreen(props: { category: PickerCategory }): React
     playable
       .filter((a) => a.type === 'tracing')
       .filter((a) =>
-        kind === 'letters' ? /^trace-letter-/.test(a.id)
-        : kind === 'numbers' ? /^trace-number-/.test(a.id)
-        : !/^trace-(letter|number)-/.test(a.id))
+        kind === 'letters' ? /^trace-letter-/.test(a.id) : kind === 'numbers' ? /^trace-number-/.test(a.id) : !/^trace-(letter|number)-/.test(a.id),
+      )
       .sort(numericSort);
   const ranked =
-    category === 'tracing-letters' ? tracingOf('letters')
-    : category === 'tracing-numbers' ? tracingOf('numbers')
-    : category === 'tracing-shapes' ? tracingOf('shapes')
-    : recommendActivities(
-          playable.filter((a) => a.category === category),
-          {
-            ageBand: profile?.ageBand ?? '3-5',
-            difficulty: profile?.difficulty ?? 2,
-            favouriteCategories: profile?.favouriteCategories ?? [],
-            enabledCategories: [...ACTIVITY_CATEGORIES],
-            recentActivityIds: [],
-          },
-          24,
-        );
+    category === 'tracing-letters'
+      ? tracingOf('letters')
+      : category === 'tracing-numbers'
+        ? tracingOf('numbers')
+        : category === 'tracing-shapes'
+          ? tracingOf('shapes')
+          : recommendActivities(
+              playable.filter((a) => a.category === category),
+              {
+                ageBand: profile?.ageBand ?? '3-5',
+                difficulty: profile?.difficulty ?? 2,
+                favouriteCategories: profile?.favouriteCategories ?? [],
+                enabledCategories: [...ACTIVITY_CATEGORIES],
+                recentActivityIds: [],
+              },
+              24,
+            );
 
-  // Per-game icons (owner direction, July 2026): every game tile shows its own
-  // emoji instead of the shared category chick.
+  // Per-game icons (owner direction): every game tile shows its own emoji.
   const GAME_EMOJI: Record<string, string> = {
     'pop-bubbles': '🫧', 'tap-target': '🐶', 'drag-sort': '🧺', 'match-pairs': '🃏',
     'memory-cards': '🃏', counting: '🔢', 'odd-one-out': '🔎', 'letter-match': '🔤',
@@ -92,7 +190,8 @@ export function ActivityPickerScreen(props: { category: PickerCategory }): React
     (a.type === 'game' ? GAME_EMOJI[a.template] : undefined) ??
     ({ drawing: '🖍️', colouring: '🎨', puzzles: '🧩', tracing: '✏️', toddler: '🐣', preschool: '🦘', logic: '💡' })[a.category];
 
-  // Letter/number tracing tiles show just the big glyph pair (owner direction).
+  // Letter/number tracing tiles show just the big glyph pair as a text fallback
+  // when the clay art is missing (owner direction).
   function glyphFor(id: string): string | undefined {
     const letter = /^trace-letter-(.)$/.exec(id);
     if (letter) return `${letter[1]!.toUpperCase()} ${letter[1]!}`;
@@ -100,12 +199,13 @@ export function ActivityPickerScreen(props: { category: PickerCategory }): React
     return num ? num[1]! : undefined;
   }
 
-  // The Tracing door shows a section chooser first (owner direction).
+  // The Tracing door shows a section chooser first (owner direction): cloud
+  // section icons in soft bubbles.
   if (category === 'tracing') {
     const sections = [
-      { key: 'tracing-letters' as const, label: 'Letters', sub: 'A to Z, big and small', glyph: 'A a' },
-      { key: 'tracing-numbers' as const, label: 'Numbers', sub: '0 to 10', glyph: '1 2 3' },
-      { key: 'tracing-shapes' as const, label: 'Shapes', sub: 'Circles, squares and more', glyph: '○ △ □' },
+      { key: 'tracing-letters' as const, label: 'Letters', icon: 'sec-letters' },
+      { key: 'tracing-numbers' as const, label: 'Numbers', icon: 'sec-numbers' },
+      { key: 'tracing-shapes' as const, label: 'Shapes', icon: 'sec-shapes' },
     ];
     // "My Name" traces the child's own name (from their profile), if it has letters.
     const nick = profile?.nickname ?? '';
@@ -116,6 +216,8 @@ export function ActivityPickerScreen(props: { category: PickerCategory }): React
             return template ? { ...template, id: 'trace-name', title: `My name: ${nick}`, paths: nameStrokes(nick) } : null;
           })()
         : null;
+    const chooserCount = sections.length + (nameActivity ? 1 : 0);
+    const cellW = gridFor(chooserCount);
     return (
       <View style={styles.root}>
         <View style={styles.topBar}>
@@ -124,29 +226,32 @@ export function ActivityPickerScreen(props: { category: PickerCategory }): React
         </View>
         <ScrollView contentContainerStyle={styles.grid}>
           {sections.map((sct, i) => (
-            <View key={sct.key} style={styles.cell}>
-              <BigTile
-                label={sct.label}
-                subtitle={sct.sub}
-                glyph={sct.glyph}
-                emoji=""
-                colour={theme.tileColours[(i + 2) % theme.tileColours.length]!}
-                theme={theme}
-                onPress={() => navigate({ name: 'picker', category: sct.key })}
-              />
-            </View>
+            <BubbleTile
+              key={sct.key}
+              label={sct.label}
+              showLabel
+              bare={false}
+              colour={theme.tileColours[(i + 2) % theme.tileColours.length]!}
+              textColour={theme.text}
+              artSource={sectionIcon(sct.icon)}
+              index={i}
+              cellW={cellW}
+              onPress={() => navigate({ name: 'picker', category: sct.key })}
+            />
           ))}
           {nameActivity && (
-            <View key="tracing-name" style={styles.cell}>
-              <BigTile
-                label="My Name"
-                subtitle="Trace your own name"
-                emoji="✍️"
-                colour={theme.tileColours[5 % theme.tileColours.length]!}
-                theme={theme}
-                onPress={() => navigate({ name: 'activity', activity: nameActivity })}
-              />
-            </View>
+            <BubbleTile
+              key="tracing-name"
+              label="My Name"
+              showLabel
+              bare={false}
+              colour={theme.tileColours[5 % theme.tileColours.length]!}
+              textColour={theme.text}
+              artSource={sectionIcon('sec-name')}
+              index={sections.length}
+              cellW={cellW}
+              onPress={() => navigate({ name: 'activity', activity: nameActivity })}
+            />
           )}
         </ScrollView>
       </View>
@@ -154,6 +259,9 @@ export function ActivityPickerScreen(props: { category: PickerCategory }): React
   }
 
   const isTracingSection = /^tracing-/.test(category) && !littlest;
+  const isGlyphList = category === 'tracing-letters' || category === 'tracing-numbers';
+  const isShapeList = category === 'tracing-shapes';
+  const cellW = gridFor(ranked.length);
   return (
     <View style={styles.root}>
       <View style={styles.topBar}>
@@ -172,27 +280,29 @@ export function ActivityPickerScreen(props: { category: PickerCategory }): React
       </View>
       <ScrollView contentContainerStyle={styles.grid}>
         {ranked.map((activity, i) => {
-          // Shape-tracing tiles show a tiny outline of the shape, not the pencil.
-          const shapePaths =
-            activity.type === 'tracing' && !/^trace-(letter|number)-/.test(activity.id) ? activity.paths : null;
+          // Tracing lists float the owner's clay art bare (no bubble): letters &
+          // numbers drop the label (picture-obvious); shapes keep the name.
+          const traceArt = activity.type === 'tracing' ? tracingArtFor(activity.id) : undefined;
+          const bare = (isGlyphList || isShapeList) && traceArt != null;
           return (
-            <View key={activity.id} style={styles.cell}>
-              <BigTile
-                label={activity.title}
-                emoji={emojiFor(activity)}
-                glyph={glyphFor(activity.id) ?? ''}
-                iconNode={shapePaths ? <ShapeIcon paths={shapePaths} size={46} color={theme.text} /> : undefined}
-                colour={theme.tileColours[i % theme.tileColours.length]!}
-                theme={theme}
-                onPress={() => navigate({ name: 'activity', activity })}
-              />
-            </View>
+            <BubbleTile
+              key={activity.id}
+              label={activity.title}
+              showLabel={!isGlyphList}
+              bare={bare}
+              colour={theme.tileColours[i % theme.tileColours.length]!}
+              textColour={theme.text}
+              artSource={traceArt}
+              emoji={traceArt ? undefined : emojiFor(activity)}
+              glyph={traceArt ? undefined : glyphFor(activity.id)}
+              index={i}
+              cellW={cellW}
+              onPress={() => navigate({ name: 'activity', activity })}
+            />
           );
         })}
         {ranked.length === 0 && (
-          <Text style={[styles.empty, { color: theme.text }]}>
-            New activities are on their way! Try another door on the home screen. 🏠
-          </Text>
+          <Text style={[styles.empty, { color: theme.text }]}>New activities are on their way! Try another door on the home screen. 🏠</Text>
         )}
       </ScrollView>
     </View>
@@ -205,7 +315,29 @@ const styles = StyleSheet.create({
   backIcon: { fontSize: 24, fontWeight: '700' },
   topBar: { flexDirection: 'row', alignItems: 'center', padding: 8 },
   title: { fontSize: 24, fontWeight: '700', marginLeft: 8 },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', padding: 8 },
-  cell: { width: '50%', minHeight: 110 },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', alignItems: 'flex-start', paddingHorizontal: 10, paddingVertical: 8, gap: 12 },
   empty: { fontSize: 18, padding: 24, textAlign: 'center' },
+  bCell: { alignItems: 'center' },
+  bPress: { alignItems: 'center', padding: 4 },
+  bPressed: { transform: [{ scale: 0.93 }] },
+  bubble: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 3,
+    shadowColor: '#4A3B32',
+    shadowOpacity: 0.18,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 4 },
+  },
+  bareIcon: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#4A3B32',
+    shadowOpacity: 0.2,
+    shadowRadius: 7,
+    shadowOffset: { width: 0, height: 5 },
+  },
+  bLabel: { fontSize: 15, fontWeight: '800', marginTop: 5, textAlign: 'center' },
+  sparkLayer: { position: 'absolute', top: '30%', left: 0, right: 0, alignItems: 'center', justifyContent: 'center' },
+  spark: { position: 'absolute', fontSize: 18 },
 });
