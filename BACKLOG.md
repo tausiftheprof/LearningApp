@@ -9,6 +9,43 @@ Status key: `[ ]` open · `[~]` in progress · `[x]` done (move to the bottom or
 
 ## Open
 
+- [ ] **Build Guided Drawing — Option A "Step Strip" (owner-chosen), multi-subject.** Owner picked
+  **Option A** from the design mockup (scratchpad artifact `753d4c6a-8183-431f-8c82-f0491ca27def`):
+  a **numbered thumbnail strip** across the top of the canvas — current step ringed in accent, a
+  green ✓ as each part completes, "Step N of M · <label>" beneath. Build over the existing corridor
+  engine (the whale pilot `renderGuidedDrawing` is the base; mobile `GuidedDrawingPlayer`).
+  Owner-approved mechanic details:
+  - **Trace-to-build, part by part.** Each step is one part the child traces in their chosen colour;
+    on coverage-complete it **locks in filled with that colour** and the next part lights up. Reuse
+    the same **start-on-the-dot + contiguous-fill** discipline as tracing (pulsing start dot; fill
+    only grows forward). Faint whole-picture ghost sits underneath.
+  - **Per-part colour (not global).** Each finished part keeps the colour it was traced with — a
+    later colour change must NOT recolour earlier parts (this was the mockup bug the owner caught).
+    Store a colour per step.
+  - **Faces stay black & white.** Eyes are a **fixed, non-colourable** part (render white + dark
+    pupils regardless of palette). Generalise to a per-step "fixed colour" flag so other fixed bits
+    work too — **car wheels** (dark) + hubs (yellow), **watermelon seeds** (black), **cake candle
+    flame** (gold). Everything else takes the child's colour.
+  - **Magic-drawer palette/tools** — port the Blank Canvas chrome (right colour rail w/ white
+    selected ring, slim crayon·paint·eraser·🪄 bar + wand drawer, floating size pod, corner
+    undo·redo / start-over·save). The old flat toolbar in `renderGuidedDrawing` is replaced.
+  - **Completion** — two-button card **"Draw again" / "Back (one screen)"** (game-completion
+    pattern, no Home) + save to gallery.
+  - **Subjects (6), owner-approved:** **Grip** (body→feet→antennae→eyes→smile→tummy-swirl),
+    **Cupcake** (case→frosting→cherry→sprinkles), **Car** (body→windows→wheels→lights),
+    **Cake** (bottom→top→icing→candle→dots), **Watermelon** (rind→flesh→white-edge→seeds),
+    **Flower/plant** (pot→stem→leaves→petals→middle). Author real traceable outlines in
+    `content/starterPack.ts` (like `whaleOutline()`); use owner art as the picker icon + faint
+    reference behind (`feed-cupcake`, `cut-car`, `cut-cake`, `feed-watermelon`, `feed-plant1`).
+  - **Content model note:** guided-drawing `steps[]` already carries a per-step `overlay` polyline;
+    extend each step with **label/cue text**, a **kind** (`fill` closed shape vs `line` stroke) so
+    the finished part renders correctly, and an optional **fixedColour**. Multi-mark steps
+    (sprinkles/seeds/dots) = several sub-paths traced together. Keep every stroke completable
+    (mirror the `tracing.test.ts` guard for the new outlines).
+  - **Surfaces:** demo `demo-shell.html` `renderGuidedDrawing` first (rebuild + headless verify each
+    subject builds to completion, eyes stay B&W, per-part colour holds), then mobile port. More
+    subjects can follow once the pattern's validated.
+
 - [ ] **Fix tracing fill "jump" + enforce start-from-the-dot.** Touching near the END of a
   shape (especially closed polygons, where the last corner sits near the start) fills almost
   the whole glyph for a moment — confusing. Cause: `lastPos = max(lastPos, result.pathPosition)`
