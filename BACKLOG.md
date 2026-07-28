@@ -37,6 +37,12 @@ Status key: `[ ]` open · `[~]` in progress · `[x]` done (move to the bottom or
     **Flower/plant** (pot→stem→leaves→petals→middle). Author real traceable outlines in
     `content/starterPack.ts` (like `whaleOutline()`); use owner art as the picker icon + faint
     reference behind (`feed-cupcake`, `cut-car`, `cut-cake`, `feed-watermelon`, `feed-plant1`).
+  - **Art quality (owner direction):** the mockup uses simple geometric outlines *for feel only* —
+    the **final build's art must look realistic/clay-style**, reading like the real object, not a
+    primitive shape. Author detailed traceable outlines from the owner's actual PNG art (trace the
+    clay renders for accurate silhouettes + interior detail lines), or have cleaner line-art
+    commissioned, and show the owner's PNG as the faint reference underneath. Keep each stroke
+    completable (the tracing guard) while adding the extra detail that makes it look real.
   - **Content model note:** guided-drawing `steps[]` already carries a per-step `overlay` polyline;
     extend each step with **label/cue text**, a **kind** (`fill` closed shape vs `line` stroke) so
     the finished part renders correctly, and an optional **fixedColour**. Multi-mark steps
