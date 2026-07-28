@@ -246,7 +246,7 @@
   .bubble:hover { transform: scale(1.05); }
   .bubble:active { transform: scale(0.9); }
   .bubble.pop { animation: bubPop .5s ease; }
-  .bubble .emoji { font-size: clamp(40px, 9vw, 60px); line-height: 1; filter: drop-shadow(0 3px 3px rgba(0,0,0,0.14)); }
+  .bubble .emoji { font-size: clamp(48px, 11vw, 74px); line-height: 1; filter: drop-shadow(0 4px 4px rgba(0,0,0,0.16)); }
   .bubble .tile-illo .lg-img, .bubble .tile-illo svg { width: clamp(54px, 12vw, 82px) !important; height: clamp(54px, 12vw, 82px) !important; }
   .bubble .glyph-big { font-size: clamp(40px, 9vw, 62px); }
   /* bare: no coloured circle — the clay art floats, animations kept */
@@ -1179,6 +1179,45 @@ function renderColourSections() {
   app.append(top, grid);
 }
 
+// Little Games groups (owner direction, July 2026): the flat games list is
+// split into four kid-friendly groups, mirroring the Tracing chooser. Each
+// group's `has` predicate runs over the toddler-category activities.
+const GAME_GROUPS = [
+  { key: 'games-sort', label: 'Sort & Match', glyph: '🧩', has: (a) => (a.template === 'drag-sort' && !a.params?.ordered) || a.template === 'match-pairs' || a.template === 'shadow-match' || a.template === 'letter-match' },
+  { key: 'games-tap', label: 'Tap & Count', glyph: '🔢', has: (a) => a.template === 'pop-bubbles' || a.template === 'tap-target' || a.template === 'counting' || a.template === 'number-hop' || a.template === 'odd-one-out' },
+  { key: 'games-patterns', label: 'Patterns', glyph: '🔁', has: (a) => a.template === 'sequence' || a.template === 'pattern-complete' },
+  { key: 'games-hands', label: 'Busy Hands', glyph: '✂️', has: (a) => a.template === 'feed-animal' || a.template === 'cut-along' || a.template === 'stack-blocks' || a.template === 'reveal-wipe' },
+];
+const gameGroupFor = (key) => GAME_GROUPS.find((g) => g.key === key);
+
+/** Little Games chooser (owner direction, July 2026): four game "boxes" —
+ *  Sort & Match, Tap & Count, Patterns, Busy Hands — each opening its own
+ *  bubble list. Empty groups (for the youngest band) are hidden. */
+function renderGameSections() {
+  setStatus('Little Games groups', ['content pack toddler']);
+  const top = el(`<div class="topbar"></div>`);
+  top.append(holdToHomeButton(() => navigate({ name: 'home' })), el(`<div class="hello">Pick a game box!</div>`));
+  const grid = el(`<div class="bubble-grid glyph-grid"></div>`);
+  const set = LH.recommendActivities(
+    state.catalogue.filter(playable).filter((a) => a.category === 'toddler'),
+    {
+      ageBand: state.profile?.ageBand ?? '3-5',
+      difficulty: state.profile?.difficulty ?? 2,
+      favouriteCategories: state.profile?.favouriteCategories ?? [],
+      enabledCategories: [...LH.ACTIVITY_CATEGORIES],
+      recentActivityIds: [],
+    },
+    64,
+  );
+  GAME_GROUPS.filter((g) => set.some(g.has)).forEach((g, i) => {
+    const iconHtml = `<span class="glyph-big" aria-hidden="true">${g.glyph}</span>`;
+    grid.append(bubbleTile(iconHtml, g.label, tiles()[(i + 2) % tiles().length], () => {
+      speak(g.label); navigate({ name: 'picker', category: g.key });
+    }));
+  });
+  app.append(top, grid);
+}
+
 // A tiny outline of a shape-tracing activity, drawn from its own guide paths
 // (so the icon always matches what the child will trace). Replaces the generic
 // pencil for the Shapes section.
@@ -1242,6 +1281,9 @@ function renderPicker(category) {
   // Colour splits into two sections (owner direction, July 2026): Colour by
   // Numbers and Colour Your Way.
   if (category === 'colouring') { renderColourSections(); return; }
+  // Little Games splits into four groups (owner direction, July 2026); the
+  // 'toddler' door shows the chooser, each group lists its own games.
+  if (category === 'toddler') { renderGameSections(); return; }
   const numericSort = (a, b) => a.id.localeCompare(b.id, undefined, { numeric: true });
   const tracingOf = (kind) =>
     state.catalogue
@@ -1264,6 +1306,17 @@ function renderPicker(category) {
     : category === 'draw-blank' ? state.catalogue.filter((a) => a.type === 'guided-drawing' && a.steps.length <= 1)
     : category === 'draw-guided' ? state.catalogue.filter((a) => a.type === 'guided-drawing' && a.steps.length > 1)
     : category === 'draw-dotdot' ? state.catalogue.filter((a) => a.type === 'game' && a.template === 'dot-to-dot')
+    : /^games-/.test(category) ? LH.recommendActivities(
+        state.catalogue.filter(playable).filter((a) => a.category === 'toddler').filter(gameGroupFor(category)?.has ?? (() => true)),
+        {
+          ageBand: state.profile?.ageBand ?? '3-5',
+          difficulty: state.profile?.difficulty ?? 2,
+          favouriteCategories: state.profile?.favouriteCategories ?? [],
+          enabledCategories: [...LH.ACTIVITY_CATEGORIES],
+          recentActivityIds: [],
+        },
+        64,
+      )
     : LH.recommendActivities(
         state.catalogue.filter(playable).filter((a) => a.category === category),
         {
@@ -1293,6 +1346,11 @@ function renderPicker(category) {
     back.onclick = () => navigate({ name: 'picker', category: 'colouring' });
     top.append(back);
   }
+  if (/^games-/.test(category)) {
+    const back = el(`<button class="icon-btn" aria-label="Back">←</button>`);
+    back.onclick = () => navigate({ name: 'picker', category: 'toddler' });
+    top.append(back);
+  }
   top.append(el(`<div class="hello">Pick one!</div>`));
   // Floating glyph lists (letters/numbers/shapes) get roomier spacing so the
   // clay art breathes instead of looking squished.
@@ -1304,11 +1362,27 @@ function renderPicker(category) {
   // Per-game icons (owner direction, July 2026): every game tile shows its own
   // picture/emoji instead of the shared category chick - real art where we have
   // it, a fitting emoji otherwise.
+  // Per-template default icon. The old set leaned on the 🃏 joker card (ugly,
+  // off-brand) and a single ➡️ across every pattern game; these are cuter and
+  // on-theme, and GAME_ICON below overrides per activity so no two tiles repeat.
   const GAME_EMOJI = {
-    'pop-bubbles': '🫧', 'tap-target': '🐶', 'drag-sort': '🧺', 'match-pairs': '🃏',
-    'memory-cards': '🃏', counting: '🔢', 'odd-one-out': '🔎', 'letter-match': '🔤',
-    sequence: '➡️', 'stack-blocks': '🧱', 'shadow-match': '👥', 'reveal-wipe': '✨',
-    'pattern-complete': '🔷', 'dot-to-dot': '🔢', 'feed-animal': '🍓', 'cut-along': '✂️', 'number-hop': '🐸',
+    'pop-bubbles': '🫧', 'tap-target': '👆', 'drag-sort': '🧺', 'match-pairs': '🧩',
+    'memory-cards': '🧠', counting: '🔢', 'odd-one-out': '🔎', 'letter-match': '🔤',
+    sequence: '🔁', 'stack-blocks': '🧱', 'shadow-match': '🔦', 'reveal-wipe': '✨',
+    'pattern-complete': '🧩', 'dot-to-dot': '✏️', 'feed-animal': '🍓', 'cut-along': '✂️', 'number-hop': '🐸',
+  };
+  // Per-activity icon overrides so each tile reads as its own thing (owner:
+  // "the icons are very ugly") — distinct, cute, on-theme emoji per game.
+  const GAME_ICON = {
+    'toddler-sort-colour': '🌈', 'sort-colour-three': '🌈', 'sort-colour-four': '🌈',
+    'toddler-toys-in-box': '🧸', 'toddler-match-objects': '🧸',
+    'preschool-shapes': '🔷', 'preschool-number-quantity': '🔢', 'preschool-helpers': '🧰',
+    'preschool-opposites': '↔️', 'preschool-body-parts': '👃', 'preschool-emotions': '😊',
+    'preschool-count-objects': '🐟', 'preschool-number-trace-count': '🤏', 'preschool-sequence': '🔁',
+    'preschool-letter-match': '🔤',
+    'seq-fruit': '🍓', 'seq-treats': '🧁', 'seq-garden': '🌱', 'seq-picnic': '🧺', 'seq-plants': '🪴', 'seq-journey': '🚗',
+    'logic-pattern': '🧩', 'logic-odd-one-out': '🔎', 'logic-memory-4': '🧠', 'logic-memory-6': '🧠',
+    'logic-size-order': '📏', 'logic-belongs': '🔗', 'logic-rotate-shape': '🔄', 'logic-coding-steps': '🤖',
   };
   // The "make a shape" dot-to-dots get their own clay shape art (reusing the
   // tracing shapes + the clay star) instead of the generic number emoji.
@@ -1349,7 +1423,7 @@ function renderPicker(category) {
         ? `<span class="tile-illo" aria-hidden="true">${shapeIconSvg(a, 62)}</span>`
       : (hasPicture(imgName) && !highContrast()
         ? `<span class="tile-illo" aria-hidden="true">${imgHtml(imgName, 62)}</span>`
-        : `<span class="emoji">${(a.type === 'game' && GAME_EMOJI[a.template]) || emojiFor[a.category]}</span>`);
+        : `<span class="emoji">${(a.type === 'game' && (GAME_ICON[a.id] || GAME_EMOJI[a.template])) || emojiFor[a.category]}</span>`);
     // Hide the redundant name under bubbles whose picture already says it all:
     // puzzles, letter/number tracing, and both Colour lists (owner direction).
     const showLabel = !['puzzles', 'tracing-letters', 'tracing-numbers', 'colour-bynum', 'colour-yourway'].includes(category);
