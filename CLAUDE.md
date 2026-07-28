@@ -79,8 +79,18 @@ node web-demo/build.mjs              # rebuild web-demo/index.html after ANY cor
 
 Installable Android/iOS test builds are produced with EAS or a local native toolchain — see
 `apps/mobile/BUILD.md` (build profiles in `apps/mobile/eas.json`). They can't be built in a
-locked-down sandbox that blocks Google's Android download hosts; run them on a normal machine or
-on EAS cloud.
+locked-down sandbox that blocks Google's Android download hosts (and this session's egress policy
+403-blocks `api.expo.dev`, so `eas login`/`eas build` must be run on the **owner's** machine, not
+here); run them on a normal machine or on EAS cloud. The working recipe (July 2026): `eas build -p
+android --profile preview` builds an **installable APK** (the `preview` profile → `buildType: apk`,
+internal distribution). The EAS project is `@justraji/little-grip` (`owner` + `extra.eas.projectId`
+are committed in `app.json`). Two gotchas are already baked in: the update **`channel` was removed**
+from the profiles so EAS doesn't auto-install `expo-updates` (its transitive Kotlin-2.2 libs break
+SDK 53's Kotlin-2.0 build — `expo-updates:kspReleaseKotlin` fails), and **`EAS_SKIP_AUTO_FINGERPRINT=1`**
+is set in the profile `env` (the fingerprint walk choked on a file read). OTA updates can be re-added
+later with a proper Kotlin pin when heading to production. NB the owner's clone lives under a
+**OneDrive** path, which intermittently locks files during `git pull`/checkout and EAS's file walk —
+pausing OneDrive clears it.
 
 CI (`.github/workflows/ci.yml`) runs, in order: strict typecheck, core unit tests, `npm audit
 --audit-level=high`, a gitleaks secret scan, and a **child-safety manifest audit** that fails the
@@ -225,9 +235,22 @@ unimplemented on one surface. `apps/mobile/src/screens/child/games/registry.ts`
 gates — an activity whose template isn't listed is filtered out of pickers entirely (no teasers,
 no broken screens) rather than shown half-working. Check these before assuming a game template
 "exists" on both surfaces. Development is **demo-first**: features land and get verified in the
-web demo, and the mobile port is tracked as an explicit `BACKLOG.md` item (currently: `cut-along`,
-`number-hop`, the Feed layout tweaks, the Draw Magic-drawer panel, and the tracing controls are
-demo-only).
+web demo, then the mobile port follows (tracked in `BACKLOG.md`). **Ported to mobile so far**
+(July 2026): the approved **Home** (floating art tiles incl. the Play badge, teal mascot, inline
+star, idle bob + tap sparkle — `HomeScreen.tsx`), the **tracing overhaul** (seamless band, ink
+fills the centre-line, glowing leader dot, ruled-between-lines, chime + star burst —
+`TracingPlayer.tsx`, Skia), and the **bubble-tile pickers + cloud section icons + clay glyph art**
+(`ActivityPickerScreen.tsx`). Metro only resolves **literal** `require()` paths, so all mobile
+glyph/section/shape-game art is enumerated in `apps/mobile/src/ui/tracingArt.ts`
+(`TRACING_ART`/`SECTION_ICONS`/`SHAPE_GAME_ART`, keyed by activity id / section key) — add new art
+there, not via a computed path. **Still demo-only** (mobile port pending): the new games
+(`feed-animal` new layout, `cut-along`, `number-hop`, number-locked `colour-cbn-*`), the Draw
+Magic-drawer panel, the tracing clay-art **header** cue, and the tracing controls; the tracing
+**fill is contiguous** on both surfaces now (a new `pathPosition` is accepted only within ~0.15 of
+`lastPos`, so a touch near the end can't flash-fill the glyph — this also enforces start-on-the-dot).
+Responsive grids on mobile size tiles/bubbles from `useWindowDimensions()` (viewport-driven columns,
+like the demo's CSS `auto-fit minmax`), and give every `<Image>` explicit numeric dimensions — a
+percentage width through an `Animated` wrapper doesn't resolve and the image overflows at full res.
 
 ### Multi-child profiles, screen time, rewards
 
