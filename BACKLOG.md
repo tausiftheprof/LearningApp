@@ -26,15 +26,6 @@ Status key: `[ ]` open · `[~]` in progress · `[x]` done (move to the bottom or
     colour; brush type doesn't change a flat fill, so the full Magic-drawer bar was intentionally
     reduced to a colour rail here. Add texture later if wanted.
 
-- [ ] **Polygon tracing start points — use the school convention (top vertex, clockwise).**
-  Hexagon, pentagon and rectangle currently start partway along the right side. There's no strict
-  school standard for polygons, but the teaching norm is **start at the top and trace clockwise**
-  (rectangle: top-left corner, across the top first). Round shapes (circle/oval) + triangle
-  (apex → base L-to-R) are already school-correct; re-author the polygon skeletons in
-  `content/starterPack.ts` so their start vertex is at the top and stroke order is clockwise, and
-  keep every stroke completable (the `tracing.test.ts` "every glyph is completable" guard). Owner
-  to confirm "top-start, clockwise" before the geometry change.
-
 - [ ] **Port the recent demo-first work to the mobile app.** These all shipped and are verified in
   the web demo but are not yet in the Expo app (mobile needs a device/emulator to drive + verify):
   - **Guided Drawing build-a-picture** — the 6 subjects + `renderGuidedBuild` (see Done); mobile
@@ -70,6 +61,14 @@ swap in cute art whenever ready.
 
 ## Done
 
+- [x] **Polygon tracing start points — confirmed already top-start, clockwise** (owner approved the
+  convention). Verified square, rectangle, pentagon and hexagon in `content/starterPack.ts`: the
+  `polygonPath` helper begins at `-90°` (top) and increments the angle, i.e. clockwise in screen
+  space; square/rectangle begin at the **top-left corner and go across the top first**; pentagon and
+  hexagon begin at the **top apex** and sweep clockwise; triangle is apex → base L-to-R (already
+  school-correct). The earlier "start partway along the right side" note was stale — a prior fix had
+  already re-authored these. Checked visually (start dot + direction arrow) and by coordinates; the
+  `tracing.test.ts` completability guard (50 tests) stays green. No geometry change needed.
 - [x] **Section-complete card for tracing (demo).** Finishing the whole set (0→10, a→z, all shapes)
   no longer silently wraps to the first item — it celebrates with a star burst and a two-button
   **"🔁 Play again" (restart the set from the first item) / "⬅️ Back (one screen)"** card
