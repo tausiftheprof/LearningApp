@@ -245,7 +245,11 @@ glyph/section/shape-game art is enumerated in `apps/mobile/src/ui/tracingArt.ts`
 (`TRACING_ART`/`SECTION_ICONS`/`SHAPE_GAME_ART`, keyed by activity id / section key) — add new art
 there, not via a computed path. **Still demo-only** (mobile port pending): the new games
 (`feed-animal` new layout, `cut-along`, `number-hop`, number-locked `colour-cbn-*`), the Draw
-Magic-drawer panel, the tracing clay-art **header** cue, and the tracing controls; the tracing
+Magic-drawer panel, the **Guided Drawing "build a picture"** subjects (Grip/Cupcake/Car/Cake/
+Watermelon/Flower — one part traced at a time, each locking in filled with the child's colour;
+geometry authored as polylines in `packages/core/src/content/guidedBuilds.ts`, single source of
+truth for the mobile port; guided-drawing steps carry `label`/`strokes`/`fill`/`fixedColour`;
+demo renderer `renderGuidedBuild`), the tracing clay-art **header** cue, and the tracing controls; the tracing
 **fill is contiguous** on both surfaces now (a new `pathPosition` is accepted only within ~0.15 of
 `lastPos`, so a touch near the end can't flash-fill the glyph — this also enforces start-on-the-dot).
 Responsive grids on mobile size tiles/bubbles from `useWindowDimensions()` (viewport-driven columns,

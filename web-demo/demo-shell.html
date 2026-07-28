@@ -378,6 +378,26 @@
   .play-stage { flex: 1; position: relative; margin: 8px 14px 12px; border-radius: 16px; background: #fff; overflow: hidden; }
   canvas.stage { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; }
 
+  /* Guided "build a picture" chrome (renderGuidedBuild) */
+  .gb-strip { position: absolute; top: 8px; left: 8px; right: 8px; z-index: 3; display: flex; flex-wrap: wrap;
+    gap: 6px; justify-content: center; pointer-events: none; }
+  .gb-chip { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 800;
+    color: #8a7f7a; background: rgba(255,255,255,0.82); border: 2px solid rgba(150,140,135,0.25);
+    border-radius: 999px; padding: 3px 10px 3px 7px; }
+  .gb-chip b { font-weight: 800; }
+  .gb-chip.current { color: #fff; background: var(--accent, #FF8A65); border-color: var(--accent, #FF8A65); }
+  .gb-chip.done { color: #2e7d32; background: rgba(129,199,132,0.22); border-color: rgba(129,199,132,0.55); }
+  .gb-rail { position: absolute; top: 50%; right: 10px; transform: translateY(-50%); z-index: 3;
+    display: flex; flex-direction: column; gap: 8px; padding: 8px 7px; background: rgba(255,255,255,0.86);
+    border-radius: 999px; box-shadow: 0 4px 12px rgba(69,61,91,0.12); }
+  .gb-rail.locked { opacity: 0.38; pointer-events: none; }
+  .gb-swatch { width: 26px; height: 26px; border-radius: 50%; border: 3px solid transparent; cursor: pointer;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.18); padding: 0; }
+  .gb-swatch.active { border-color: #fff; outline: 3px solid var(--accent, #FF8A65); }
+  .gb-restart { position: absolute; top: 8px; left: 8px; z-index: 4; width: 34px; height: 34px; border-radius: 50%;
+    border: none; background: rgba(255,255,255,0.86); color: #8a7f7a; font-size: 18px; font-weight: 900;
+    cursor: pointer; box-shadow: 0 2px 6px rgba(69,61,91,0.12); }
+
   .toolbar {
     display: flex; flex-wrap: wrap; justify-content: center; gap: 6px;
     padding: 6px 14px 12px; align-items: center;
@@ -1850,6 +1870,213 @@ function renderTracing(firstActivity) {
 }
 
 /**
+ * GUIDED DRAWING — "build a picture" (owner Option A).
+ *
+ * The child makes a picture one part at a time. Each step highlights one part's
+ * corridor (grey band + guide + leader dot); the child traces it, and on
+ * completion the part appears filled with the colour they picked from the right
+ * rail (or a fixed colour for parts that aren't child-colourable — wheels,
+ * seeds, eyes). A top strip tracks the parts; the whole thing is a faint ghost
+ * up front so the child can see what they're making. Finishing celebrates and
+ * offers "play again" / "back" (the game-completion pattern), never a Home
+ * prompt. Geometry comes from packages/core `guidedDrawingSubjects()`.
+ */
+function renderGuidedBuild(activity) {
+  setStatus('Guided Drawing — ' + activity.title, ['tracing.TracingSession (per part)']);
+  const base = LH.tracingConfigFor(state.profile?.difficulty ?? 1, {
+    accessibilityWiderCorridor: Boolean(state.profile?.accessibility?.widerTracingCorridor),
+  });
+  const config = { ...base, corridorWidth: base.corridorWidth * 1.5, coverageToComplete: 0.5 };
+
+  const steps = activity.steps.map((s) => ({
+    label: s.label || 'Part',
+    fill: Boolean(s.fill),
+    fixedColour: s.fixedColour || null,
+    strokes: s.strokes && s.strokes.length ? s.strokes : [s.overlay],
+  }));
+  const done = new Array(steps.length).fill(false);
+  const partColour = new Array(steps.length).fill(null);
+
+  const PALETTE = ['#EF5350', '#FF8A65', '#FFCA28', '#66BB6A', '#26A69A', '#42A5F5', '#7E57C2', '#EC407A', '#8D6E63', '#FFFFFF'];
+  let colour = PALETTE[3];
+  let stepIndex = 0, strokeIndex = 0, finished = false;
+  let session = new LH.TracingSession(steps[0].strokes[0], config);
+  let scale = 1, ox = 0, oy = 0, activePointer = null, activePointerType = '', tracing = false, penPressure = 1;
+
+  const sc = state.screen || {};
+  const stage = el(`<div class="play-stage"></div>`);
+  const strip = el(`<div class="gb-strip" aria-label="Drawing steps"></div>`);
+  const canvas = el(`<canvas class="stage" aria-label="Guided drawing canvas"></canvas>`);
+  const rail = el(`<div class="gb-rail" role="toolbar" aria-label="Colours"></div>`);
+  const startOver = el(`<button class="gb-restart" aria-label="Start over">↺</button>`);
+  stage.append(strip, canvas, rail, startOver);
+  const note = el(`<div class="encourage" role="status"></div>`);
+  app.append(stage, note);
+  const ctx = canvas.getContext('2d');
+
+  const X = (x) => x * scale + ox;
+  const Y = (y) => y * scale + oy;
+  const pathFor = (stroke) => {
+    ctx.beginPath();
+    stroke.forEach((p, i) => (i ? ctx.lineTo(X(p.x), Y(p.y)) : ctx.moveTo(X(p.x), Y(p.y))));
+  };
+  const drawPart = (step, style) => {
+    ctx.lineCap = ctx.lineJoin = 'round';
+    for (const stroke of step.strokes) {
+      pathFor(stroke);
+      if (style.fill) { ctx.closePath(); ctx.fillStyle = style.fill; ctx.fill(); if (style.line) { ctx.strokeStyle = style.line; ctx.lineWidth = style.width || 2; ctx.stroke(); } }
+      else { ctx.strokeStyle = style.line; ctx.lineWidth = style.width || 3; ctx.stroke(); }
+    }
+  };
+
+  function paint() {
+    const r = stage.getBoundingClientRect();
+    if (!r.width || !r.height || !canvas.width) return;
+    ctx.clearRect(0, 0, r.width, r.height);
+    steps.forEach((step, si) => {
+      if (done[si]) {
+        const c = partColour[si] || '#BDBDBD';
+        drawPart(step, step.fill ? { fill: c, line: 'rgba(80,70,66,0.28)', width: 2 * scale } : { line: c, width: 11 * scale });
+      } else if (si !== stepIndex || finished) {
+        // faint ghost of the parts not yet reached, so the goal is visible
+        drawPart(step, { line: 'rgba(120,108,102,0.22)', width: 3 });
+      }
+    });
+    if (!finished) {
+      const step = steps[stepIndex];
+      // ghost the whole current part lightly, then the active stroke on top
+      drawPart(step, { line: 'rgba(120,108,102,0.30)', width: 3 });
+      const active = step.strokes[strokeIndex];
+      ctx.lineCap = ctx.lineJoin = 'round';
+      // A soft fixed-width halo hints the line to follow — kept in screen pixels
+      // (not the engine's design-space tolerance) so tiny parts like the cherry
+      // or an eye don't get swallowed by a giant grey disc.
+      pathFor(active);
+      ctx.strokeStyle = 'rgba(210, 200, 196, 0.75)';
+      ctx.lineWidth = 15;
+      ctx.stroke();
+      const accent = getComputedStyle(app).getPropertyValue('--accent').trim() || '#FF8A65';
+      pathFor(active);
+      ctx.strokeStyle = step.fixedColour || accent;
+      ctx.lineWidth = 4;
+      ctx.stroke();
+      const s0 = active[0];
+      ctx.beginPath(); ctx.arc(X(s0.x), Y(s0.y), 12, 0, Math.PI * 2);
+      ctx.fillStyle = step.fixedColour || accent;
+      ctx.fill();
+    }
+  }
+
+  function fit() {
+    const r = stage.getBoundingClientRect();
+    canvas.width = r.width * devicePixelRatio; canvas.height = r.height * devicePixelRatio;
+    ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+    const side = Math.min(r.width, r.height);
+    scale = side / 1000; ox = (r.width - side) / 2; oy = (r.height - side) / 2;
+    paint();
+  }
+
+  function updateStrip() {
+    strip.innerHTML = '';
+    steps.forEach((step, si) => {
+      const chip = el(`<span class="gb-chip ${done[si] ? 'done' : si === stepIndex ? 'current' : ''}">${done[si] ? '✓' : si + 1}<b>${step.label}</b></span>`);
+      strip.append(chip);
+    });
+  }
+  function updateRail() {
+    rail.innerHTML = '';
+    const fixed = !finished && steps[stepIndex] && steps[stepIndex].fixedColour;
+    rail.classList.toggle('locked', Boolean(fixed));
+    for (const c of PALETTE) {
+      const sw = el(`<button class="gb-swatch ${colour === c ? 'active' : ''}" style="background:${c}" aria-label="Colour ${c}"></button>`);
+      sw.onclick = () => { if (fixed) return; colour = c; updateRail(); };
+      rail.append(sw);
+    }
+  }
+
+  function advance() {
+    const step = steps[stepIndex];
+    if (strokeIndex + 1 < step.strokes.length) {
+      strokeIndex++;
+      session = new LH.TracingSession(step.strokes[strokeIndex], config);
+      paint();
+      return;
+    }
+    done[stepIndex] = true;
+    partColour[stepIndex] = step.fixedColour || colour;
+    playPop();
+    if (stepIndex + 1 < steps.length) {
+      stepIndex++; strokeIndex = 0;
+      session = new LH.TracingSession(steps[stepIndex].strokes[0], config);
+      updateStrip(); updateRail();
+      note.textContent = LH.pickFeedback('completed') + ' Now the ' + steps[stepIndex].label.toLowerCase() + '!';
+      speak(note.textContent);
+      paint();
+      return;
+    }
+    finish();
+  }
+
+  function finish() {
+    finished = true;
+    updateStrip(); updateRail(); paint();
+    celebrate(24); playChime();
+    completeActivity(activity, { attempts: 1 });
+    note.textContent = LH.pickFeedback('completed') + ' You drew a ' + activity.title.replace(/^Draw (a |an )?/i, '') + '!';
+    speak(note.textContent);
+    const card = el(`<div class="banner name-done" role="status">
+      <div class="big">🌟 All done! ${activity.title}! 🎨</div>
+      <div class="name-done-btns">
+        <button data-a="again">✏️ Draw again</button>
+        <button data-a="back">⬅️ Back</button>
+      </div>
+    </div>`);
+    card.querySelector('[data-a="again"]').onclick = () => navigate({ name: 'activity', activity, from: sc.from, pickerCategory: sc.pickerCategory });
+    card.querySelector('[data-a="back"]').onclick = () => navigate({ name: 'picker', category: sc.pickerCategory || 'draw-guided' });
+    stage.append(card);
+  }
+
+  const pt = (e) => { const r = canvas.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; };
+  const feed = (p) => {
+    if (finished) return;
+    const res = session.addPoint({ x: (p.x - ox) / scale, y: (p.y - oy) / scale });
+    if (res.completed) { tracing = false; session.endAttempt(); advance(); return true; }
+    return false;
+  };
+  canvas.addEventListener('pointerdown', (e) => {
+    if (activePointer !== null) {
+      if (e.pointerType === 'pen' && activePointerType !== 'pen') { tracing = false; activePointer = null; }
+      else return;
+    }
+    activePointer = e.pointerId; activePointerType = e.pointerType;
+    canvas.setPointerCapture(e.pointerId);
+    penPressure = e.pointerType === 'pen' && e.pressure > 0 ? e.pressure : 1;
+    tracing = true;
+    feed(pt(e)); paint();
+  });
+  canvas.addEventListener('pointermove', (e) => {
+    if (!tracing || e.pointerId !== activePointer) return;
+    const evs = e.getCoalescedEvents ? e.getCoalescedEvents() : null;
+    for (const ev of (evs && evs.length ? evs : [e])) { if (feed(pt(ev))) return; }
+    paint();
+  });
+  const endStroke = (e) => {
+    if (e.pointerId !== activePointer) return;
+    activePointer = null; tracing = false;
+    // pointercancel commits/returns, never discards: the part's coverage is kept.
+  };
+  window.addEventListener('pointerup', endStroke);
+  window.addEventListener('pointercancel', endStroke);
+  startOver.onclick = () => navigate({ name: 'activity', activity, from: sc.from, pickerCategory: sc.pickerCategory });
+
+  updateStrip(); updateRail();
+  requestAnimationFrame(fit);
+  new ResizeObserver(fit).observe(stage);
+  note.textContent = 'Trace the ' + steps[0].label.toLowerCase() + ' to start your ' + activity.title.replace(/^Draw (a |an )?/i, '') + '!';
+  speak(activity.title + '. ' + note.textContent);
+}
+
+/**
  * Guided drawing (owner direction, July 2026): follow real guide lines to
  * draw a picture with an actual crayon/brush, not a strict trace-and-pass
  * test. Combines two existing engines: TracingSession (core.tracing) tracks
@@ -1865,6 +2092,10 @@ function renderTracing(firstActivity) {
  * technique. Pilot content: the whale (starterPack.ts `draw-guided-whale`).
  */
 function renderGuidedDrawing(activity) {
+  // Build-a-picture subjects (owner Option A) carry per-step labels/fill data —
+  // route them to the part-by-part renderer. The legacy whale (plain single
+  // overlays) falls through to the trace-and-colour pilot below.
+  if (activity.steps.some((s) => s && s.label)) return renderGuidedBuild(activity);
   setStatus('Guided Drawing — ' + activity.title, ['tracing.TracingSession (guide)', 'drawing.DrawingSession (ink)']);
   const config = {
     ...LH.tracingConfigFor(state.profile?.difficulty ?? 1, {

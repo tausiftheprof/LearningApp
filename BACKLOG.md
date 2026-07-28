@@ -9,48 +9,22 @@ Status key: `[ ]` open · `[~]` in progress · `[x]` done (move to the bottom or
 
 ## Open
 
-- [ ] **Build Guided Drawing — Option A "Step Strip" (owner-chosen), multi-subject.** Owner picked
-  **Option A** from the design mockup (scratchpad artifact `753d4c6a-8183-431f-8c82-f0491ca27def`):
-  a **numbered thumbnail strip** across the top of the canvas — current step ringed in accent, a
-  green ✓ as each part completes, "Step N of M · <label>" beneath. Build over the existing corridor
-  engine (the whale pilot `renderGuidedDrawing` is the base; mobile `GuidedDrawingPlayer`).
-  Owner-approved mechanic details:
-  - **Trace-to-build, part by part.** Each step is one part the child traces in their chosen colour;
-    on coverage-complete it **locks in filled with that colour** and the next part lights up. Reuse
-    the same **start-on-the-dot + contiguous-fill** discipline as tracing (pulsing start dot; fill
-    only grows forward). Faint whole-picture ghost sits underneath.
-  - **Per-part colour (not global).** Each finished part keeps the colour it was traced with — a
-    later colour change must NOT recolour earlier parts (this was the mockup bug the owner caught).
-    Store a colour per step.
-  - **Faces stay black & white.** Eyes are a **fixed, non-colourable** part (render white + dark
-    pupils regardless of palette). Generalise to a per-step "fixed colour" flag so other fixed bits
-    work too — **car wheels** (dark) + hubs (yellow), **watermelon seeds** (black), **cake candle
-    flame** (gold). Everything else takes the child's colour.
-  - **Magic-drawer palette/tools** — port the Blank Canvas chrome (right colour rail w/ white
-    selected ring, slim crayon·paint·eraser·🪄 bar + wand drawer, floating size pod, corner
-    undo·redo / start-over·save). The old flat toolbar in `renderGuidedDrawing` is replaced.
-  - **Completion** — two-button card **"Draw again" / "Back (one screen)"** (game-completion
-    pattern, no Home) + save to gallery.
-  - **Subjects (6), owner-approved:** **Grip** (body→feet→antennae→eyes→smile→tummy-swirl),
-    **Cupcake** (case→frosting→cherry→sprinkles), **Car** (body→windows→wheels→lights),
-    **Cake** (bottom→top→icing→candle→dots), **Watermelon** (rind→flesh→white-edge→seeds),
-    **Flower/plant** (pot→stem→leaves→petals→middle). Author real traceable outlines in
-    `content/starterPack.ts` (like `whaleOutline()`); use owner art as the picker icon + faint
-    reference behind (`feed-cupcake`, `cut-car`, `cut-cake`, `feed-watermelon`, `feed-plant1`).
-  - **Art quality (owner direction):** the mockup uses simple geometric outlines *for feel only* —
-    the **final build's art must look realistic/clay-style**, reading like the real object, not a
-    primitive shape. Author detailed traceable outlines from the owner's actual PNG art (trace the
-    clay renders for accurate silhouettes + interior detail lines), or have cleaner line-art
-    commissioned, and show the owner's PNG as the faint reference underneath. Keep each stroke
-    completable (the tracing guard) while adding the extra detail that makes it look real.
-  - **Content model note:** guided-drawing `steps[]` already carries a per-step `overlay` polyline;
-    extend each step with **label/cue text**, a **kind** (`fill` closed shape vs `line` stroke) so
-    the finished part renders correctly, and an optional **fixedColour**. Multi-mark steps
-    (sprinkles/seeds/dots) = several sub-paths traced together. Keep every stroke completable
-    (mirror the `tracing.test.ts` guard for the new outlines).
-  - **Surfaces:** demo `demo-shell.html` `renderGuidedDrawing` first (rebuild + headless verify each
-    subject builds to completion, eyes stay B&W, per-part colour holds), then mobile port. More
-    subjects can follow once the pattern's validated.
+- [ ] **Guided Drawing — realistic/clay art + mobile port (follow-up to the shipped Option A).**
+  The Option-A mechanic + flow shipped in the demo (see Done) using **simple geometric outlines**
+  (authored as polylines in `packages/core/src/content/guidedBuilds.ts`, 0..400 space × 2.5). Two
+  things remain:
+  - **Realistic art.** Per owner direction the final subjects should read like the real object /
+    clay render, not primitive shapes. Re-author each subject's `strokes` in `guidedBuilds.ts` with
+    detailed traceable outlines traced from the owner's PNGs (or commissioned line-art), and show
+    the owner's PNG as a faint reference behind. Keep every stroke completable (the headless
+    build-to-completion verify in scratchpad `verify-guided.mjs` is the guard — it drives a real
+    trace through all six).
+  - **Mobile port.** `apps/mobile/.../GuidedDrawingPlayer` still runs the old whale pilot. Port the
+    build-a-picture renderer (reads the same `guidedBuilds` data: `label` / `strokes` / `fill` /
+    `fixedColour` per step) — step strip, per-part colour rail, fixed-colour parts, completion card.
+  - **Optional:** per-part brush texture (crayon/paint) — the demo fills parts flat with the chosen
+    colour; brush type doesn't change a flat fill, so the full Magic-drawer bar was intentionally
+    reduced to a colour rail here. Add texture later if wanted.
 
 - [ ] **Fix tracing fill "jump" + enforce start-from-the-dot.** Touching near the END of a
   shape (especially closed polygons, where the last corner sits near the start) fills almost
@@ -120,6 +94,20 @@ swap in cute art whenever ready.
 
 ## Done
 
+- [x] **Guided Drawing — Option A "build a picture" (demo).** Owner-picked Option A: a numbered
+  **step strip** across the top (current part ringed in accent, green ✓ as each locks in), a
+  right-side **colour rail**, and part-by-part **trace-to-build** over the core corridor engine.
+  Each part is traced in the child's chosen colour and locks in **filled with that colour**;
+  **per-part colour holds** (changing colour later never recolours earlier parts); **fixed-colour
+  parts** aren't child-colourable (Grip's eyes dark, car wheels dark, car lights + cake dots +
+  watermelon seeds their own colours) — the rail dims on those. Faint whole-picture ghost underneath;
+  finishing fires the star burst + chime and shows the **"Draw again" / "Back (one screen)"** card
+  (no Home). Six subjects — **Grip, Cupcake, Car, Cake, Watermelon, Flower** — authored as polyline
+  geometry in `packages/core/src/content/guidedBuilds.ts` (single source of truth, so mobile can
+  reuse it), wired into the starter pack, with the guided-drawing schema extended
+  (`label`/`strokes`/`fill`/`fixedColour`, backward-compatible with the whale pilot). Demo renderer
+  `renderGuidedBuild` in `demo-shell.html`. Verified headless: a real trace drives all six to
+  completion with zero console errors. (Realistic art + mobile port tracked as an Open follow-up.)
 - [x] **Home matches the approved mockup** — Candy home tiles are now the floating blob-card art with the label underneath, size-capped & centre-packed (`repeat(auto-fit, minmax(122px,168px))`), the teal Little Grip mascot greeter (hop), inline star, idle bob + tap sparkle. (Earlier "home polish" only added motion; this rebuilds the layout to the mockup.)
 - [x] **Dot-to-Dot shapes** — new "Make a star / triangle / square" activities in Draw → Dot to Dot; joining the numbered dots closes into the shape (renderer closes the loop for `params.closed`).
 - [x] **Bug fix: counting instruction** — the counting game spoke "count the apples" for every item; now says the real item ("Count the fish…") from `params.item`.

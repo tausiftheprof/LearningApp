@@ -146,7 +146,22 @@ export const gameActivitySchema = activityBase.extend({
 export const guidedDrawingActivitySchema = activityBase.extend({
   type: z.literal('guided-drawing'),
   steps: z
-    .array(z.object({ prompt: assetRefSchema, overlay: z.array(pointSchema).min(2) }))
+    .array(
+      z.object({
+        prompt: assetRefSchema,
+        // Legacy single corridor polyline (whale pilot / free board). New
+        // build-a-picture subjects also set the fields below.
+        overlay: z.array(pointSchema).min(2),
+        /** Short part name shown in the step strip ("Body", "Wheels", …). */
+        label: z.string().max(40).optional(),
+        /** One or more polylines traced together as this one part (e.g. two feet). */
+        strokes: z.array(z.array(pointSchema).min(2)).optional(),
+        /** Closed shape filled with the child's colour vs. an open stroked line. */
+        fill: z.boolean().optional(),
+        /** A part that is NOT child-colourable (wheels, seeds, eyes) — always this colour. */
+        fixedColour: z.string().optional(),
+      }),
+    )
     .min(1),
 });
 

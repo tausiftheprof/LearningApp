@@ -1,4 +1,5 @@
 import type { Activity, ContentPack } from './schema';
+import { guidedDrawingSubjects } from './guidedBuilds';
 import { DIGIT_CHARS, digitStrokes, LETTERS, letterStrokes } from './glyphs';
 import { CONTENT_PACK_FORMAT_VERSION, gameTemplateIds, validateContentPack } from './schema';
 import type { Point } from '../types';
@@ -531,6 +532,10 @@ const drawingActivities: Activity[] = [
     estimatedMinutes: 4, theme: 'underwater', locale: 'en-AU', instructionAudio: audio('draw-guided'),
     steps: whaleOutline().map((overlay) => ({ prompt: 'images/whale.svg', overlay })),
   },
+  // Build-a-picture subjects (owner Option A): one part per step, child colours
+  // each part, fixed-colour parts (wheels/seeds/eyes) aren't colourable. Geometry
+  // lives in guidedBuilds.ts so mobile can reuse the same source of truth.
+  ...guidedDrawingSubjects(),
 ];
 
 /** Dot-to-dot pilot (owner direction, July 2026): tap the numbered dots in
