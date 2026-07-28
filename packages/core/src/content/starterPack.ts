@@ -382,21 +382,32 @@ const games: GameSpec[] = [
   } },
   { id: 'toddler-toys-in-box', title: 'Toys in the box', template: 'drag-sort', category: 'toddler', ageBands: ['2-3'], difficulty: 1, motorSkills: ['dragging', 'precision-placement'], minutes: 2, theme: 'everyday', params: { bins: ['box'], items: ['bear', 'car', 'duck', 'star', 'balloon'] } },
   { id: 'toddler-match-objects', title: 'Match the toys', template: 'match-pairs', category: 'toddler', ageBands: ['2-3'], difficulty: 1, motorSkills: ['tapping', 'dragging'], minutes: 2, theme: 'everyday', params: { pairs: 3, images: ['duck', 'car', 'star'] } },
-  { id: 'toddler-sort-colour', title: 'Sort by colour', template: 'drag-sort', category: 'toddler', ageBands: ['2-3', '3-5'], difficulty: 1, motorSkills: ['dragging'], minutes: 2, theme: 'shapes-patterns', params: { bins: ['red', 'blue'], items: 6 } },
-  // Sort-by-colour variations (owner direction, July 2026): a ladder of pages
-  // with more buckets as skill grows — 2 buckets for beginners (2-3), 3 for
-  // developing (3-5), 4 for confident (5-7). Bucket colours use the drag-sort
-  // renderer palette (red/blue/yellow/green/orange/purple/pink).
-  { id: 'sort-colour-red-yellow', title: 'Red and yellow', template: 'drag-sort', category: 'toddler', ageBands: ['2-3', '3-5'], difficulty: 1, motorSkills: ['dragging'], minutes: 2, theme: 'shapes-patterns', params: { bins: ['red', 'yellow'], items: 6 } },
-  { id: 'sort-colour-blue-green', title: 'Blue and green', template: 'drag-sort', category: 'toddler', ageBands: ['2-3', '3-5'], difficulty: 1, motorSkills: ['dragging'], minutes: 2, theme: 'shapes-patterns', params: { bins: ['blue', 'green'], items: 6 } },
-  { id: 'sort-colour-red-green', title: 'Red and green', template: 'drag-sort', category: 'toddler', ageBands: ['2-3', '3-5'], difficulty: 1, motorSkills: ['dragging'], minutes: 2, theme: 'shapes-patterns', params: { bins: ['red', 'green'], items: 6 } },
-  { id: 'sort-colour-three-primary', title: 'Three colours', template: 'drag-sort', category: 'toddler', ageBands: ['3-5', '5-7'], difficulty: 2, motorSkills: ['dragging', 'precision-placement'], minutes: 2, theme: 'shapes-patterns', params: { bins: ['red', 'blue', 'yellow'], items: 6 } },
-  { id: 'sort-colour-three-bright', title: 'Bright three', template: 'drag-sort', category: 'toddler', ageBands: ['3-5', '5-7'], difficulty: 2, motorSkills: ['dragging', 'precision-placement'], minutes: 2, theme: 'shapes-patterns', params: { bins: ['green', 'orange', 'purple'], items: 6 } },
-  { id: 'sort-colour-three-pretty', title: 'Pretty three', template: 'drag-sort', category: 'toddler', ageBands: ['3-5', '5-7'], difficulty: 2, motorSkills: ['dragging', 'precision-placement'], minutes: 2, theme: 'shapes-patterns', params: { bins: ['pink', 'blue', 'green'], items: 6 } },
-  { id: 'sort-colour-three-traffic', title: 'Traffic light colours', template: 'drag-sort', category: 'toddler', ageBands: ['3-5', '5-7'], difficulty: 2, motorSkills: ['dragging', 'precision-placement'], minutes: 2, theme: 'shapes-patterns', params: { bins: ['red', 'yellow', 'green'], items: 6 } },
-  { id: 'sort-colour-four-rainbow', title: 'Rainbow four', template: 'drag-sort', category: 'toddler', ageBands: ['5-7'], difficulty: 3, motorSkills: ['dragging', 'precision-placement'], minutes: 3, theme: 'shapes-patterns', params: { bins: ['red', 'blue', 'yellow', 'green'], items: 8 } },
-  { id: 'sort-colour-four-bright', title: 'Four bright buckets', template: 'drag-sort', category: 'toddler', ageBands: ['5-7'], difficulty: 3, motorSkills: ['dragging', 'precision-placement'], minutes: 3, theme: 'shapes-patterns', params: { bins: ['orange', 'purple', 'pink', 'green'], items: 8 } },
-  { id: 'sort-colour-four-champion', title: 'Colour champion', template: 'drag-sort', category: 'toddler', ageBands: ['5-7'], difficulty: 3, motorSkills: ['dragging', 'precision-placement'], minutes: 3, theme: 'shapes-patterns', params: { bins: ['red', 'blue', 'green', 'purple'], items: 8 } },
+  // Sort by colour (owner direction, July 2026): each activity plays a run of
+  // FIVE pages one after another (finish a page → the next appears), laddered by
+  // skill — 2 buckets for beginners (2-3), 3 for developing (3-5), 4 for
+  // confident (5-7). Bucket colours come from the drag-sort renderer palette
+  // (red/blue/yellow/green/orange/purple/pink); the run ends after the last page.
+  { id: 'toddler-sort-colour', title: 'Sort by colour', template: 'drag-sort', category: 'toddler', ageBands: ['2-3', '3-5'], difficulty: 1, motorSkills: ['dragging'], minutes: 3, theme: 'shapes-patterns', params: { pages: [
+    { bins: ['red', 'blue'], items: 6 },
+    { bins: ['red', 'yellow'], items: 6 },
+    { bins: ['blue', 'green'], items: 6 },
+    { bins: ['red', 'green'], items: 6 },
+    { bins: ['yellow', 'purple'], items: 6 },
+  ] } },
+  { id: 'sort-colour-three', title: 'Sort by colour — 3 buckets', template: 'drag-sort', category: 'toddler', ageBands: ['3-5', '5-7'], difficulty: 2, motorSkills: ['dragging', 'precision-placement'], minutes: 4, theme: 'shapes-patterns', params: { pages: [
+    { bins: ['red', 'blue', 'yellow'], items: 6 },
+    { bins: ['green', 'orange', 'purple'], items: 6 },
+    { bins: ['pink', 'blue', 'green'], items: 6 },
+    { bins: ['red', 'yellow', 'green'], items: 6 },
+    { bins: ['orange', 'blue', 'purple'], items: 6 },
+  ] } },
+  { id: 'sort-colour-four', title: 'Sort by colour — 4 buckets', template: 'drag-sort', category: 'toddler', ageBands: ['5-7'], difficulty: 3, motorSkills: ['dragging', 'precision-placement'], minutes: 4, theme: 'shapes-patterns', params: { pages: [
+    { bins: ['red', 'blue', 'yellow', 'green'], items: 8 },
+    { bins: ['orange', 'purple', 'pink', 'green'], items: 8 },
+    { bins: ['red', 'blue', 'green', 'purple'], items: 8 },
+    { bins: ['yellow', 'orange', 'blue', 'pink'], items: 8 },
+    { bins: ['red', 'green', 'purple', 'orange'], items: 8 },
+  ] } },
   { id: 'toddler-shadow-match', title: 'Find my shadow', template: 'shadow-match', category: 'toddler', ageBands: ['2-3', '3-5'], difficulty: 1, motorSkills: ['dragging', 'precision-placement'], minutes: 2, theme: 'animals', params: { items: ['dolphin', 'dinosaur', 'rocket'] } },
   { id: 'toddler-reveal', title: 'Wipe and see!', template: 'reveal-wipe', category: 'toddler', ageBands: ['2-3'], difficulty: 1, motorSkills: ['swiping'], minutes: 1, theme: 'surprise', params: { pictures: ['unicorn', 'whale', 'treehouse'] } },
   { id: 'toddler-stack', title: 'Stack the blocks', template: 'stack-blocks', category: 'toddler', ageBands: ['2-3'], difficulty: 1, motorSkills: ['dragging', 'precision-placement'], minutes: 2, theme: 'everyday', params: { blocks: 4 } },

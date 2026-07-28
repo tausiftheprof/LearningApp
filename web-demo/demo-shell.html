@@ -3542,42 +3542,80 @@ function renderGame(activity) {
             red: '#E0525E', blue: '#5C8FD6', yellow: '#F4C531', green: '#66B86B',
             orange: '#EE8B47', purple: '#9B72CF', pink: '#E888B4', box: '#B07B4F',
           };
-          let placed = 0, total;
-          // Spread the buckets evenly across the top so 2, 3 or 4 of them all fit.
-          const n = bins.length, gap = 4, bwPct = (100 - gap * (n + 1)) / n;
-          const binEls = bins.map((b, i) => {
-            const bleft = gap + i * (bwPct + gap);
-            const zone = el(`<div aria-label="${b} box" style="position:absolute;left:${bleft}%;top:8%;width:${bwPct}%;height:110px;background:${colourFor[b] || '#B07B4F'};border-radius:14px;opacity:0.9;display:grid;place-items:center;color:#fff;font-weight:800;font-size:18px">${b === 'box' ? '🧺' : b}</div>`);
-            stage.append(zone);
-            return { name: b, el: zone };
-          });
-          if (bins.length > 1 && bins.every((b) => colourFor[b])) {
-            // Sort by colour: drop each coloured tile into its matching bucket.
-            total = typeof params.items === 'number' ? params.items : 6;
+          // Build ONE sort-by-colour round into the stage. Returns the DOM nodes
+          // it created (so a multi-page run can clear them) and calls onPageDone
+          // when every tile has been dropped into its matching bucket.
+          const buildColourPage = (pageBins, count, onPageDone) => {
+            const nodes = [];
+            let placed = 0;
+            // Spread the buckets evenly across the top so 2, 3 or 4 all fit.
+            const n = pageBins.length, gap = 4, bwPct = (100 - gap * (n + 1)) / n;
+            const binEls = pageBins.map((b, i) => {
+              const bleft = gap + i * (bwPct + gap);
+              const zone = el(`<div aria-label="${b} box" style="position:absolute;left:${bleft}%;top:8%;width:${bwPct}%;height:110px;background:${colourFor[b] || '#B07B4F'};border-radius:14px;opacity:0.9;display:grid;place-items:center;color:#fff;font-weight:800;font-size:18px">${b}</div>`);
+              stage.append(zone); nodes.push(zone);
+              return { name: b, el: zone };
+            });
             const zones2 = binEls.map((z) => ({ el: z.el, onDrop: (it) => {
               if (it.dataset.bin !== z.name) return false;
               it.remove(); say(LH.pickFeedback('completed'));
-              if (++placed === total) finish();
+              if (++placed === count) onPageDone(nodes);
               return true;
             } }));
             // Balanced colours (round-robin) then shuffled so the tiles aren't
             // laid out in an obvious repeating pattern.
             const order = [];
-            for (let i = 0; i < total; i++) order.push(bins[i % bins.length]);
+            for (let i = 0; i < count; i++) order.push(pageBins[i % pageBins.length]);
             for (let i = order.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [order[i], order[j]] = [order[j], order[i]]; }
-            const cols = total <= 6 ? total : Math.ceil(total / 2);
-            const rows = Math.ceil(total / cols);
+            const cols = count <= 6 ? count : Math.ceil(count / 2);
+            const rows = Math.ceil(count / cols);
             order.forEach((bin, i) => {
               const cIdx = i % cols, rIdx = Math.floor(i / cols);
               const ileft = cols > 1 ? 8 + cIdx * (84 / (cols - 1)) : 42;
               const itop = rows > 1 ? 52 + rIdx * 20 : 62;
               const it = el(`<div role="img" aria-label="${bin} shape" style="position:absolute;left:${ileft}%;top:${itop}%;width:56px;height:56px;border-radius:14px;background:${colourFor[bin]}"></div>`);
               it.dataset.homeX = ileft + '%'; it.dataset.homeY = itop + '%'; it.dataset.bin = bin;
-              stage.append(it);
+              stage.append(it); nodes.push(it);
               makeDraggable(stage, it, () => zones2, () => miss());
             });
+          };
+
+          if (Array.isArray(params.pages) && params.pages.length) {
+            // Multi-page sort-by-colour: finish one round and the next appears,
+            // one after another, until the last page ends the activity.
+            const pages = params.pages;
+            const dots = el(`<div aria-label="Progress" style="position:absolute;left:0;right:0;bottom:8px;display:flex;gap:8px;justify-content:center;pointer-events:none"></div>`);
+            pages.forEach(() => dots.append(el(`<span style="width:10px;height:10px;border-radius:50%;background:#00000022"></span>`)));
+            stage.append(dots);
+            const markDots = (i) => [...dots.children].forEach((d, k) => { d.style.background = k <= i ? (getComputedStyle(app).getPropertyValue('--accent') || '#FF8A65') : '#00000022'; });
+            let idx = 0;
+            const runPage = () => {
+              markDots(idx);
+              const cfg = pages[idx] || {};
+              const pageBins = Array.isArray(cfg.bins) ? cfg.bins : ['red', 'blue'];
+              const count = typeof cfg.items === 'number' ? cfg.items : pageBins.length * 2;
+              buildColourPage(pageBins, count, (nodes) => {
+                idx += 1;
+                if (idx >= pages.length) { finish(); return; }
+                say(LH.pickFeedback('completed'));
+                if (typeof celebrate === 'function') celebrate(8);
+                setTimeout(() => { nodes.forEach((el2) => el2.remove()); runPage(); }, 650);
+              });
+            };
+            runPage();
+          } else if (bins.length > 1 && bins.every((b) => colourFor[b])) {
+            const count = typeof params.items === 'number' ? params.items : 6;
+            buildColourPage(bins, count, () => finish());
           } else {
-            total = items.length;
+            const n = bins.length, gap = 4, bwPct = (100 - gap * (n + 1)) / n;
+            let placed = 0;
+            const total = items.length;
+            const binEls = bins.map((b, i) => {
+              const bleft = gap + i * (bwPct + gap);
+              const zone = el(`<div aria-label="${b} box" style="position:absolute;left:${bleft}%;top:8%;width:${bwPct}%;height:110px;background:${colourFor[b] || '#B07B4F'};border-radius:14px;opacity:0.9;display:grid;place-items:center;color:#fff;font-weight:800;font-size:18px">${b === 'box' ? '🧺' : b}</div>`);
+              stage.append(zone);
+              return { name: b, el: zone };
+            });
             const zones2 = binEls.map((z) => ({ el: z.el, onDrop: (it) => {
               it.remove(); say(LH.pickFeedback('completed'));
               if (++placed === total) finish();
