@@ -3386,7 +3386,11 @@ function renderGame(activity) {
     if (finished) return;
     finished = true;
     completeActivity(activity, { attempts });
-    stage.append(completionBanner(onDone));
+    // No end-of-game popup (owner direction, July 2026): let the star burst and
+    // chime play, then slip back to the games list on its own so the child stays
+    // in flow instead of tapping through a banner.
+    const back = () => navigate({ name: 'picker', category: state.screen.pickerCategory || activity.category });
+    setTimeout(back, 1200);
   };
   const say = (m) => { note.textContent = m; speak(m); };
   const miss = (moment = 'try-again') => { attempts++; say(LH.pickFeedback(moment)); };
