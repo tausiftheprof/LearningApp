@@ -3538,29 +3538,44 @@ function renderGame(activity) {
         } else {
           const bins = params.bins || ['box'];
           const items = Array.isArray(params.items) ? params.items : ['bear', 'car', 'duck', 'star', 'balloon'];
-          const colourFor = { red: '#E0525E', blue: '#5C8FD6', box: '#B07B4F' };
+          const colourFor = {
+            red: '#E0525E', blue: '#5C8FD6', yellow: '#F4C531', green: '#66B86B',
+            orange: '#EE8B47', purple: '#9B72CF', pink: '#E888B4', box: '#B07B4F',
+          };
           let placed = 0, total;
+          // Spread the buckets evenly across the top so 2, 3 or 4 of them all fit.
+          const n = bins.length, gap = 4, bwPct = (100 - gap * (n + 1)) / n;
           const binEls = bins.map((b, i) => {
-            const zone = el(`<div aria-label="${b} box" style="position:absolute;left:${12 + i * 46}%;top:8%;width:130px;height:110px;background:${colourFor[b] || '#B07B4F'};border-radius:14px;opacity:0.9;display:grid;place-items:center;color:#fff;font-weight:800;font-size:18px">${b === 'box' ? '🧺' : b}</div>`);
+            const bleft = gap + i * (bwPct + gap);
+            const zone = el(`<div aria-label="${b} box" style="position:absolute;left:${bleft}%;top:8%;width:${bwPct}%;height:110px;background:${colourFor[b] || '#B07B4F'};border-radius:14px;opacity:0.9;display:grid;place-items:center;color:#fff;font-weight:800;font-size:18px">${b === 'box' ? '🧺' : b}</div>`);
             stage.append(zone);
             return { name: b, el: zone };
           });
           if (bins.length > 1 && bins.every((b) => colourFor[b])) {
-            // sort by colour: tint copies of the star image per bin
-            total = 6;
+            // Sort by colour: drop each coloured tile into its matching bucket.
+            total = typeof params.items === 'number' ? params.items : 6;
             const zones2 = binEls.map((z) => ({ el: z.el, onDrop: (it) => {
               if (it.dataset.bin !== z.name) return false;
               it.remove(); say(LH.pickFeedback('completed'));
               if (++placed === total) finish();
               return true;
             } }));
-            for (let i = 0; i < total; i++) {
-              const bin = bins[i % bins.length];
-              const it = el(`<div role="img" aria-label="${bin} shape" style="position:absolute;left:${20 + i * 14}%;top:62%;width:56px;height:56px;border-radius:14px;background:${colourFor[bin]}"></div>`);
-              it.dataset.homeX = 20 + i * 14 + '%'; it.dataset.homeY = '62%'; it.dataset.bin = bin;
+            // Balanced colours (round-robin) then shuffled so the tiles aren't
+            // laid out in an obvious repeating pattern.
+            const order = [];
+            for (let i = 0; i < total; i++) order.push(bins[i % bins.length]);
+            for (let i = order.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [order[i], order[j]] = [order[j], order[i]]; }
+            const cols = total <= 6 ? total : Math.ceil(total / 2);
+            const rows = Math.ceil(total / cols);
+            order.forEach((bin, i) => {
+              const cIdx = i % cols, rIdx = Math.floor(i / cols);
+              const ileft = cols > 1 ? 8 + cIdx * (84 / (cols - 1)) : 42;
+              const itop = rows > 1 ? 52 + rIdx * 20 : 62;
+              const it = el(`<div role="img" aria-label="${bin} shape" style="position:absolute;left:${ileft}%;top:${itop}%;width:56px;height:56px;border-radius:14px;background:${colourFor[bin]}"></div>`);
+              it.dataset.homeX = ileft + '%'; it.dataset.homeY = itop + '%'; it.dataset.bin = bin;
               stage.append(it);
               makeDraggable(stage, it, () => zones2, () => miss());
-            }
+            });
           } else {
             total = items.length;
             const zones2 = binEls.map((z) => ({ el: z.el, onDrop: (it) => {
