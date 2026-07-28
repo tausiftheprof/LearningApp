@@ -26,26 +26,6 @@ Status key: `[ ]` open · `[~]` in progress · `[x]` done (move to the bottom or
     colour; brush type doesn't change a flat fill, so the full Magic-drawer bar was intentionally
     reduced to a colour rail here. Add texture later if wanted.
 
-- [ ] **Fix tracing fill "jump" + enforce start-from-the-dot.** Touching near the END of a
-  shape (especially closed polygons, where the last corner sits near the start) fills almost
-  the whole glyph for a moment — confusing. Cause: `lastPos = max(lastPos, result.pathPosition)`
-  accepts *any* nearest-point fraction, so a far touch leaps the fill ahead. Fix: only advance
-  the fill **contiguously** — accept a new `pathPosition` only when it's within ~0.12 of the
-  current `lastPos` (tune), so the ink can only grow by tracing forward from the start dot;
-  a touch at the end does nothing. This also enforces "start on the dot" visually with no voice.
-  **Shared logic — apply to BOTH `web-demo/demo-shell.html` (`renderTracing`) and mobile
-  `TracingPlayer.tsx`.** (Optional later: once CMS instruction-voice ships, add a spoken "Start
-  on the dot!" — today mobile's `playInstruction` is a documented silent scaffold, so voice
-  won't play yet.)
-
-- [ ] **Section-complete card for tracing (numbers/letters/shapes).** When a child finishes the
-  whole set (e.g. 0→10 numbers), don't just silently wrap to the start — celebrate: give a star +
-  show a two-button card **"Play again" (restart the set from the first item) / "Back (one screen)"**,
-  mirroring the game-completion pattern (Feed the Animal is the reference). Today tracing
-  auto-advances and wraps after the last item with no end-of-set moment. Applies to demo
-  (`renderTracing` `letterQueue` wrap) + mobile (`TracingPlayer` / `ActivityPlayerScreen` advance),
-  for all three sets (letters / numbers / shapes).
-
 - [ ] **Polygon tracing start points — use the school convention (top vertex, clockwise).**
   Hexagon, pentagon and rectangle currently start partway along the right side. There's no strict
   school standard for polygons, but the teaching norm is **start at the top and trace clockwise**
@@ -55,16 +35,12 @@ Status key: `[ ]` open · `[~]` in progress · `[x]` done (move to the bottom or
   keep every stroke completable (the `tracing.test.ts` "every glyph is completable" guard). Owner
   to confirm "top-start, clockwise" before the geometry change.
 
-- [ ] **Swap the Games tile to the revised (pastel) Play badge.** Owner uploaded
-  `assets/images/Icon - Games home screen 3.png` — same composition as the shipped one
-  (trophy / coins / rocket / rainbow / clouds / stars) but in a softer pastel palette that
-  matches the Candy-Clouds theme better. Build step: check alpha (looks transparent already,
-  but confirm — if it's the baked checkerboard, region-size key-out), trim + cap ~560px,
-  overwrite `assets/images/tile-toddler.png` (the key the Games tile is already wired to),
-  delete the messy-named source, `node web-demo/build.mjs`, republish `ad14d5cb`.
-
 - [ ] **Port the recent demo-first work to the mobile app.** These all shipped and are verified in
   the web demo but are not yet in the Expo app (mobile needs a device/emulator to drive + verify):
+  - **Guided Drawing build-a-picture** — the 6 subjects + `renderGuidedBuild` (see Done); mobile
+    `GuidedDrawingPlayer` still runs the old whale pilot. Reads `guidedBuilds` data.
+  - **Tracing section-complete card** — demo shows a "Play again / Back" card at the end of each
+    set (see Done); mobile `TracingPlayer`/`ActivityPlayerScreen` still just wraps to the first item.
   - The two new games — **Cutting Practice** (`cut-along`) and **Number Path Hop** (`number-hop`)
     — are demo-only; add them to `apps/mobile/.../games/registry.ts` + `GamePlayer`/new players.
   - **Feed the Animal** — layout tweaks (big centre animal + right food column), seamless feeding,
@@ -94,6 +70,22 @@ swap in cute art whenever ready.
 
 ## Done
 
+- [x] **Section-complete card for tracing (demo).** Finishing the whole set (0→10, a→z, all shapes)
+  no longer silently wraps to the first item — it celebrates with a star burst and a two-button
+  **"🔁 Play again" (restart the set from the first item) / "⬅️ Back (one screen)"** card
+  (game-completion pattern). `renderTracing`'s `letterQueue` became `tracingSection` (returns the
+  ordered set + this item's index + kind); `strokeDone` shows `sectionDoneCard` at the end instead
+  of wrapping. Verified headless: tracing the last number (10) and the last shape (zigzag) to
+  completion pops the card, zero console errors. (Mobile port tracked in the port item.)
+- [x] **Games tile → pastel Play badge.** Owner's `Icon - Games home screen 3.png` (solid near-white
+  background, no alpha) keyed out with a border flood-fill of only near-white pixels (so the pastel
+  art + white clouds survive), feathered, trimmed, capped to 560px → overwrote
+  `assets/images/tile-toddler.png`; messy source removed. Confirmed clean over a colour + on the
+  home screen (soft pastel Play badge matching Candy-Clouds).
+- [x] **Tracing fill "jump" + start-from-the-dot — confirmed shipped.** The contiguous-fill guard is
+  in place on both surfaces (demo `renderTracing`: a new `pathPosition` advances `lastPos` only when
+  `onPath && 0 < Δ < 0.15`; mobile `TracingPlayer` mirrors it), so a touch near the end can't
+  flash-fill the glyph and the child must trace forward from the start dot. Nothing further needed.
 - [x] **Guided Drawing — Option A "build a picture" (demo).** Owner-picked Option A: a numbered
   **step strip** across the top (current part ringed in accent, green ✓ as each locks in), a
   right-side **colour rail**, and part-by-part **trace-to-build** over the core corridor engine.

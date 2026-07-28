@@ -1420,12 +1420,11 @@ function instructionFor(a) {
 function onDone() { navigate({ name: 'home' }); }
 
 /* ---------- tracing (core TracingSession, multi-stroke + auto-advance) ---------- */
-function letterQueue(activityId) {
-  // Advance to the next item in the SAME tracing section — letters a..z,
-  // numbers 0..10, or shapes — and wrap back to the first after the last, so a
-  // finished shape/letter/number always flows into the next one (owner: no
-  // "Home" prompt between them). Numeric compare so 10 follows 9, not 1.
-  if (activityId === 'trace-name') return null; // one-off, not part of a section
+function tracingSection(activityId) {
+  // The ordered set of items in the SAME tracing section as `activityId` —
+  // letters a..z, numbers 0..10, or shapes — plus this item's index in it.
+  // Numeric compare so 10 follows 9, not 1. Returns null for one-off/solo items.
+  if (activityId === 'trace-name') return null;
   const isLetter = /^trace-letter-/.test(activityId);
   const isNumber = /^trace-number-/.test(activityId);
   const inSection = (id) => (isLetter ? /^trace-letter-/.test(id) : isNumber ? /^trace-number-/.test(id) : !/^trace-(letter|number)-/.test(id));
@@ -1434,7 +1433,8 @@ function letterQueue(activityId) {
     .sort((a, b) => a.id.localeCompare(b.id, undefined, { numeric: true }));
   if (seq.length <= 1) return null;
   const idx = seq.findIndex((a) => a.id === activityId);
-  return idx >= 0 ? seq[(idx + 1) % seq.length] : null;
+  if (idx < 0) return null;
+  return { seq, idx, kind: isLetter ? 'letters' : isNumber ? 'numbers' : 'shapes' };
 }
 
 function renderTracing(firstActivity) {
@@ -1518,6 +1518,10 @@ function renderTracing(firstActivity) {
     scale = Math.min(availW / cw, availH / ch);
     ox = padL + (availW - cw * scale) / 2 - b.minx * scale;
     oy = padV + (availH - ch * scale) / 2 - b.miny * scale;
+    // Publish the live design→canvas transform on the Playwright test seam so
+    // headless checks can drive an accurate trace (the fit is bbox-based, not a
+    // plain 0..1000 square map).
+    if (window.__lgTest) window.__lgTest.traceMap = { scale, ox, oy };
     draw();
   }
 
@@ -1715,18 +1719,39 @@ function renderTracing(firstActivity) {
     celebrate(24);
     const avg = Math.round(scores.reduce((x, y) => x + y, 0) / scores.length);
     completeActivity(activity, { attempts: 1, hintCount: 0, accuracyScore: avg });
-    // Flow straight into the next item in the section (no "Home" prompt); only
-    // a single-item section would have no next, and then we show the banner.
-    const next = letterQueue(activity.id);
-    if (next) {
+    // Flow straight into the next item in the section (no "Home" prompt). At the
+    // END of the whole set (0..10, a..z, all shapes) don't silently wrap — mark
+    // the moment with a section-complete card (play again / back one screen).
+    const sec = tracingSection(activity.id);
+    if (sec && sec.idx + 1 < sec.seq.length) {
+      const next = sec.seq[sec.idx + 1];
       note.textContent = '🎉 ' + LH.pickFeedback('completed') + ' Next: ' + next.title;
       setTimeout(() => loadActivity(next), 1300);
+    } else if (sec) {
+      const msg = '🎉 You finished all the ' + sec.kind + '! Amazing!';
+      note.textContent = msg; speak('Hooray! You finished all the ' + sec.kind + '! Amazing job!');
+      stage.append(sectionDoneCard(sec));
     } else if (activity.id === 'trace-name') {
       speak('Hooray! You wrote your name! Amazing job!');
       stage.append(nameDoneCard());
     } else {
       stage.append(completionBanner(onDone));
     }
+  }
+
+  function sectionDoneCard(sec) {
+    // Game-completion pattern (Feed the Animal is the reference): play again
+    // restarts the set from the first item; back goes up one screen to the list.
+    const card = el(`<div class="banner name-done" role="status">
+      <div class="big">🎉 You finished all the ${sec.kind}! 🌟</div>
+      <div class="name-done-btns">
+        <button data-a="again">🔁 Play again</button>
+        <button data-a="back">⬅️ Back</button>
+      </div>
+    </div>`);
+    card.querySelector('[data-a="again"]').onclick = () => { card.remove(); loadActivity(sec.seq[0]); };
+    card.querySelector('[data-a="back"]').onclick = () => navigate({ name: 'picker', category: state.screen.pickerCategory || activity.category });
+    return card;
   }
 
   // Stylus + palm rejection: follow exactly one pointer, but PEN-FIRST — a pen
