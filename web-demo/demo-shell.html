@@ -456,6 +456,24 @@
   }
   .done-toast.gone { opacity: 0; transform: translateX(-50%) translateY(-8px); }
   @media (prefers-reduced-motion: reduce) { .done-toast { transition: none; } }
+  /* Parent area — Option 1 "Family Link" layout: a child-tinted zone bounds
+     everything about the selected child; general settings sit outside it. */
+  #app.parent-mode .kid-zone { background: var(--kz, #EAF3F1); border: 1px solid var(--kzl, #D8E6E2); border-radius: 16px; padding: 13px; display: flex; flex-direction: column; gap: 12px; }
+  #app.parent-mode .kid-badge { align-self: flex-start; font-size: 11px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; color: var(--kzi, #1E4A41); }
+  #app.parent-mode .kid-head { display: flex; align-items: center; gap: 12px; }
+  #app.parent-mode .kid-av { width: 52px; height: 52px; border-radius: 50%; flex-shrink: 0; display: grid; place-items: center; font-size: 22px; font-weight: 800; color: #fff; box-shadow: inset 0 0 0 3px rgba(255,255,255,.5); }
+  #app.parent-mode .kid-name { font-size: 21px; font-weight: 800; line-height: 1.1; }
+  #app.parent-mode .kid-meta { font-size: 13px; color: #52606D; margin-top: 2px; }
+  #app.parent-mode .lvl-pill { display: inline-block; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .03em; color: #fff; border-radius: 999px; padding: 1px 8px; vertical-align: middle; }
+  #app.parent-mode .kid-switch { display: flex; gap: 8px; flex-wrap: wrap; }
+  #app.parent-mode .kid-chip { display: flex; align-items: center; gap: 7px; font: inherit; font-size: 13px; font-weight: 600; background: #fff; border: 1px solid #D5DBE0; color: #52606D; border-radius: 999px; padding: 5px 12px 5px 6px; cursor: pointer; }
+  #app.parent-mode .kid-chip[aria-pressed="true"] { border-color: #2F6F62; background: #E6F1EE; color: #1E4A41; }
+  #app.parent-mode .kid-chip .cdot { width: 22px; height: 22px; border-radius: 50%; color: #fff; display: grid; place-items: center; font-size: 12px; font-weight: 800; }
+  #app.parent-mode .sub-h { font-size: 12px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; color: #7B8794; margin: 4px 2px 2px; }
+  #app.parent-mode .scope-div { display: flex; align-items: center; gap: 12px; color: #7B8794; font-size: 11.5px; font-weight: 700; letter-spacing: .02em; margin: 18px 2px 8px; }
+  #app.parent-mode .scope-div::before, #app.parent-mode .scope-div::after { content: ""; flex: 1; height: 1px; background: #DCE2E7; }
+  #app.parent-mode .device-note { display: flex; gap: 12px; align-items: center; background: #EEF1F4; border: 1px dashed #CFD6DC; border-radius: 12px; padding: 11px 13px; }
+  #app.parent-mode .device-note .di { font-size: 20px; }
   .name-done-btns button { margin-top: 8px; }
   .name-done .big { animation: pop-in 0.4s ease; }
   @keyframes pop-in { from { transform: scale(0.7); opacity: 0; } to { transform: scale(1); opacity: 1; } }
@@ -4538,7 +4556,8 @@ function cloudSyncSubtitle(account) {
 
 function renderParent(section) {
   const engines = {
-    dashboard: ['screenTime.secondsUsed'], profile: ['profiles + settings'],
+    dashboard: ['screenTime.secondsUsed'], children: ['profiles + deletion.deleteAllChildData'],
+    settings: ['profiles + settings + themes + accessibility'],
     progress: ['progress.buildParentReport'], 'screen-time': ['screenTime.grantExtraTime'],
     appearance: ['themes (core APP_THEMES)'],
     accessibility: ['settings.accessibility'], privacy: ['deletion.deleteAllChildData'],
@@ -4564,38 +4583,105 @@ function renderParent(section) {
 
   if (section === 'dashboard') {
     const mins = Math.round(LH.secondsUsed(state.screenTime, todayKey()) / 60);
-    body.append(el(`<h2>Parent dashboard</h2>`));
-    body.append(el(`<div class="stat-cards">
-      <div class="stat-card"><div class="v">⭐ ${state.rewards.totalStars}</div><div class="k">stars earned</div></div>
-      <div class="stat-card"><div class="v">${mins} min</div><div class="k">play today</div></div>
-      <div class="stat-card"><div class="v">${p ? p.nickname : '—'}</div><div class="k">${p ? p.ageBand + ' years' : 'no profile'}</div></div>
-    </div>`));
-    const rows = [
-      ['profile', 'Child profile', 'Difficulty, handedness, sound'],
-      ['progress', 'Progress', 'Skills, favourites and suggestions'],
-      ['screen-time', 'Screen time', 'Daily target and extra time'],
-      ['appearance', 'Theme', 'Soft Storybook, Candy Clouds or Little Aussie Adventure'],
-      ['accessibility', 'Accessibility', 'See, hear, touch and pace settings'],
-      ['artwork', 'Saved artwork', 'View and replay drawings'],
-      ['privacy', 'Privacy & data', 'Notice, delete everything'],
-      ['cloud-sync', 'Cloud backup & sync', cloudSyncSubtitle(state.account)],
-      ['subscription', 'Subscription', 'Free plan'],
-      ['help', 'Help & support', 'FAQ, contact, complaints'],
+    const lvlLabel = (d) => (d === 1 ? 'Beginner' : d === 2 ? 'Developing' : 'Confident');
+    const initialOf = (nm) => (nm || '?').trim().charAt(0).toUpperCase();
+    // ---- Child zone: the tinted panel bounds everything about this child. ----
+    const zone = el(`<div class="kid-zone"></div>`);
+    if (p) {
+      const kidColour = LH.themeById(p.themeId).accent;
+      zone.style.setProperty('--kz', kidColour + '18');
+      zone.style.setProperty('--kzl', kidColour + '44');
+      zone.style.setProperty('--kzi', kidColour);
+      zone.append(el(`<span class="kid-badge">For ${p.nickname}</span>`));
+      const head = el(`<div class="kid-head"><div class="kid-av" style="background:${kidColour}">${initialOf(p.nickname)}</div><div><div class="kid-name">${p.nickname}</div><div class="kid-meta">${p.ageBand} years · <span class="lvl-pill" style="background:${kidColour}">${lvlLabel(p.difficulty)}</span></div></div></div>`);
+      zone.append(head);
+    }
+    const sw = el(`<div class="kid-switch"></div>`);
+    zone.append(sw);
+    repos.profiles.getAll().then((all) => {
+      sw.innerHTML = '';
+      for (const pr of all) {
+        const c = LH.themeById(pr.themeId).accent;
+        const chip = el(`<button class="kid-chip" aria-pressed="${state.profile?.id === pr.id}"><span class="cdot" style="background:${c}">${initialOf(pr.nickname)}</span>${pr.nickname}</button>`);
+        chip.onclick = async () => { if (state.profile?.id !== pr.id) { await activateProfile(pr.id); persistSoon(); } render(); };
+        sw.append(chip);
+      }
+      const manage = el(`<button class="kid-chip" style="color:#2F6F62;font-weight:700;padding-left:12px">＋ Add / manage</button>`);
+      manage.onclick = () => navigate({ name: 'parent', section: 'children' });
+      sw.append(manage);
+    });
+    if (p) {
+      const stats = el(`<div class="stat-cards"></div>`);
+      stats.append(
+        el(`<div class="stat-card"><div class="v">⭐ ${state.rewards.totalStars}</div><div class="k">stars</div></div>`),
+        el(`<div class="stat-card"><div class="v">${mins} min</div><div class="k">play today</div></div>`),
+        el(`<div class="stat-card"><div class="v">${lvlLabel(p.difficulty)}</div><div class="k">level</div></div>`),
+      );
+      zone.append(stats);
+      zone.append(el(`<div class="sub-h">${p.nickname}’s learning</div>`));
+      const learn = [
+        ['progress', '📈', 'Progress & skills', 'Skills, favourites and suggestions'],
+        ['screen-time', '⏱', 'Screen time', 'Daily target and extra time'],
+        ['artwork', '🖼', 'Saved artwork', 'View and replay drawings'],
+        ['settings', '⚙️', 'Settings', 'Difficulty, sound, voice, theme, access'],
+      ];
+      for (const [key, ic, title, sub] of learn) {
+        const r = el(`<button class="choice-row"><span>${ic} ${title}<span class="sub">${sub}</span></span><span class="radio">›</span></button>`);
+        r.onclick = () => navigate({ name: 'parent', section: key });
+        zone.append(r);
+      }
+    }
+    body.append(zone);
+    // ---- General app settings: outside the child zone, neutral, not per-child. ----
+    body.append(el(`<div class="scope-div">General app settings</div>`));
+    body.append(el(`<div class="device-note"><span class="di">📱</span><span><strong>Little Grip · this device</strong><br><span class="kid-meta">No account · everything stays on this device</span></span></div>`));
+    const admin = [
+      ['privacy', '🔒', 'Privacy & data', 'Notice, delete everything'],
+      ['cloud-sync', '☁️', 'Cloud backup & sync', cloudSyncSubtitle(state.account)],
+      ['subscription', '🎟', 'Subscription', 'Free plan'],
+      ['help', '💬', 'Help & support', 'FAQ, contact, complaints'],
     ];
-    for (const [key, title, sub] of rows) {
-      const r = el(`<button class="choice-row"><span>${title}<span class="sub">${sub}</span></span><span class="radio">›</span></button>`);
+    for (const [key, ic, title, sub] of admin) {
+      const r = el(`<button class="choice-row"><span>${ic} ${title}<span class="sub">${sub}</span></span><span class="radio">›</span></button>`);
       r.onclick = () => navigate({ name: 'parent', section: key });
       body.append(r);
     }
-  } else if (section === 'profile') {
-    body.append(el(`<h2>Children</h2>`));
+  } else if (section === 'children') {
+    body.append(el(`<h2>Children</h2>`), el(`<p style="font-size:13px;color:#52606D">Switch between children, add a new one, or remove a child and all their data from this device.</p>`));
     repos.profiles.getAll().then((all) => {
       for (const pr of all) {
-        const row = el(`<button class="choice-row"><span>${pr.nickname}<span class="sub">${pr.ageBand} years · ${pr.difficulty === 1 ? 'Beginner' : pr.difficulty === 2 ? 'Developing' : 'Confident'}</span></span><span class="radio">${state.profile?.id === pr.id ? '● playing' : '○ switch'}</span></button>`);
-        row.onclick = async () => { await activateProfile(pr.id); persistSoon(); render(); };
+        const lvl = pr.difficulty === 1 ? 'Beginner' : pr.difficulty === 2 ? 'Developing' : 'Confident';
+        const playing = state.profile?.id === pr.id;
+        const row = el(`<div class="choice-row" style="cursor:default;align-items:center"><span>${pr.nickname}<span class="sub">${pr.ageBand} years · ${lvl}${playing ? ' · playing now' : ''}</span></span></div>`);
+        const actions = el(`<span style="display:flex;gap:8px;flex-shrink:0"></span>`);
+        if (!playing) {
+          const swb = el(`<button class="primary-btn teal" style="min-height:34px;padding:4px 14px;font-size:13px;margin:0">Switch</button>`);
+          swb.onclick = async () => { await activateProfile(pr.id); persistSoon(); render(); };
+          actions.append(swb);
+        }
+        const del = el(`<button class="primary-btn danger" style="min-height:34px;padding:4px 12px;font-size:13px;margin:0" aria-label="Delete ${pr.nickname}">🗑 Delete</button>`);
+        del.onclick = async () => {
+          if (!confirm(`Remove ${pr.nickname}? This permanently deletes ${pr.nickname}’s profile, progress, rewards and saved artwork from this device. This cannot be undone.`)) return;
+          await LH.deleteAllChildData(repos, pr.id);
+          const remaining = await repos.profiles.getAll();
+          if (state.profile?.id === pr.id) {
+            if (remaining.length) {
+              await activateProfile(remaining[0].id);
+            } else {
+              state.profile = null;
+              state.rewards = LH.emptyRewardsState(todayKey());
+              state.screenTime = LH.emptyScreenTime(15);
+              state.daily = null;
+              persistSoon(); navigate({ name: 'onboarding' }); return;
+            }
+          }
+          persistSoon(); render();
+        };
+        actions.append(del);
+        row.append(actions);
         body.append(row);
       }
-      const addWrap = el(`<div style="margin-top:14px"></div>`);
+      const addWrap = el(`<div style="margin-top:16px"></div>`);
       addWrap.append(el(`<label style="display:block;font-size:13px;font-weight:700;margin-bottom:4px">Add another child (nickname)</label>`));
       const input = el(`<input type="text" maxlength="20" style="font-size:16px;padding:9px 12px;border:1px solid #C5CDD4;border-radius:10px;background:#fff" aria-label="New child's nickname">`);
       const bandRow = el(`<div style="display:flex;gap:8px;margin:8px 0"></div>`);
@@ -4618,43 +4704,64 @@ function renderParent(section) {
       };
       addWrap.append(input, bandRow, add);
       body.append(addWrap);
-
-      if (p) {
-        body.append(el(`<h2 style="margin-top:18px">Settings for ${p.nickname}</h2>`), el(`<label style="font-weight:700;font-size:13px">Difficulty</label>`));
-        [[1, 'Beginner'], [2, 'Developing'], [3, 'Confident']].forEach(([lvl, name]) => {
-          const r2 = el(`<button class="choice-row"><span>${name}</span><span class="radio">${p.difficulty === lvl ? '●' : '○'}</span></button>`);
-          r2.onclick = async () => { state.profile = { ...p, difficulty: lvl }; await repos.profiles.save(state.profile); persistSoon(); render(); };
-          body.append(r2);
-        });
-        body.append(el(`<label style="font-weight:700;font-size:13px">Sound</label>`));
-        ['music', 'effects', 'voice'].forEach((ch) => {
-          const row2 = el(`<div class="choice-row" style="cursor:default"><span>${ch === 'music' ? 'Background music' : ch === 'effects' ? 'Sound effects' : 'Voice instructions (soft female voice)'}</span></div>`);
-          const t = el(`<input type="checkbox" class="toggle" aria-label="${ch}" ${p.sound[ch] ? 'checked' : ''}>`);
-          t.onchange = async () => { state.profile = { ...p, sound: { ...p.sound, [ch]: t.checked } }; await repos.profiles.save(state.profile); persistSoon(); };
-          row2.append(t); body.append(row2);
-        });
-
-        body.append(
-          el(`<label style="font-weight:700;font-size:13px;margin-top:14px;display:block">Voice — pick the one that sounds nicest</label>`),
-          el(`<p style="font-size:13px;color:#52606D;margin:4px 0 8px">Voices come from this device, so the list differs between phones, tablets and computers. Tap ▶ to hear a sample. On Android, installing "Speech Services by Google" adds much softer voices. The released app will use professionally recorded audio instead.</p>`),
-        );
-        const voices = englishVoices().slice(0, 14);
-        if (!voices.length) body.append(el(`<p style="font-size:13px">This browser has no speech voices available.</p>`));
-        for (const v of voices) {
-          const active = p.sound.voiceName ? p.sound.voiceName === v.name : false;
-          const row3 = el(`<button class="choice-row"><span>${v.name}<span class="sub">${v.lang}${v.name === pickFemaleVoice()?.name && !p.sound.voiceName ? ' · current default' : ''}</span></span><span class="radio">${active ? '●' : '○'}</span></button>`);
-          const hear = el(`<button class="primary-btn teal" style="min-height:34px;padding:4px 12px;font-size:13px;margin:0 10px 0 0" aria-label="Preview ${v.name}">▶</button>`);
-          hear.onclick = (e) => { e.stopPropagation(); previewVoice(v); };
-          row3.insertBefore(hear, row3.lastElementChild);
-          row3.onclick = async () => {
-            state.profile = { ...p, sound: { ...p.sound, voiceName: v.name } };
-            await repos.profiles.save(state.profile);
-            persistSoon(); previewVoice(v); render();
-          };
-          body.append(row3);
-        }
-      }
     });
+  } else if (section === 'settings' && p) {
+    body.append(el(`<h2>Settings for ${p.nickname}</h2>`), el(`<p style="font-size:13px;color:#52606D">Everything that shapes ${p.nickname}’s play, in one place.</p>`));
+    body.append(el(`<div class="sub-h">Difficulty</div>`));
+    [[1, 'Beginner'], [2, 'Developing'], [3, 'Confident']].forEach(([lvl, name]) => {
+      const r2 = el(`<button class="choice-row"><span>${name}</span><span class="radio">${p.difficulty === lvl ? '●' : '○'}</span></button>`);
+      r2.onclick = async () => { state.profile = { ...p, difficulty: lvl }; await repos.profiles.save(state.profile); persistSoon(); render(); };
+      body.append(r2);
+    });
+    body.append(el(`<div class="sub-h">Sound</div>`));
+    ['music', 'effects', 'voice'].forEach((ch) => {
+      const row2 = el(`<div class="choice-row" style="cursor:default"><span>${ch === 'music' ? 'Background music' : ch === 'effects' ? 'Sound effects' : 'Voice instructions (soft female voice)'}</span></div>`);
+      const t = el(`<input type="checkbox" class="toggle" aria-label="${ch}" ${p.sound[ch] ? 'checked' : ''}>`);
+      t.onchange = async () => { state.profile = { ...p, sound: { ...p.sound, [ch]: t.checked } }; await repos.profiles.save(state.profile); persistSoon(); };
+      row2.append(t); body.append(row2);
+    });
+    body.append(
+      el(`<div class="sub-h">Voice</div>`),
+      el(`<p style="font-size:13px;color:#52606D;margin:4px 0 8px">Voices come from this device, so the list differs between phones, tablets and computers. Tap ▶ to hear a sample. On Android, installing "Speech Services by Google" adds much softer voices. The released app will use professionally recorded audio instead.</p>`),
+    );
+    const voices = englishVoices().slice(0, 14);
+    if (!voices.length) body.append(el(`<p style="font-size:13px">This browser has no speech voices available.</p>`));
+    for (const v of voices) {
+      const active = p.sound.voiceName ? p.sound.voiceName === v.name : false;
+      const row3 = el(`<button class="choice-row"><span>${v.name}<span class="sub">${v.lang}${v.name === pickFemaleVoice()?.name && !p.sound.voiceName ? ' · current default' : ''}</span></span><span class="radio">${active ? '●' : '○'}</span></button>`);
+      const hear = el(`<button class="primary-btn teal" style="min-height:34px;padding:4px 12px;font-size:13px;margin:0 10px 0 0" aria-label="Preview ${v.name}">▶</button>`);
+      hear.onclick = (e) => { e.stopPropagation(); previewVoice(v); };
+      row3.insertBefore(hear, row3.lastElementChild);
+      row3.onclick = async () => {
+        state.profile = { ...p, sound: { ...p.sound, voiceName: v.name } };
+        await repos.profiles.save(state.profile);
+        persistSoon(); previewVoice(v); render();
+      };
+      body.append(row3);
+    }
+    body.append(el(`<div class="sub-h">Theme</div>`), el(`<p style="font-size:13px;color:#52606D;margin:2px 0 6px">Colours only — nothing about play or data changes, and high-contrast accessibility always wins.</p>`));
+    for (const t of LH.APP_THEMES) {
+      const activeT = LH.themeById(p.themeId).id === t.id;
+      const row = el(`<button class="choice-row"><span><span class="theme-swatches" aria-hidden="true">${[t.greeting.background, ...t.tileColours.slice(0, 4)].map((c) => `<span style="background:${c}"></span>`).join('')}</span>${t.name}<span class="sub">${t.blurb}</span></span><span class="radio">${activeT ? '●' : '○'}</span></button>`);
+      row.onclick = async () => { state.profile = { ...p, themeId: t.id }; await repos.profiles.save(state.profile); persistSoon(); render(); };
+      body.append(row);
+    }
+    body.append(el(`<div class="sub-h">Accessibility</div>`));
+    const a11y = [
+      ['highContrast', 'High contrast', 'Stronger colours and outlines'],
+      ['colourBlindFriendly', 'Colour-blind friendly', 'Patterns and symbols alongside colour'],
+      ['reducedMotion', 'Reduce motion', 'Crossfades instead of movement (confetti off)'],
+      ['largerTouchTargets', 'Larger touch targets', 'Bigger buttons everywhere'],
+      ['longerResponseTime', 'More time to respond', 'All timers 2.5× longer'],
+      ['noTimeLimits', 'No time limits', 'Never offer timed challenges'],
+      ['widerTracingCorridor', 'Easier tracing', 'Wider tracing path (1.5×)'],
+    ];
+    for (const [key, label, hint] of a11y) {
+      const row = el(`<div class="choice-row" style="cursor:default"><span>${label}<span class="sub">${hint}</span></span></div>`);
+      const t = el(`<input type="checkbox" class="toggle" aria-label="${label}" ${p.accessibility[key] ? 'checked' : ''}>`);
+      t.onchange = async () => { state.profile = { ...p, accessibility: { ...p.accessibility, [key]: t.checked } }; await repos.profiles.save(state.profile); persistSoon(); render(); };
+      row.append(t); body.append(row);
+    }
   } else if (section === 'progress' && p) {
     repos.progress.forProfile(p.id).then((records) => {
       const report = LH.buildParentReport(records);
