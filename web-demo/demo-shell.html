@@ -387,6 +387,12 @@
     box-shadow: 0 2px 5px rgba(74, 59, 50, 0.15);
   }
   .icon-btn.holding { background: var(--accent, #FF8A65); }
+  /* Owner clay button icons (home/back/next/save) — the art carries its own tile
+     + shadow, so the button is bare (no white circle). */
+  .clay-btn { background: none; border: none; padding: 0; cursor: pointer; line-height: 0; display: inline-flex; }
+  .clay-btn img { display: block; object-fit: contain; }
+  .clay-btn:active { transform: scale(0.92); }
+  .clay-btn:focus-visible { outline: 3px solid #64B5F6; outline-offset: 2px; border-radius: 12px; }
 
   .instruction-bar, .play-stage { border: 2px solid color-mix(in srgb, var(--accent, #FF8A65) 22%, transparent); }
   .play-stage { flex: 1; position: relative; margin: 8px 14px 12px; border-radius: 16px; background: #fff; overflow: hidden; }
@@ -950,8 +956,17 @@ function uiAlert(message, opts = {}) { return uiDialog({ message, cancelLabel: n
 /* Home button: a single tap goes home (owner direction, July 2026 — the old
    1.2s press-and-hold read as broken). Also fires on pointerup so it works
    even when a drawing surface has captured the pointer stream. */
+/** A bare button showing one of the owner's clay button icons, falling back to
+ *  an emoji `.icon-btn` when the art is missing or high-contrast mode is on. */
+function clayBtn(imgName, ariaLabel, fallbackGlyph, size = 52) {
+  if (RASTER_IMAGES[imgName] && !highContrast()) {
+    return el(`<button class="clay-btn" aria-label="${ariaLabel}"><img src="${RASTER_IMAGES[imgName]}" alt="" style="width:${size}px;height:${size}px"></button>`);
+  }
+  return el(`<button class="icon-btn" aria-label="${ariaLabel}">${fallbackGlyph}</button>`);
+}
+
 function holdToHomeButton(onHome) {
-  const btn = el(`<button class="icon-btn" aria-label="Go home">🏠</button>`);
+  const btn = clayBtn('home-icon', 'Go home', '🏠');
   let done = false;
   const go = async () => { if (done) return; done = true; btn.classList.add('holding'); await stopActivityClock(); onHome(); };
   btn.addEventListener('click', go);
@@ -1091,7 +1106,9 @@ function renderOnboarding(step = 'welcome', draft = { nickname: '', ageBand: '3-
       wrap.append(row);
     }
     if (error) wrap.append(el(`<div class="err" role="alert">${error}</div>`));
-    const next = el(`<button class="primary-btn teal" style="margin-top:14px">Next</button>`);
+    const next = (RASTER_IMAGES['next-icon'] && !highContrast())
+      ? el(`<button class="clay-btn" aria-label="Next" style="margin-top:14px;align-self:center"><img src="${RASTER_IMAGES['next-icon']}" alt="Next" style="width:76px;height:76px"></button>`)
+      : el(`<button class="primary-btn teal" style="margin-top:14px">Next</button>`);
     next.onclick = () => {
       const problems = LH.validateProfileInput(draft);
       if (problems.length) {
@@ -1354,9 +1371,11 @@ function renderColourSections() {
 // split into four kid-friendly groups, mirroring the Tracing chooser. Each
 // group's `has` predicate runs over the toddler-category activities.
 const GAME_GROUPS = [
-  { key: 'games-sort', label: 'Sort & Match', glyph: '🧩', has: (a) => (a.template === 'drag-sort' && !a.params?.ordered) || a.template === 'match-pairs' || a.template === 'shadow-match' || a.template === 'letter-match' },
-  { key: 'games-tap', label: 'Tap & Count', glyph: '🔢', has: (a) => a.template === 'pop-bubbles' || a.template === 'tap-target' || a.template === 'counting' || a.template === 'number-hop' || a.template === 'odd-one-out' },
-  { key: 'games-patterns', label: 'Patterns', glyph: '🔁', has: (a) => a.template === 'sequence' || a.template === 'pattern-complete' },
+  // `labelled` art has the group name baked into the picture (owner clay tiles),
+  // so the tile hides its separate text label and floats bare (no coloured bubble).
+  { key: 'games-sort', label: 'Sort & Match', glyph: '🧩', img: 'sort-and-match-with-label', labelled: true, has: (a) => (a.template === 'drag-sort' && !a.params?.ordered) || a.template === 'match-pairs' || a.template === 'shadow-match' || a.template === 'letter-match' },
+  { key: 'games-tap', label: 'Tap & Count', glyph: '🔢', img: 'tap-and-count-with-label', labelled: true, has: (a) => a.template === 'pop-bubbles' || a.template === 'tap-target' || a.template === 'counting' || a.template === 'number-hop' || a.template === 'odd-one-out' },
+  { key: 'games-patterns', label: 'Patterns', glyph: '🔁', img: 'patterns-with-label', labelled: true, has: (a) => a.template === 'sequence' || a.template === 'pattern-complete' },
   { key: 'games-hands', label: 'Busy Hands', glyph: '✂️', img: 'cut-scissors-open', has: (a) => a.template === 'feed-animal' || a.template === 'cut-along' || a.template === 'stack-blocks' || a.template === 'reveal-wipe' },
 ];
 const gameGroupFor = (key) => GAME_GROUPS.find((g) => g.key === key);
@@ -1382,13 +1401,17 @@ function renderGameSections() {
   );
   GAME_GROUPS.filter((g) => set.some(g.has)).forEach((g, i) => {
     // A group can supply its own clay artwork (Busy Hands → the scissors image);
-    // high-contrast mode falls back to the emoji glyph for legibility.
-    const iconHtml = (g.img && !highContrast() && (IMAGES[g.img] || RASTER_IMAGES[g.img]))
-      ? `<span class="tile-illo" aria-hidden="true">${imgHtml(g.img, 62)}</span>`
+    // high-contrast mode falls back to the emoji glyph for legibility. A
+    // `labelled` tile (name baked into the art) fills the bubble, floats bare and
+    // hides the separate text label.
+    const useImg = g.img && !highContrast() && (IMAGES[g.img] || RASTER_IMAGES[g.img]);
+    const labelled = Boolean(useImg && g.labelled);
+    const iconHtml = useImg
+      ? `<span class="tile-illo" aria-hidden="true">${imgHtml(g.img, labelled ? 118 : 62)}</span>`
       : `<span class="glyph-big" aria-hidden="true">${g.glyph}</span>`;
     grid.append(bubbleTile(iconHtml, g.label, tiles()[(i + 2) % tiles().length], () => {
       speak(g.label); navigate({ name: 'picker', category: g.key });
-    }));
+    }, !labelled, labelled));
   });
   app.append(top, grid);
 }
@@ -1507,22 +1530,22 @@ function renderPicker(category) {
   const top = el(`<div class="topbar"></div>`);
   top.append(holdToHomeButton(() => navigate({ name: 'home' })));
   if (/^tracing-/.test(category) && (state.profile?.ageBand ?? '3-5') !== '2-3') {
-    const back = el(`<button class="icon-btn" aria-label="Back">←</button>`);
+    const back = clayBtn('back-icon', 'Back', '←');
     back.onclick = () => navigate({ name: 'picker', category: 'tracing' });
     top.append(back);
   }
   if (/^draw-/.test(category)) {
-    const back = el(`<button class="icon-btn" aria-label="Back">←</button>`);
+    const back = clayBtn('back-icon', 'Back', '←');
     back.onclick = () => navigate({ name: 'picker', category: 'drawing' });
     top.append(back);
   }
   if (/^colour-(bynum|yourway)$/.test(category)) {
-    const back = el(`<button class="icon-btn" aria-label="Back">←</button>`);
+    const back = clayBtn('back-icon', 'Back', '←');
     back.onclick = () => navigate({ name: 'picker', category: 'colouring' });
     top.append(back);
   }
   if (/^games-/.test(category)) {
-    const back = el(`<button class="icon-btn" aria-label="Back">←</button>`);
+    const back = clayBtn('back-icon', 'Back', '←');
     back.onclick = () => navigate({ name: 'picker', category: 'toddler' });
     top.append(back);
   }
@@ -1620,7 +1643,7 @@ function renderPicker(category) {
 function backButton(activity) {
   // "Back one screen" (owner request): to the picker this activity came from,
   // or back to the Daily Adventure path when it was launched from there.
-  const btn = el(`<button class="icon-btn" aria-label="Back">←</button>`);
+  const btn = clayBtn('back-icon', 'Back', '←');
   btn.onclick = async () => {
     await stopActivityClock();
     if (state.screen.from === 'daily') navigate({ name: 'daily' });
@@ -2843,7 +2866,7 @@ function renderColouringLineArt(activity) {
   const fab = el(`<button class="colour-fab" aria-label="Open colours"></button>`);
   fab.onclick = () => { menuOpen = true; renderPanel(); };
   const actions = el(`<div class="colour-actions"></div>`);
-  const saveBtn = el(`<button class="icon-btn" aria-label="Save my picture">💾</button>`);
+  const saveBtn = clayBtn('save-with-label', 'Save my picture', '💾', 56);
   const resetBtn = el(`<button class="icon-btn" aria-label="Start again">🗑️</button>`);
   actions.append(saveBtn, resetBtn);
   stage.append(canvas, panel, fab, actions);
@@ -3224,7 +3247,7 @@ function renderColouring(activity) {
   const fab = el(`<button class="colour-fab" aria-label="Open colours"></button>`);
   fab.onclick = () => { menuOpen = true; renderPanel(); };
   const actions = el(`<div class="colour-actions"></div>`);
-  const saveBtn = el(`<button class="icon-btn" aria-label="Save my picture">💾</button>`);
+  const saveBtn = clayBtn('save-with-label', 'Save my picture', '💾', 56);
   const resetBtn = el(`<button class="icon-btn" aria-label="Start again">🗑️</button>`);
   actions.append(saveBtn, resetBtn);
   stage.append(canvas, panel, fab, actions);

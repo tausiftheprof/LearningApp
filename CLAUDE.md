@@ -252,6 +252,18 @@ group tile** (in `renderGameSections`) uses the scissors clay art via an optiona
 `GAME_GROUPS` entry (high-contrast falls back to the ✂️ glyph). The old off-brand 🃏 joker card and
 the single ➡️ shared across every pattern game were replaced (July 2026) so no two tiles repeat and
 each reads as its own cute, on-theme icon; tile emoji are sized to fill the bubble like the clay art.
+Three of the four **Little Games group tiles** now use owner **labelled clay art** (the group name
+baked into the picture): `GAME_GROUPS` entries `games-sort`/`games-tap`/`games-patterns` carry
+`img` + `labelled: true`, so `renderGameSections` renders the art large, floats it **bare** (no
+coloured bubble) and **hides the separate text label**. Busy Hands still uses the unlabelled scissors
+art + a text label until a matching "Busy Hands" labelled icon lands.
+
+**Owner clay UI buttons** (July 2026): the top-bar **home** (`home-icon`) and **back** (`back-icon`),
+the onboarding **Next** (`next-icon`), and the colouring-page **Save** (`save-with-label`) are the
+owner's clay button art, wired through the shared **`clayBtn(imgName, ariaLabel, fallbackGlyph, size)`**
+helper (bare `.clay-btn`, no white circle — the art carries its own tile+shadow; falls back to the
+emoji `.icon-btn` in high-contrast mode). The Draw board's tiny toolbar Save (`mk`/`mkCorner`) stays
+the 💾 glyph — a labelled tile doesn't fit that button row.
 
 **Tracing glyphs & flow**: letter (A-Z capital+small pair) and number (0-10) stroke skeletons are
 authored as polylines in `content/glyphs.ts` (`digitStrokes`/`letterStrokes`), shape strokes in
