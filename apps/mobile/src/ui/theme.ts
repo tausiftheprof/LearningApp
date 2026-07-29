@@ -19,6 +19,8 @@ export interface Theme {
   success: string;
   childMinTargetDp: number;
   radius: number;
+  /** High-contrast mode active — surfaces fall back to plain emoji buttons etc. */
+  highContrast: boolean;
   /** Full approved-theme tokens (greeting card, tile icons, rewards banner). */
   app: AppTheme;
 }
@@ -35,6 +37,7 @@ export const parentTheme: Theme = {
   success: '#2E7D32',
   childMinTargetDp: 48,
   radius: 10,
+  highContrast: false,
   app: themeById(undefined),
 };
 
@@ -51,6 +54,7 @@ export function childTheme(a: AccessibilitySettings, themeId?: string): Theme {
         success: '#006600',
         childMinTargetDp: 64,
         radius: 24,
+        highContrast: true,
         app,
       }
     : {
@@ -64,6 +68,7 @@ export function childTheme(a: AccessibilitySettings, themeId?: string): Theme {
         success: '#81C784',
         childMinTargetDp: 64,
         radius: 24,
+        highContrast: false,
         app,
       };
   return { ...base, childMinTargetDp: a.largerTouchTargets ? 88 : 64 };

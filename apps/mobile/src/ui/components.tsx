@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { Pressable, StyleSheet, Text, View, type ViewStyle } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, View, type ViewStyle } from 'react-native';
 import type { Theme } from './theme';
+import { UI_ART } from './uiArt';
 
 /**
  * Reusable accessible components (docs/03 section 3.3).
@@ -89,6 +90,10 @@ export function HoldToHomeButton(props: {
   onHome: () => void;
 }): React.JSX.Element {
   const [pressed, setPressed] = useState(false);
+  const size = props.theme.childMinTargetDp;
+  const hc = props.theme.highContrast;
+  // Owner clay home button (bare — the art carries its own tile); high-contrast
+  // keeps the plain emoji-on-surface button for legibility.
   return (
     <Pressable
       accessibilityRole="button"
@@ -97,15 +102,20 @@ export function HoldToHomeButton(props: {
       onPressIn={() => setPressed(true)}
       onPressOut={() => setPressed(false)}
       style={[
-        styles.homeButton,
+        hc ? styles.homeButton : styles.clayButton,
         {
-          minWidth: props.theme.childMinTargetDp,
-          minHeight: props.theme.childMinTargetDp,
-          backgroundColor: pressed ? props.theme.accent : props.theme.surface,
+          minWidth: size,
+          minHeight: size,
+          transform: [{ scale: pressed ? 0.92 : 1 }],
+          ...(hc ? { backgroundColor: pressed ? props.theme.accent : props.theme.surface } : {}),
         },
       ]}
     >
-      <Text style={styles.replayIcon}>🏠</Text>
+      {hc ? (
+        <Text style={styles.replayIcon}>🏠</Text>
+      ) : (
+        <Image source={UI_ART.home} resizeMode="contain" style={{ width: size, height: size }} />
+      )}
     </Pressable>
   );
 }
@@ -192,6 +202,7 @@ const styles = StyleSheet.create({
     margin: 8,
     elevation: 2,
   },
+  clayButton: { alignItems: 'center', justifyContent: 'center', margin: 8 },
   parentRow: {
     flexDirection: 'row',
     alignItems: 'center',
