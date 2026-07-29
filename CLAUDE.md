@@ -181,6 +181,18 @@ activity uses `preschool`; 5-7 gets Little Games + Think & Solve. **Tracing show
 but both pickers route the 2-3 band **straight to the Shapes list** (no chooser, no back button —
 back would loop); Letters/Numbers/My Name are 3-5+.
 
+**Little Games splits into four groups** (owner direction, July 2026): the `toddler` door opens a
+chooser (`renderGameSections`) — **Sort & Match**, **Tap & Count**, **Patterns**, **Busy Hands** —
+each a `games-*` sub-category listing only its own games (with a back button to the chooser). Group
+membership is a template predicate in the `GAME_GROUPS` array (demo `demo-shell.html`); empty groups
+(the youngest band) are hidden. This mirrors the Tracing/Colour/Draw chooser pattern. **Sort by
+colour** is now three leveled multi-page activities (`toddler-sort-colour` 2-bucket, `sort-colour-three`,
+`sort-colour-four`), each running **five pages back-to-back** via a `params.pages` array on the
+`drag-sort` template — finish a page and the next appears (progress dots + a confetti beat between),
+the run ends after the last page. The renderer's `buildColourPage()` helper draws one round; a bucket
+count of 2/3/4 ladders by skill (beginner/developing/confident). (Demo-only so far; mobile picker +
+drag-sort port pending.)
+
 **Colour by Numbers is number-locked**: each `colour-cbn-*` activity carries a `byNumberPlan`
 (schema field) — `[{ number, colour, targets }]` where `targets` is **one point per numbered
 region as fractions (0..1) of the square artwork**. The child is locked to colour 1 until every
@@ -189,12 +201,18 @@ When authoring targets, put each point on/near the printed digit — the fill ch
 ~4.5% neighbourhood around the target (the digit itself is ink and never flooded), and taps on
 ink hop to the nearest open pixel. Wrong-number/background taps are spoken-rejected, never filled.
 
-**Game-completion pattern** (owner direction): games end with a two-button card — **play again +
-back one screen** — not a Home prompt (Feed the Animal is the reference; tracing's name-finish
-card is the same idea). The generic `completionBanner` (with Home) survives on non-game flows.
+**Game-completion pattern** (owner direction): **no end-of-game popup** (July 2026) — a generic game
+finishing plays its star burst + chime and then **auto-returns to the games list on its own**
+(`renderGame`'s `finish()` navigates back to `pickerCategory` after ~1.2s; the old `completionBanner`
+with Home is gone from the game path). Games with a **bespoke** end card — **play again + back one
+screen** — keep it (Feed the Animal is the reference; tracing's name-finish card is the same idea).
+The generic `completionBanner` (with Home) survives only on non-game flows.
 **Picker icons**: game tiles never use the category illustration or the old 🐣 chick — each
-template resolves its own art (feed → `params.open` character, cut → scissors, hop → lily-pad)
-or a per-template emoji (`GAME_EMOJI` maps in both pickers).
+template resolves its own art (feed → `params.open` character, cut → scissors, hop → lily-pad),
+else a **per-activity** override (`GAME_ICON`, keyed by id) or a per-template emoji (`GAME_EMOJI`).
+The old off-brand 🃏 joker card and the single ➡️ shared across every pattern game were replaced
+(July 2026) so no two tiles repeat and each reads as its own cute, on-theme icon; tile emoji are
+sized to fill the bubble like the clay art.
 
 **Tracing glyphs & flow**: letter (A-Z capital+small pair) and number (0-10) stroke skeletons are
 authored as polylines in `content/glyphs.ts` (`digitStrokes`/`letterStrokes`), shape strokes in
