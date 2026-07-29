@@ -1883,7 +1883,15 @@ function renderTracing(firstActivity) {
       // Push the top/base lines out by half the drawn band so the letters sit
       // BETWEEN the lines (band edge just touches them, never spilling over).
       const half = drawBand / 2;
-      const lineX0 = ox + 26 * scale, lineX1 = ox + (1000 - 26) * scale;
+      // Span the ruled lines across the ACTUAL glyph width (so a long name's
+      // lines reach both ends of the name), but never shorter than the 0..1000
+      // box — a single letter/number keeps full-width notebook lines.
+      let gx0 = 1e9, gx1 = -1e9;
+      for (const s of strokes) for (const p of s) { if (p.x < gx0) gx0 = p.x; if (p.x > gx1) gx1 = p.x; }
+      const lpad = half + 34;
+      const dx0 = Number.isFinite(gx0) ? Math.min(26, gx0 - lpad) : 26;
+      const dx1 = Number.isFinite(gx1) ? Math.max(1000 - 26, gx1 + lpad) : 1000 - 26;
+      const lineX0 = ox + dx0 * scale, lineX1 = ox + dx1 * scale;
       const yAt = (dy) => dy * scale + oy;
       ctx.setLineDash([]);
       ctx.strokeStyle = 'rgba(120, 150, 200, 0.5)'; ctx.lineWidth = 2;
