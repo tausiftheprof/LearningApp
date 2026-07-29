@@ -317,7 +317,15 @@ fills the centre-line, glowing leader dot, ruled-between-lines, chime + star bur
 (`ActivityPickerScreen.tsx`). Metro only resolves **literal** `require()` paths, so all mobile
 glyph/section/shape-game art is enumerated in `apps/mobile/src/ui/tracingArt.ts`
 (`TRACING_ART`/`SECTION_ICONS`/`SHAPE_GAME_ART`, keyed by activity id / section key) — add new art
-there, not via a computed path. **Still demo-only** (mobile port pending): the new games
+there, not via a computed path; UI-button art lives in `ui/uiArt.ts` and photo-puzzle art in
+`ui/puzzleArt.ts`. **Also ported (July 2026, typecheck-clean, pending on-device verify):**
+**picture puzzle pieces** (`PuzzlePlayer` slices the real photo + ghost target for the 11 photo
+jigsaws, colour-tile fallback otherwise), the **clay UI buttons** (home/back top bar via `clayBtn`
+pattern, colouring Save, onboarding Next — `Theme.highContrast` gates the emoji fallback), the
+**non-covering Option-B completion** (`CompletionBanner` → slim toast + ~5s auto-return countdown +
+"Play again" remount via a `replayKey` in `ActivityPlayerScreen`; wired for puzzle/tracing/guided/
+game), and **per-theme home icons** (`THEME_TILE_ART` candy/storybook/aussie in `HomeScreen`).
+**Still demo-only** (mobile port pending): the new games
 (`feed-animal` new layout, `cut-along`, `number-hop`, number-locked `colour-cbn-*`), the Draw
 Magic-drawer panel, the **Guided Drawing "build a picture"** subjects (Grip/Cupcake/Car/Cake/
 Watermelon/Flower — one part traced at a time, each locking in filled with the child's colour;
