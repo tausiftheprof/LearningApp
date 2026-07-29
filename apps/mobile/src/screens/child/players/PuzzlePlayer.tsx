@@ -1,9 +1,10 @@
 import React, { useMemo, useRef, useState } from 'react';
-import { PanResponder, StyleSheet, Text, View } from 'react-native';
+import { Image, PanResponder, StyleSheet, Text, View } from 'react-native';
 import type { JigsawActivity } from '@littlegrip/core';
 import { PuzzleSession, puzzleConfigFor } from '@littlegrip/core';
 import type { Theme } from '../../../ui/theme';
 import { useAppStore } from '../../../state/appStore';
+import { puzzleArtFor } from '../../../ui/puzzleArt';
 import { CompletionBanner } from '../ActivityPlayerScreen';
 
 /**
@@ -21,6 +22,9 @@ export function PuzzlePlayer(props: {
   const { activity, theme } = props;
   const { profile } = useAppStore();
   const [board, setBoard] = useState({ w: 1, h: 1 });
+  // Owner picture puzzles slice a real image into pieces; procedural (SVG)
+  // jigsaws with no bundled photo fall back to the coloured-tile scaffold.
+  const picture = puzzleArtFor(activity.image);
 
   const cell = Math.min(board.w / activity.cols, (board.h * 0.6) / activity.rows);
   const config = useMemo(() => puzzleConfigFor(profile?.difficulty ?? 1), [profile]);
@@ -131,6 +135,22 @@ export function PuzzlePlayer(props: {
 
   return (
     <View style={styles.root} onLayout={(e) => setBoard({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })} {...pan.panHandlers}>
+      {/* Faint whole-picture target behind the slots, so the goal is visible */}
+      {picture && (
+        <View
+          pointerEvents="none"
+          style={{
+            position: 'absolute',
+            left: (board.w - cell * activity.cols) / 2,
+            top: 16,
+            width: cell * activity.cols,
+            height: cell * activity.rows,
+            opacity: 0.16,
+          }}
+        >
+          <Image source={picture} resizeMode="stretch" style={{ width: '100%', height: '100%', borderRadius: 10 }} />
+        </View>
+      )}
       {/* Board slots */}
       {pieces.map((p) => {
         const slot = slotCentre(p.row, p.col);
@@ -149,24 +169,53 @@ export function PuzzlePlayer(props: {
           />
         );
       })}
-      {/* Pieces */}
-      {pieces.map((p) => (
-        <View
-          key={p.id}
-          accessibilityLabel={p.placed ? 'Placed puzzle piece' : 'Puzzle piece'}
-          style={[styles.piece, {
-            width: cell - 10,
-            height: cell - 10,
-            left: p.x - cell / 2 + 5,
-            top: p.y - cell / 2 + 5,
-            backgroundColor: p.colour,
-            opacity: p.placed ? 1 : 0.95,
-            borderRadius: p.placed ? 6 : 14,
-          }]}
-        >
-          <Text style={styles.pieceLabel}>{p.row * activity.cols + p.col + 1}</Text>
-        </View>
-      ))}
+      {/* Pieces — a slice of the real picture, or a numbered colour tile */}
+      {pieces.map((p) =>
+        picture ? (
+          <View
+            key={p.id}
+            accessibilityLabel={p.placed ? 'Placed puzzle piece' : 'Puzzle piece'}
+            style={[styles.piece, {
+              width: cell,
+              height: cell,
+              left: p.x - cell / 2,
+              top: p.y - cell / 2,
+              borderRadius: p.placed ? 4 : 10,
+              overflow: 'hidden',
+              borderWidth: p.placed ? 0 : 2,
+              borderColor: '#FFFFFF',
+            }]}
+          >
+            <Image
+              source={picture}
+              resizeMode="stretch"
+              style={{
+                position: 'absolute',
+                width: cell * activity.cols,
+                height: cell * activity.rows,
+                left: -p.col * cell,
+                top: -p.row * cell,
+              }}
+            />
+          </View>
+        ) : (
+          <View
+            key={p.id}
+            accessibilityLabel={p.placed ? 'Placed puzzle piece' : 'Puzzle piece'}
+            style={[styles.piece, {
+              width: cell - 10,
+              height: cell - 10,
+              left: p.x - cell / 2 + 5,
+              top: p.y - cell / 2 + 5,
+              backgroundColor: p.colour,
+              opacity: p.placed ? 1 : 0.95,
+              borderRadius: p.placed ? 6 : 14,
+            }]}
+          >
+            <Text style={styles.pieceLabel}>{p.row * activity.cols + p.col + 1}</Text>
+          </View>
+        ),
+      )}
       <CompletionBanner visible={done} onDone={props.onDone} colour={theme.success} />
     </View>
   );
