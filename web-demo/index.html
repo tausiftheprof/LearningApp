@@ -1268,6 +1268,37 @@ async function completeActivity(activity, { attempts = 1, hintCount = 0, accurac
 /* ---------- shared UI helpers ---------- */
 function el(html) { const t = document.createElement('template'); t.innerHTML = html.trim(); return t.content.firstElementChild; }
 
+/* In-app modal dialogs. The demo is often viewed inside a sandboxed iframe
+   (e.g. the published artifact), where the browser silently ignores native
+   window.confirm()/alert() and confirm() just returns false — so a real
+   "Delete?" prompt never appeared and the button looked dead. These render an
+   overlay in our own DOM instead, so they work everywhere. */
+function uiDialog({ title, message, confirmLabel, cancelLabel, danger }) {
+  return new Promise((resolve) => {
+    const overlay = el(`<div style="position:fixed;inset:0;background:rgba(74,59,50,.5);display:grid;place-items:center;z-index:200;padding:20px"></div>`);
+    const card = el(`<div role="dialog" aria-modal="true" style="max-width:340px;width:100%;background:#fff;border-radius:18px;padding:20px;box-shadow:0 18px 46px rgba(40,30,25,.35);text-align:left"></div>`);
+    if (title) card.append(el(`<h3 style="margin:0 0 8px;font-size:18px;color:#2B2B2B">${title}</h3>`));
+    card.append(el(`<p style="margin:0 0 16px;font-size:14px;line-height:1.45;color:#52606D">${message}</p>`));
+    const btns = el(`<div style="display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap"></div>`);
+    const done = (v) => { overlay.remove(); resolve(v); };
+    if (cancelLabel !== null) {
+      const cancel = el(`<button class="primary-btn" style="background:#ECECEC;color:#333;margin:0">${cancelLabel || 'Cancel'}</button>`);
+      cancel.onclick = () => done(false);
+      btns.append(cancel);
+    }
+    const ok = el(`<button class="primary-btn ${danger ? 'danger' : 'teal'}" style="margin:0">${confirmLabel || 'OK'}</button>`);
+    ok.onclick = () => done(true);
+    btns.append(ok);
+    card.append(btns);
+    overlay.append(card);
+    overlay.addEventListener('click', (e) => { if (e.target === overlay && cancelLabel !== null) done(false); });
+    document.body.append(overlay);
+    ok.focus();
+  });
+}
+function uiConfirm(message, opts = {}) { return uiDialog({ message, ...opts }); }
+function uiAlert(message, opts = {}) { return uiDialog({ message, cancelLabel: null, ...opts }); }
+
 /* Home button: a single tap goes home (owner direction, July 2026 — the old
    1.2s press-and-hold read as broken). Also fires on pointerup so it works
    even when a drawing surface has captured the pointer stream. */
@@ -5103,7 +5134,7 @@ function renderParent(section) {
         }
         const del = el(`<button class="primary-btn danger" style="min-height:34px;padding:4px 12px;font-size:13px;margin:0" aria-label="Delete ${pr.nickname}">🗑 Delete</button>`);
         del.onclick = async () => {
-          if (!confirm(`Remove ${pr.nickname}? This permanently deletes ${pr.nickname}’s profile, progress, rewards and saved artwork from this device. This cannot be undone.`)) return;
+          if (!(await uiConfirm(`This permanently deletes ${pr.nickname}’s profile, progress, rewards and saved artwork from this device. This cannot be undone.`, { title: `Remove ${pr.nickname}?`, confirmLabel: '🗑 Delete', danger: true }))) return;
           await LH.deleteAllChildData(repos, pr.id);
           const remaining = await repos.profiles.getAll();
           if (state.profile?.id === pr.id) {
@@ -5137,7 +5168,7 @@ function renderParent(section) {
       const add = el(`<button class="primary-btn teal" style="margin:0">Add child</button>`);
       add.onclick = async () => {
         const problems = LH.validateProfileInput({ nickname: input.value, ageBand: band });
-        if (problems.length) { alert('Please use a simple nickname (no emails or phone numbers).'); return; }
+        if (problems.length) { await uiAlert('Please use a simple nickname (no emails or phone numbers).'); return; }
         const pr = LH.createProfile({ nickname: input.value, ageBand: band }, 'profile-' + Date.now(), Date.now());
         await repos.profiles.save(pr);
         await repos.rewards.save(pr.id, LH.emptyRewardsState(todayKey()));
@@ -5310,7 +5341,7 @@ function renderParent(section) {
     const del = el(`<button class="primary-btn danger">Delete all child data</button>`);
     del.onclick = async () => {
       if (!state.profile) return;
-      if (!confirm('Delete all child data? This permanently removes the profile, progress, rewards and all saved artwork. This cannot be undone.')) return;
+      if (!(await uiConfirm('This permanently removes the profile, progress, rewards and all saved artwork. This cannot be undone.', { title: 'Delete all child data?', confirmLabel: 'Delete everything', danger: true }))) return;
       const summary = await LH.deleteAllChildData(repos, state.profile.id);
       const clean = await LH.verifyNoChildDataRemains(repos, state.profile.id);
       localStorage.removeItem(LS_KEY);
@@ -5320,11 +5351,11 @@ function renderParent(section) {
       state.daily = null;
       state.account = LH.emptyAccountState();
       await repos.account.clear();
-      alert(`Deleted and verified (${clean ? 'no child data remains' : 'verification failed'}):\n` +
-        `• profile: ${summary.profileDeleted ? 'removed' : 'was already gone'}\n` +
-        `• progress records: ${summary.progressRecordsDeleted}\n` +
-        `• artwork: ${summary.artworkDeleted}\n` +
-        `• rewards and screen-time ledger: cleared`);
+      await uiAlert(`Deleted and verified (${clean ? 'no child data remains' : 'verification failed'}):<br>` +
+        `• profile: ${summary.profileDeleted ? 'removed' : 'was already gone'}<br>` +
+        `• progress records: ${summary.progressRecordsDeleted}<br>` +
+        `• artwork: ${summary.artworkDeleted}<br>` +
+        `• rewards and screen-time ledger: cleared`, { title: 'Done' });
       navigate({ name: 'onboarding' });
     };
     body.append(del);
