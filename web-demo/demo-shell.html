@@ -1437,7 +1437,7 @@ function renderPicker(category) {
     else if (a.type === 'colouring') imgName = (/^colour-([a-z]+)/.exec(a.id) || [])[1] || null;
     else if (category === 'draw-dotdot') imgName = DOTDOT_ICON[a.id] || imageNameFromRef(a.params?.image || '');
     else if (a.type === 'game' && a.template === 'feed-animal') imgName = imageNameFromRef(a.params?.open || '');
-    else if (a.type === 'game' && a.template === 'cut-along') imgName = 'cut-scissors-open';
+    else if (a.type === 'game' && a.template === 'cut-along') imgName = imageNameFromRef(a.params?.image || '');
     else if (a.type === 'game' && a.template === 'number-hop') imgName = 'hop-stone';
     const hasPicture = (n) => Boolean(n && (IMAGES[n] || RASTER_IMAGES[n]));
     // Games without their own art fall back to a per-game emoji, never the
@@ -1463,8 +1463,9 @@ function renderPicker(category) {
         ? `<span class="tile-illo" aria-hidden="true">${imgHtml(imgName, 62)}</span>`
         : `<span class="emoji">${(a.type === 'game' && (GAME_ICON[a.id] || GAME_EMOJI[a.template])) || emojiFor[a.category]}</span>`);
     // Hide the redundant name under bubbles whose picture already says it all:
-    // puzzles, letter/number tracing, and both Colour lists (owner direction).
-    const showLabel = !['puzzles', 'tracing-letters', 'tracing-numbers', 'colour-bynum', 'colour-yourway'].includes(category);
+    // puzzles, letter/number tracing, both Colour lists, and the games lists
+    // (games-sort/count/pattern/hands) — owner direction, picture-forward tiles.
+    const showLabel = !(String(category).startsWith('games-') || ['puzzles', 'tracing-letters', 'tracing-numbers', 'colour-bynum', 'colour-yourway'].includes(category));
     // Tracing glyphs float without the coloured circle (owner direction) — just
     // the clay letter/number/shape art, keeping the bob/pop/sparkle.
     const bare = ['tracing-letters', 'tracing-numbers', 'tracing-shapes'].includes(category);
