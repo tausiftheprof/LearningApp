@@ -134,7 +134,12 @@ advertising-ID permissions.
   desktop viewing, but on phones / small or short viewports (`@media (max-width: 900px), (max-height:
   700px)`) it goes **full-bleed** — the header/engine-badges/footer chrome is hidden and `.device`
   fills `100dvh` — so every contain-fit activity centres and auto-sizes to the real screen (owner
-  direction, July 2026). Keep that when touching the shell layout.
+  direction, July 2026). Keep that when touching the shell layout. Two things that only bite on the
+  now-wider full-bleed screen: **bubble-grid columns are capped** (`repeat(auto-fit, minmax(…, 172px))`
+  + `justify-content: center`), not `1fr` — otherwise a handful of tiles stretch edge-to-edge into one
+  squashed row; and **`renderGuidedBuild`'s `fit()` centres the picture's own bounding box** in the
+  space left of the colour rail (reserves `railW`/`stripH`), not the raw 0..1000 box, so an
+  off-centre-authored subject (or the rail) doesn't shove the drawing to one side.
 
 Because the mobile app and the web demo are two independent renderers of the same
 `@littlegrip/core` engines, a new feature typically touches: one core module (+ its
@@ -268,7 +273,12 @@ section** (letters / numbers / shapes), wrapping after the last, with no "Home" 
 them (the top-bar home button is the exit). Behind letters/numbers/name the player draws ruled
 "notebook" lines (`tracingGuideLines` returns the top/mid/base y in design space). **Trace-name**
 is a runtime-built activity (`nameStrokes(nickname)` lays the child's own name out on the baseline)
-— it is not in the static pack, so each renderer builds it from the active profile. The
+— it is not in the static pack, so each renderer builds it from the active profile. **`nameStrokes`
+lays every letter at FULL single-letter size (`s = 0.5`), NOT a width-fit scale** — capitals must reach
+the top ruled line and the band must keep the single-letter proportion, so a long name is simply wider
+in design space and the renderer's content-bounds `fit()` shrinks the whole thing uniformly (the ruled
+lines share the transform, so the capital stays on the top line at any size). Don't reintroduce a
+`min(0.5, AVAIL_W/total)` scale — that floats the capital at the midline and makes the band look chunky. The
 `tracingConfigFor` widths above control how thick the traceable *band* is (the flat seamless grey
 band the child colours in), while the **ink** is a single theme-accent colour (`ink = accent`, the
 active theme's accent — no colour picker; that was removed) drawn thinner than the band and, crucially,

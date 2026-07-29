@@ -247,7 +247,7 @@
   /* ---- Bubble tiles (owner-approved): round balloon tiles + plain-text names,
      a gentle bob, and a pop + sparkle on tap. Used on every "pick something"
      grid (games, choosers, tracing lists). ---- */
-  .bubble-grid { flex: 1; overflow-y: auto; display: grid; grid-template-columns: repeat(auto-fit, minmax(118px, 1fr)); gap: clamp(12px, 3vw, 26px) clamp(8px, 2.4vw, 18px); justify-items: center; padding: 6px 4px 20px; align-content: start; }
+  .bubble-grid { flex: 1; overflow-y: auto; display: grid; grid-template-columns: repeat(auto-fit, minmax(118px, 172px)); gap: clamp(12px, 3vw, 26px) clamp(10px, 2.4vw, 22px); justify-items: center; justify-content: center; padding: 6px 4px 20px; align-content: start; }
   .bubble-wrap { display: flex; flex-direction: column; align-items: center; gap: 7px; width: 100%; }
   .bubble {
     position: relative; width: clamp(96px, 22vw, 138px); aspect-ratio: 1; border: none; border-radius: 50%;
@@ -269,7 +269,7 @@
   .bubble.bare .tile-illo .lg-img, .bubble.bare .tile-illo svg { width: clamp(72px, 17vw, 118px) !important; height: clamp(72px, 17vw, 118px) !important; filter: drop-shadow(0 6px 8px rgba(74,59,50,0.2)); }
   .bubble.bare .glyph-big { filter: drop-shadow(0 4px 5px rgba(74,59,50,0.18)); }
   /* roomier grid for floating glyphs so they don't look squished */
-  .bubble-grid.glyph-grid { grid-template-columns: repeat(auto-fit, minmax(128px, 1fr)); gap: clamp(22px, 4.5vw, 44px) clamp(16px, 3.5vw, 34px); padding: 16px 10px 26px; }
+  .bubble-grid.glyph-grid { grid-template-columns: repeat(auto-fit, minmax(128px, 184px)); gap: clamp(22px, 4.5vw, 44px) clamp(16px, 3.5vw, 34px); padding: 16px 10px 26px; }
   .sec-toggle { margin-left: auto; border: 2px solid rgba(74,59,50,.15); background: #fff; color: var(--tile-ink, #4A3B32); font-family: inherit; font-weight: 800; font-size: 13px; padding: 8px 14px; border-radius: 999px; cursor: pointer; box-shadow: 0 3px 8px rgba(74,59,50,.12); }
 
   /* ---- Rewards section (owner-approved mock): star jar, trophies, sticker book, certificate ---- */
@@ -2143,6 +2143,17 @@ function renderGuidedBuild(activity) {
   const done = new Array(steps.length).fill(false);
   const partColour = new Array(steps.length).fill(null);
 
+  // Design-space bounding box of the whole picture — the fit centres THIS, not the
+  // 0..1000 authoring box, so a subject authored off-centre (and the right colour
+  // rail) never leaves the drawing shoved to one side.
+  const CB = (() => {
+    let minx = 1e9, maxx = -1e9, miny = 1e9, maxy = -1e9;
+    for (const st of steps) for (const stroke of st.strokes) for (const p of stroke) {
+      minx = Math.min(minx, p.x); maxx = Math.max(maxx, p.x); miny = Math.min(miny, p.y); maxy = Math.max(maxy, p.y);
+    }
+    return { minx, maxx, miny, maxy };
+  })();
+
   const PALETTE = ['#EF5350', '#FF8A65', '#FFCA28', '#66BB6A', '#26A69A', '#42A5F5', '#7E57C2', '#EC407A', '#8D6E63', '#FFFFFF'];
   let colour = PALETTE[3];
   let stepIndex = 0, strokeIndex = 0, finished = false;
@@ -2217,8 +2228,16 @@ function renderGuidedBuild(activity) {
     const r = stage.getBoundingClientRect();
     canvas.width = r.width * devicePixelRatio; canvas.height = r.height * devicePixelRatio;
     ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
-    const side = Math.min(r.width, r.height);
-    scale = side / 1000; ox = (r.width - side) / 2; oy = (r.height - side) / 2;
+    // Reserve the top step-strip and the right colour rail, then contain-fit the
+    // picture's own bounding box (with a margin) centred in what's left.
+    const railW = 62, stripH = 52, margin = 22;
+    const boxL = margin, boxR = r.width - railW - margin;
+    const boxT = stripH, boxB = r.height - margin;
+    const availW = Math.max(60, boxR - boxL), availH = Math.max(60, boxB - boxT);
+    const cw = Math.max(1, CB.maxx - CB.minx), ch = Math.max(1, CB.maxy - CB.miny);
+    scale = Math.min(availW / cw, availH / ch);
+    ox = boxL + (availW - cw * scale) / 2 - CB.minx * scale;
+    oy = boxT + (availH - ch * scale) / 2 - CB.miny * scale;
     paint();
   }
 

@@ -225,8 +225,13 @@ export function nameStrokes(name: string): Point[][] {
   });
   const GAP = 170; // authored-space gap between letters (roomy, for chunky fingers)
   const totalW = bounds.reduce((a, b) => a + b.w, 0) + GAP * (glyphs.length - 1);
-  const AVAIL_W = 940;
-  const s = Math.min(0.5, AVAIL_W / totalW); // never larger than the letter activities
+  // Lay each letter out at its FULL single-letter size (0.5) so capitals reach the
+  // top ruled line and the corridor band keeps the same proportion as the
+  // letter activities. A longer name is simply wider in design space; the renderer
+  // content-fits the whole name (glyph strokes + the ruled-line span) into the
+  // stage, shrinking it uniformly — so it never distorts the glyphs or leaves the
+  // capital floating at the midline the way a width-fit scale did.
+  const s = 0.5;
   const base = 660;
   let x = 500 - (totalW * s) / 2; // centre the whole name
   const out: Point[][] = [];
