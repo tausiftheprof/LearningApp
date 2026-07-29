@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import type { AgeBand } from '@littlegrip/core';
 import { AGE_BANDS, createProfile, validateProfileInput } from '@littlegrip/core';
 import { useAppStore } from '../state/appStore';
 import { parentTheme } from '../ui/theme';
+import { UI_ART } from '../ui/uiArt';
 import { ParentRow, PrimaryButton } from '../ui/components';
 
 /**
@@ -87,7 +88,9 @@ export function OnboardingScreen(): React.JSX.Element {
               {error}
             </Text>
           )}
-          <PrimaryButton label="Next" theme={theme} onPress={() => setStep('privacy')} />
+          <Pressable accessibilityRole="button" accessibilityLabel="Next" onPress={() => setStep('privacy')} style={styles.nextClay}>
+            <Image source={UI_ART.next} resizeMode="contain" style={{ width: 84, height: 84 }} />
+          </Pressable>
         </View>
       )}
 
@@ -123,4 +126,5 @@ const styles = StyleSheet.create({
   },
   radio: { fontSize: 22, color: '#2F6F62' },
   error: { color: '#B3261E', fontSize: 15, marginTop: 8 },
+  nextClay: { alignSelf: 'center', marginTop: 14 },
 });

@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { GestureResponderEvent } from 'react-native';
 import { Canvas, Circle, Group, LinearGradient, Path, Skia, useCanvasRef, vec } from '@shopify/react-native-skia';
 import type { ColouringActivity } from '@littlegrip/core';
@@ -7,6 +7,7 @@ import { PALETTES } from '@littlegrip/core';
 import { useAppStore } from '../../../state/appStore';
 import { getRepositories } from '../../../storage/db';
 import type { Theme } from '../../../ui/theme';
+import { UI_ART } from '../../../ui/uiArt';
 import { CompletionBanner } from '../ActivityPlayerScreen';
 
 const DESIGN = 1000;
@@ -424,8 +425,12 @@ function RegionColouringPlayer(props: {
 
         {/* Save + start-again, bottom-left (owner direction) */}
         <View style={styles.actions}>
-          <Pressable accessibilityRole="button" accessibilityLabel="Save my picture" onPress={() => void saveArtwork()} style={styles.actionBtn}>
-            <Text style={styles.actionIcon}>💾</Text>
+          <Pressable accessibilityRole="button" accessibilityLabel="Save my picture" onPress={() => void saveArtwork()} style={props.theme.highContrast ? styles.actionBtn : undefined}>
+            {props.theme.highContrast ? (
+              <Text style={styles.actionIcon}>💾</Text>
+            ) : (
+              <Image source={UI_ART.save} resizeMode="contain" style={{ width: 54, height: 54 }} />
+            )}
           </Pressable>
           <Pressable accessibilityRole="button" accessibilityLabel="Start again" onPress={resetAll} style={styles.actionBtn}>
             <Text style={styles.actionIcon}>🗑️</Text>
