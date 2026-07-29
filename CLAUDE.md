@@ -58,7 +58,12 @@ keep that cheap:
   background, label bg regions, drop every region larger than ~220px (removes the exterior *and* the
   enclosed holes) while small clay highlights survive; feather one ring; then trim/cap/save. Verify by
   compositing over a solid colour and viewing. Ask the owner to enable "transparent background" on
-  export to skip all this.
+  export to skip all this — the later home-icon sets (the `Option 1/2/3` uploads → `sb-*`/`au-*`/
+  `tile-games-play`) already shipped with real alpha, so those just needed `trim()` +
+  `resize({ fit: 'inside' })`, no flood-fill. **Clean up raw uploads once processed**: the
+  messy-named originals (`Option N icon - *.png`, root `Tracing - N.png`) are redundant after they're
+  saved under clean keys — `git rm` them (history keeps a copy) so they don't bloat the repo or the
+  inlined demo bundle (`build.mjs` inlines every raster in `assets/images/`).
 
 ## Commands
 
@@ -201,18 +206,35 @@ When authoring targets, put each point on/near the printed digit — the fill ch
 ~4.5% neighbourhood around the target (the digit itself is ink and never flooded), and taps on
 ink hop to the nearest open pixel. Wrong-number/background taps are spoken-rejected, never filled.
 
-**Game-completion pattern** (owner direction): **no end-of-game popup** (July 2026) — a generic game
-finishing plays its star burst + chime and then **auto-returns to the games list on its own**
-(`renderGame`'s `finish()` navigates back to `pickerCategory` after ~1.2s; the old `completionBanner`
-with Home is gone from the game path). Games with a **bespoke** end card — **play again + back one
+**Cut-along** (Busy Hands): the child drags the scissors along a dotted line across a picture; on
+completion the picture splits in two. `params.line` is the wiggle style (`straight`/`wavy`/`zigzag`)
+and `params.orientation: 'vertical'` runs the cut **top-to-bottom** (splitting left/right) instead of
+the default left-to-right (splitting top/bottom). The two halves are clipped as **simple,
+complementary polygons** — mind the winding: each half must trace the cut path so its closing edges
+don't cross, or you get a self-intersecting bow-tie that clips the picture into a pinched "hourglass"
+(it looks pre-cut before a single snip). Activities: `toddler-cut-{car,cake,strawberry,cupcake,
+watermelon}` reuse the clay food/vehicle art; the `contentPack.test.ts` enumerates them, so adding
+one updates that expectation.
+
+**Activity-completion pattern** (owner direction, July 2026): **nothing covers the child's finished
+work.** The old `completionBanner` popped a full card (🎉 + Home) over the drawing/puzzle/glyph and hid
+it; it is retired from every activity — tracing, drawing/guided save, colour-by-number, flood-fill
+colouring, jigsaw and dot-to-dot now append a slim, non-covering **`doneToast`** ("🎉 All done!") that
+pins to the top, celebrates and fades on its own, leaving the artwork fully visible (the top bar's
+back/home handle navigation). Generic games still **auto-return** to the games list on their own
+(`renderGame`'s `finish()` after ~1.2s). Games with a **bespoke** end card — **play again + back one
 screen** — keep it (Feed the Animal is the reference; tracing's name-finish card is the same idea).
-The generic `completionBanner` (with Home) survives only on non-game flows.
-**Picker icons**: game tiles never use the category illustration or the old 🐣 chick — each
-template resolves its own art (feed → `params.open` character, cut → scissors, hop → lily-pad),
-else a **per-activity** override (`GAME_ICON`, keyed by id) or a per-template emoji (`GAME_EMOJI`).
-The old off-brand 🃏 joker card and the single ➡️ shared across every pattern game were replaced
-(July 2026) so no two tiles repeat and each reads as its own cute, on-theme icon; tile emoji are
-sized to fill the bubble like the clay art.
+Don't reintroduce a covering popup.
+**Picker icons**: game tiles never use the category illustration or the old 🐣 chick — each template
+resolves its own art (feed → `params.open` character, **cut → the activity's own `params.image`
+picture** — cake/car/strawberry/cupcake/watermelon, not the scissors — hop → lily-pad), else a
+**per-activity** override (`GAME_ICON`, keyed by id) or a per-template emoji (`GAME_EMOJI`). The
+**games-list pages hide tile labels** (`showLabel` false for any `games-*` category, alongside
+puzzles / letter+number tracing / both Colour lists) — picture-forward bubbles. The **Busy Hands
+group tile** (in `renderGameSections`) uses the scissors clay art via an optional `img` on its
+`GAME_GROUPS` entry (high-contrast falls back to the ✂️ glyph). The old off-brand 🃏 joker card and
+the single ➡️ shared across every pattern game were replaced (July 2026) so no two tiles repeat and
+each reads as its own cute, on-theme icon; tile emoji are sized to fill the bubble like the clay art.
 
 **Tracing glyphs & flow**: letter (A-Z capital+small pair) and number (0-10) stroke skeletons are
 authored as polylines in `content/glyphs.ts` (`digitStrokes`/`letterStrokes`), shape strokes in
@@ -282,10 +304,26 @@ word-form-arithmetic gate with lockouts and auto-relock, gating the entire paren
 (`apps/mobile/src/screens/parent/`), which itself provides screen-time controls, the deletion
 flow, and the optional (off-by-default) cloud-sync account settings.
 
+**Grown-ups area layout** (owner direction, July 2026, demo `renderParent`): a Family Link pattern —
+a **child-tinted zone** (badge, avatar, name, level pill, child-switcher chips, stats, and that
+child's rows: Progress, Screen time, Saved artwork, Settings) bounds everything about the selected
+child; a **"General app settings"** divider + a "this device" note then separate the account rows
+(Privacy & data, Cloud backup & sync, Subscription, Help) on neutral ground, so account settings
+don't read as per-child. The four per-child config screens fold into one **Settings for [Name]** page
+(difficulty, sound, voice, theme, accessibility). A dedicated **Children** screen (reached via
+"＋ Add / manage") lists each child with **Switch** and **Delete** — delete runs
+`deletion.deleteAllChildData`, then re-activates a remaining child or returns to onboarding when the
+last one goes. (Demo-first; mobile parent screens unchanged so far.)
+
 The child Home is **age-adaptive**: `home/homeLayout.ts`'s `homeTilesForAge(ageBand)` returns the
 ordered set of doors for a band (fewest, largest tiles for `2-3`; more for `3-5`/`5-7`), and both
 renderers consume it, so the home content always matches the profile. Tiles are icon + label only
-(no per-tile subtitle) to keep reading load off pre-readers.
+(no per-tile subtitle) to keep reading load off pre-readers. Home-tile artwork is **per-theme**
+(`THEME_TILE_PHOTOS` in `demo-shell.html`, July 2026): every theme uses the same finalised floating
+capped-tile layout (the "Option 2" look), only the icon set differs — Candy Clouds keeps its clay
+tiles (Games tile → the "Play" badge `tile-games-play`), Soft Storybook uses the `sb-*` set, Little
+Aussie Adventure the Australian-animal `au-*` set. High-contrast mode falls back to emoji medallions.
+(Demo-first; mobile home still ships only the Candy set.)
 
 **Theme reaches the inside screens too** (not just Home): the demo's `render()` publishes the active
 theme onto `#app` as CSS custom properties — `--accent`, `--success`, `--tile-ink` (high-contrast
