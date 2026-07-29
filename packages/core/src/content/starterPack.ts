@@ -343,6 +343,15 @@ const puzzleActivities: Activity[] = [
   photoJigsaw('puzzle-photo-rabbit', 'Rabbit Puzzle', 'puzzle-rabbit', ['2-3', '3-5', '5-7'], 'animals'),
   photoJigsaw('puzzle-photo-unicorn', 'Unicorn Puzzle', 'puzzle-unicorn', ['2-3', '3-5', '5-7'], 'fairy-tales'),
   photoJigsaw('puzzle-photo-whale', 'Whale Puzzle', 'puzzle-whale', ['2-3', '3-5', '5-7'], 'underwater'),
+  // More owner clay-art puzzles (July 2026): the Feed/Cut characters composited
+  // onto soft pastel backgrounds (assets/images/puzzle-<key>.png).
+  photoJigsaw('puzzle-photo-cupcake', 'Cupcake Puzzle', 'puzzle-cupcake', ['2-3', '3-5', '5-7'], 'treats'),
+  photoJigsaw('puzzle-photo-strawberry', 'Strawberry Puzzle', 'puzzle-strawberry', ['2-3', '3-5', '5-7'], 'fruit'),
+  photoJigsaw('puzzle-photo-watermelon', 'Watermelon Puzzle', 'puzzle-watermelon', ['2-3', '3-5', '5-7'], 'fruit'),
+  photoJigsaw('puzzle-photo-kangaroo', 'Kangaroo Puzzle', 'puzzle-kangaroo', ['2-3', '3-5', '5-7'], 'animals'),
+  photoJigsaw('puzzle-photo-grip', 'Grip Puzzle', 'puzzle-grip', ['2-3', '3-5', '5-7'], 'mascot'),
+  photoJigsaw('puzzle-photo-car', 'Car Puzzle', 'puzzle-car', ['2-3', '3-5', '5-7'], 'vehicles'),
+  photoJigsaw('puzzle-photo-cake', 'Cake Puzzle', 'puzzle-cake', ['2-3', '3-5', '5-7'], 'treats'),
 ];
 
 /* ---------- Games: 10 toddler + 10 preschool + 10 logic (FR-008..FR-010) ---------- */
