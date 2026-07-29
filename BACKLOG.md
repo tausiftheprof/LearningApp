@@ -77,11 +77,13 @@ swap in cute art whenever ready.
   `CompletionBanner` is now a slim toast + ~5s auto-return countdown + "Play again" (remount via a
   `replayKey` in `ActivityPlayerScreen`, wired for puzzle/tracing/guided/game); (4) **clay Save**
   (colouring) + **onboarding Next**; (5) **per-theme home icons** (`THEME_TILE_ART`
-  candy/storybook/aussie in `HomeScreen`). **Still pending (large, needs device to get right):** the
-  labelled game-group tiles + Little Games chooser, new game players (`cut-along`, `number-hop`),
-  Guided Drawing build-a-picture rewrite (still the whale pilot), Colour-by-Numbers number-locked
-  line-art pipeline, and the Draw Magic-drawer panel. Build to verify: `eas build -p android
-  --profile preview` (owner's machine).
+  candy/storybook/aussie in `HomeScreen`); (6) **Guided Drawing build-a-picture** — `GuidedDrawingPlayer`
+  rewritten to the part-by-part trace→fill mechanic reading `guidedBuilds` (replaces the removed whale
+  pilot); (7) **Number Path Hop** game (`number-hop` registered + `NumberHopGame`). **Still pending
+  (large, complex interactions — best done with device feedback):** `cut-along` (drag-to-split),
+  Colour-by-Numbers number-locked line-art, the Draw Magic-drawer panel, and the labelled game-group
+  tiles + Little Games chooser. Build to verify: `eas build -p android --profile preview` (owner's
+  machine).
 - [x] **End-of-activity card → Option B (auto-return + replay), non-covering.** Owner picked Option B
   from the mockup (artifact `382698d1-c693-4ed5-9a83-9005bbeb6cb0`). The big covering
   `.banner.name-done` card is gone from all four bespoke end screens — tracing **section-complete**,
