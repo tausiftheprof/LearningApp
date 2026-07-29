@@ -2605,18 +2605,29 @@ function renderGuidedBuild(activity) {
     });
     if (!finished) {
       const step = steps[stepIndex];
-      // ghost the whole current part lightly, then the active stroke on top
-      drawPart(step, { line: 'rgba(120,108,102,0.30)', width: 3 });
-      const active = step.strokes[strokeIndex];
+      const partC = step.fixedColour || colour;   // colour finished strokes fill with
       ctx.lineCap = ctx.lineJoin = 'round';
-      // A soft fixed-width halo hints the line to follow — kept in screen pixels
-      // (not the engine's design-space tolerance) so tiny parts like the cherry
-      // or an eye don't get swallowed by a giant grey disc.
+      // Colour EACH stroke the moment it's traced — a multi-part step (two wheels,
+      // two windows) must colour the first one in immediately, not wait for the
+      // whole step. Strokes not yet reached stay a faint ghost.
+      step.strokes.forEach((stroke, idx) => {
+        if (idx < strokeIndex) {
+          pathFor(stroke);
+          if (step.fill) { ctx.closePath(); ctx.fillStyle = partC; ctx.fill(); ctx.strokeStyle = 'rgba(80,70,66,0.28)'; ctx.lineWidth = 2 * scale; ctx.stroke(); }
+          else { ctx.strokeStyle = partC; ctx.lineWidth = 11 * scale; ctx.stroke(); }
+        } else {
+          pathFor(stroke); ctx.strokeStyle = 'rgba(120,108,102,0.30)'; ctx.lineWidth = 3; ctx.stroke();
+        }
+      });
+      // The active stroke on top: a soft fixed-width halo hints the line to follow
+      // (screen pixels, not the engine's design tolerance, so tiny parts like an
+      // eye don't get swallowed), then the coloured guide line + leader dot.
+      const active = step.strokes[strokeIndex];
+      const accent = getComputedStyle(app).getPropertyValue('--accent').trim() || '#FF8A65';
       pathFor(active);
       ctx.strokeStyle = 'rgba(210, 200, 196, 0.75)';
       ctx.lineWidth = 15;
       ctx.stroke();
-      const accent = getComputedStyle(app).getPropertyValue('--accent').trim() || '#FF8A65';
       pathFor(active);
       ctx.strokeStyle = step.fixedColour || accent;
       ctx.lineWidth = 4;
@@ -2679,7 +2690,7 @@ function renderGuidedBuild(activity) {
   // Test seam: jump to a step so headless checks can inspect the colour rail on a
   // fixed-colour part without hand-tracing every earlier part.
   if (window.__lgTest) window.__lgTest.guided = {
-    fixed: () => steps.map((s, i) => ({ i, label: s.label, fixed: Boolean(s.fixedColour) })),
+    fixed: () => steps.map((s, i) => ({ i, label: s.label, fixed: Boolean(s.fixedColour), strokes: s.strokes.length })),
     goToStep: (i) => {
       finished = false;
       stepIndex = Math.max(0, Math.min(steps.length - 1, i));
@@ -2687,6 +2698,8 @@ function renderGuidedBuild(activity) {
       session = new LH.TracingSession(steps[stepIndex].strokes[0], config);
       updateStrip(); updateRail(); paint();
     },
+    completeStroke: () => advance(),
+    map: () => ({ scale, ox, oy, stepIndex, strokeIndex }),
   };
 
   function advance() {

@@ -315,8 +315,11 @@ demo renderer `renderGuidedBuild`. `fit()` centres the picture's own bounding bo
 of the colour rail — for EVERY subject, not the raw 0..1000 box. On a **fixed-colour step** (wheels,
 seeds, eyes…) the rail is NOT a dead grey palette — `updateRail` shows a **single lively swatch** of
 that set colour (idle pulse + `pop` bounce/`playPop` on touch) so a child feels it respond instead of
-getting frustrated. Test seam `window.__lgTest.guided` (`fixed()`/`goToStep`) jumps steps for headless
-checks. Also the tracing clay-art **header** cue, and the tracing controls; the tracing
+getting frustrated. **Each stroke fills the instant it's traced**, not when the whole step finishes —
+a step with two strokes (two wheels, two windows) must colour the first one in immediately, so
+`paint()` colours strokes `< strokeIndex` of the current step (don't revert to filling only on step
+completion). Test seam `window.__lgTest.guided` (`fixed()`/`goToStep`/`completeStroke`/`map`) drives
+steps/strokes for headless checks. Also the tracing clay-art **header** cue, and the tracing controls; the tracing
 **fill is contiguous** on both surfaces now (a new `pathPosition` is accepted only within ~0.15 of
 `lastPos`, so a touch near the end can't flash-fill the glyph — this also enforces start-on-the-dot).
 Responsive grids on mobile size tiles/bubbles from `useWindowDimensions()` (viewport-driven columns,
