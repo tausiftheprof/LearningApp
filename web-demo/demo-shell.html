@@ -446,6 +446,16 @@
   }
   .name-done { background: var(--accent, #FF8A65); }
   .name-done-btns { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+  /* Slim, non-covering "all done" toast — celebrates without hiding the child's
+     finished drawing/puzzle/glyph (replaces the old covering completionBanner). */
+  .done-toast {
+    position: absolute; top: 12px; left: 50%; transform: translateX(-50%);
+    background: var(--success, #5DAE6A); color: #fff; font-weight: 800; font-size: 15px;
+    padding: 9px 20px; border-radius: 999px; box-shadow: 0 6px 16px rgba(74,59,50,0.22);
+    z-index: 6; pointer-events: none; opacity: 1; transition: opacity .4s ease, transform .4s ease;
+  }
+  .done-toast.gone { opacity: 0; transform: translateX(-50%) translateY(-8px); }
+  @media (prefers-reduced-motion: reduce) { .done-toast { transition: none; } }
   .name-done-btns button { margin-top: 8px; }
   .name-done .big { animation: pop-in 0.4s ease; }
   @keyframes pop-in { from { transform: scale(0.7); opacity: 0; } to { transform: scale(1); opacity: 1; } }
@@ -866,6 +876,16 @@ function completionBanner(onDone) {
   const b = el(`<div class="banner" role="status"><div class="big">🎉 ${LH.pickFeedback('completed')}</div><button>🏠 Home</button></div>`);
   b.querySelector('button').onclick = onDone;
   return b;
+}
+
+// A small, NON-covering celebration toast (owner direction, July 2026): the old
+// completionBanner popped a full card over the child's finished work and hid it.
+// This slim pill celebrates and fades on its own, leaving the artwork / puzzle /
+// glyph fully visible — the top bar's back + home handle navigation.
+function doneToast(text = '🎉 All done!') {
+  const t = el(`<div class="done-toast" role="status">${text}</div>`);
+  setTimeout(() => { t.classList.add('gone'); setTimeout(() => t.remove(), 420); }, 1900);
+  return t;
 }
 
 function targetPx() { return state.profile?.accessibility.largerTouchTargets ? '112px' : '96px'; }
@@ -1809,7 +1829,7 @@ function renderTracing(firstActivity) {
       speak('Hooray! You wrote your name! Amazing job!');
       stage.append(nameDoneCard());
     } else {
-      stage.append(completionBanner(onDone));
+      stage.append(doneToast());
     }
   }
 
@@ -2397,7 +2417,7 @@ function renderGuidedDrawing(activity) {
     await repos.artwork.save(drawingSession.toDocument('art-' + Date.now(), state.profile.id, Date.now()));
     const avg = guideScores.length ? Math.round(guideScores.reduce((x, y) => x + y, 0) / guideScores.length) : null;
     await completeActivity(activity, { attempts: 1, accuracyScore: avg });
-    stage.append(completionBanner(onDone));
+    stage.append(doneToast());
     persistSoon();
   }
 
@@ -2584,7 +2604,7 @@ function renderDrawing(activity) {
     if (!state.profile) return;
     await repos.artwork.save(session.toDocument('art-' + Date.now(), state.profile.id, Date.now()));
     await completeActivity(activity, {});
-    stage.append(completionBanner(onDone));
+    stage.append(doneToast());
     persistSoon();
   }
 
@@ -2838,7 +2858,7 @@ function renderColouringLineArt(activity) {
       speak('You coloured it all! ' + LH.pickFeedback('completed'));
       playChime();
       completeActivity(activity, {});
-      stage.append(completionBanner(onDone));
+      stage.append(doneToast());
     } else {
       swatch = { kind: 'solid', colour: cbnPlan[cbnStep].colour };
       speak(`Now number ${cbnPlan[cbnStep].number}!`);
@@ -2955,7 +2975,7 @@ function renderColouringLineArt(activity) {
     if (!done) {
       done = true;
       completeActivity(activity, { attempts: 1, accuracyScore: null });
-      stage.append(completionBanner(onDone));
+      stage.append(doneToast());
     }
   };
   resetBtn.onclick = () => {
@@ -3182,7 +3202,7 @@ function renderColouring(activity) {
     if (all && !done) {
       done = true;
       completeActivity(activity, { attempts, accuracyScore: byNumber ? Math.max(0, 100 - (attempts - 1) * 5) : null });
-      stage.append(completionBanner(onDone));
+      stage.append(doneToast());
     }
   }
   canvas.addEventListener('pointerdown', (e) => {
@@ -3234,7 +3254,7 @@ function renderColouring(activity) {
     if (!done) {
       done = true;
       completeActivity(activity, { attempts, accuracyScore: null });
-      stage.append(completionBanner(onDone));
+      stage.append(doneToast());
     }
   };
   resetBtn.onclick = () => {
@@ -3349,7 +3369,7 @@ function renderPuzzle(activity) {
       if (!p.placed) d.addEventListener('pointerdown', (e) => { dragging = p; draggingEl = d; d.setPointerCapture(e.pointerId); });
       stage.append(d);
     }
-    if (done) stage.append(completionBanner(onDone));
+    if (done) stage.append(doneToast());
   }
 
   stage.addEventListener('pointermove', (e) => {
@@ -4192,7 +4212,7 @@ function renderGame(activity) {
           if (nextIndex >= dots.length) {
             doneAll = true; draw();
             completeActivity(activity, { attempts });
-            stage.append(completionBanner(onDone));
+            stage.append(doneToast());
             return;
           }
           draw();
