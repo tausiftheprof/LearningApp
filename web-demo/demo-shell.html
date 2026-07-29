@@ -75,6 +75,20 @@
     position: relative;
   }
   @media (max-width: 700px) { .device { aspect-ratio: 3 / 4; } }
+  /* On phones / small or short screens the framed-demo chrome (header, engine
+     badges, footer) wastes most of the viewport and squeezes the activity into a
+     tiny box. Go full-bleed there so the app — and every centred, contain-fit
+     activity inside it — fills and auto-sizes to the screen. The framed look is
+     kept only on roomy desktops. */
+  @media (max-width: 900px), (max-height: 700px) {
+    body { padding: 0; min-height: 100vh; justify-content: stretch; }
+    header, footer, .status-strip { display: none !important; }
+    .device {
+      width: 100vw; height: 100vh; height: 100dvh;
+      max-width: none; max-height: none; aspect-ratio: auto;
+      border: none; border-radius: 0; box-shadow: none;
+    }
+  }
 
   footer {
     width: 100%; max-width: 1020px; margin-top: 14px;
@@ -456,21 +470,24 @@
   }
   .done-toast.gone { opacity: 0; transform: translateX(-50%) translateY(-8px); }
   @media (prefers-reduced-motion: reduce) { .done-toast { transition: none; } }
-  /* Option-B end-of-activity affordances — non-covering: a countdown "going back"
-     pill in one bottom corner, a big round replay button in the other. */
-  .done-auto { position: absolute; bottom: 14px; left: 14px; display: flex; align-items: center; gap: 11px;
-    background: rgba(255,255,255,.94); border-radius: 999px; padding: 7px 8px 7px 15px;
-    box-shadow: 0 8px 18px rgba(74,59,50,.2); z-index: 7; }
-  .done-auto .da-txt { font-size: 13px; font-weight: 800; color: #6a6076; }
-  .done-auto .da-ring { position: relative; width: 46px; height: 46px; flex: none; }
-  .done-auto .da-num { position: absolute; inset: 0; display: grid; place-items: center; font-size: 17px; font-weight: 800; color: var(--accent, #F17BA6); font-variant-numeric: tabular-nums; }
-  .done-replay { position: absolute; bottom: 12px; right: 14px; width: 66px; height: 66px; border-radius: 50%;
-    border: none; background: #fff; box-shadow: 0 8px 18px rgba(74,59,50,.26); cursor: pointer; padding: 0;
-    display: grid; place-items: center; z-index: 7; animation: doneReplayIn .42s cubic-bezier(.34,1.3,.5,1); }
-  .done-replay img { width: 82%; height: 82%; object-fit: contain; pointer-events: none; }
-  .done-replay:active { transform: scale(.92); }
-  @keyframes doneReplayIn { from { transform: scale(.5); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+  /* Option-B end-of-activity affordances — non-covering, CENTRED at the bottom:
+     a big, clearly-labelled "Play again" button (primary), with a small
+     countdown pill below it showing the auto-return. */
+  .done-actions { position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%);
+    display: flex; flex-direction: column; align-items: center; gap: 9px; z-index: 7; max-width: 92%; }
+  .done-replay { display: flex; align-items: center; gap: 11px; border: none; cursor: pointer; font-family: inherit;
+    background: #fff; border-radius: 999px; padding: 9px 24px 9px 12px;
+    box-shadow: 0 10px 24px rgba(74,59,50,.28); animation: doneReplayIn .42s cubic-bezier(.34,1.3,.5,1); }
+  .done-replay img { width: 46px; height: 46px; object-fit: contain; pointer-events: none; flex: none; }
+  .done-replay span { font-size: clamp(17px, 2.4vw, 21px); font-weight: 850; color: var(--accent, #F17BA6); white-space: nowrap; }
+  .done-replay:active { transform: scale(.95); }
+  @keyframes doneReplayIn { from { transform: scale(.6); opacity: 0; } to { transform: scale(1); opacity: 1; } }
   #app.reduced-motion .done-replay { animation: none; }
+  .done-auto { display: flex; align-items: center; gap: 8px; background: rgba(255,255,255,.86);
+    border-radius: 999px; padding: 4px 13px 4px 5px; box-shadow: 0 3px 10px rgba(74,59,50,.14); }
+  .done-auto .da-txt { font-size: 12.5px; font-weight: 700; color: #6a6076; white-space: nowrap; }
+  .done-auto .da-ring { position: relative; width: 28px; height: 28px; flex: none; }
+  .done-auto .da-num { position: absolute; inset: 0; display: grid; place-items: center; font-size: 12px; font-weight: 800; color: var(--accent, #F17BA6); font-variant-numeric: tabular-nums; }
   /* Parent area — Option 1 "Family Link" layout: a child-tinted zone bounds
      everything about the selected child; general settings sit outside it. */
   #app.parent-mode .kid-zone { background: var(--kz, #EAF3F1); border: 1px solid var(--kzl, #D8E6E2); border-radius: 16px; padding: 13px; display: flex; flex-direction: column; gap: 12px; }
@@ -959,32 +976,37 @@ function doneToast(text = '🎉 All done!') {
    another go can stay put — tapping it cancels the auto-return. The finished
    work stays fully visible the whole time. Shared by the tracing set-complete,
    Feed the Animal, Guided Drawing and name-tracing end screens. */
-function completionOptionB(stage, { replay, exit, toastText = '🎉 All finished!', exitLabel = 'Going back…', seconds = 3 }) {
+function completionOptionB(stage, { replay, exit, toastText = '🎉 All finished!', exitLabel = 'Going back…', seconds = 5 }) {
   stage.append(doneToast(toastText));
   const reduced = document.getElementById('app').classList.contains('reduced-motion');
   const R = 19, CIRC = 2 * Math.PI * R;
-  const wrap = el(`<div class="done-auto" role="status" aria-label="${exitLabel}">
-    <span class="da-txt">${exitLabel}</span>
-    <span class="da-ring">
-      <svg width="46" height="46" viewBox="0 0 46 46" aria-hidden="true">
-        <circle cx="23" cy="23" r="${R}" fill="none" stroke="rgba(74,59,50,.14)" stroke-width="5"/>
-        <circle class="da-arc" cx="23" cy="23" r="${R}" fill="none" stroke="var(--accent, #F17BA6)" stroke-width="5" stroke-linecap="round" transform="rotate(-90 23 23)" stroke-dasharray="${CIRC.toFixed(1)}" stroke-dashoffset="0"/>
-      </svg>
-      <span class="da-num">${seconds}</span>
-    </span>
-  </div>`);
   const art = RASTER_IMAGES['ui-replay'];
-  const replayBtn = el(`<button class="done-replay" aria-label="Play again">${art ? `<img alt="" src="${art}">` : '🔁'}</button>`);
-  const arc = wrap.querySelector('.da-arc'), num = wrap.querySelector('.da-num');
+  // Centred bottom stack: the big, clearly-labelled "Play again" button is the
+  // primary action; a smaller countdown pill below shows the auto-return.
+  const box = el(`<div class="done-actions">
+    <button class="done-replay" aria-label="Play again">${art ? `<img alt="" src="${art}">` : '🔁'}<span>Play again</span></button>
+    <div class="done-auto" role="status" aria-label="${exitLabel}">
+      <span class="da-ring">
+        <svg width="28" height="28" viewBox="0 0 46 46" aria-hidden="true">
+          <circle cx="23" cy="23" r="${R}" fill="none" stroke="rgba(74,59,50,.14)" stroke-width="5"/>
+          <circle class="da-arc" cx="23" cy="23" r="${R}" fill="none" stroke="var(--accent, #F17BA6)" stroke-width="5" stroke-linecap="round" transform="rotate(-90 23 23)" stroke-dasharray="${CIRC.toFixed(1)}" stroke-dashoffset="0"/>
+        </svg>
+        <span class="da-num">${seconds}</span>
+      </span>
+      <span class="da-txt">${exitLabel}</span>
+    </div>
+  </div>`);
+  const replayBtn = box.querySelector('.done-replay');
+  const arc = box.querySelector('.da-arc'), num = box.querySelector('.da-num');
   let cancelled = false, raf = 0;
-  const cleanup = () => { cancelled = true; if (raf) cancelAnimationFrame(raf); wrap.remove(); replayBtn.remove(); };
-  const doExit = () => { if (cancelled || !wrap.isConnected) return; cleanup(); exit(); };
+  const cleanup = () => { cancelled = true; if (raf) cancelAnimationFrame(raf); box.remove(); };
+  const doExit = () => { if (cancelled || !box.isConnected) return; cleanup(); exit(); };
   replayBtn.onclick = () => { if (cancelled) return; cleanup(); replay(); };
-  stage.append(wrap, replayBtn);
+  stage.append(box);
   if (reduced) { setTimeout(doExit, seconds * 1000); return; }
   const start = performance.now(), total = seconds * 1000;
   const tick = (now) => {
-    if (cancelled || !wrap.isConnected) return;
+    if (cancelled || !box.isConnected) return;
     const p = Math.min((now - start) / total, 1);
     arc.style.strokeDashoffset = (CIRC * p).toFixed(1);
     num.textContent = String(Math.max(1, Math.ceil(seconds * (1 - p))));

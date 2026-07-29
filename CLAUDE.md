@@ -130,7 +130,11 @@ advertising-ID permissions.
   parallel implementation of the UI in vanilla JS/canvas (`demo-shell.html`), used to preview and
   test features against the *real* core engines without an Expo toolchain. **Any change to a core
   engine or to `demo-shell.html` requires re-running `node web-demo/build.mjs`** or the demo goes
-  stale silently (no build step catches this).
+  stale silently (no build step catches this). The demo wraps the app in a framed "device" mock for
+  desktop viewing, but on phones / small or short viewports (`@media (max-width: 900px), (max-height:
+  700px)`) it goes **full-bleed** — the header/engine-badges/footer chrome is hidden and `.device`
+  fills `100dvh` — so every contain-fit activity centres and auto-sizes to the real screen (owner
+  direction, July 2026). Keep that when touching the shell layout.
 
 Because the mobile app and the web demo are two independent renderers of the same
 `@littlegrip/core` engines, a new feature typically touches: one core module (+ its
@@ -226,10 +230,11 @@ back/home handle navigation). Generic games still **auto-return** to the games l
 **name-tracing**, **Feed the Animal**, **Guided Drawing** — used to pop a big covering `.banner.name-done`
 card (owner: "covers half the screen"); they now share **`completionOptionB(stage, { replay, exit,
 toastText, exitLabel, seconds })`** ("Option B", owner-picked from mockup `382698d1-…`): the star burst +
-chime fire, a slim top toast celebrates, a bottom-corner **countdown ring** auto-returns to the picker
-after ~3s, and a big round **replay** button in the other corner (owner clay loop-arrows art,
-`assets/images/ui-replay.png`) lets a child stay and go again (tapping it cancels the auto-return). The
-helper guards against firing after navigation (`wrap.isConnected`) and honours reduced-motion (keeps the
+chime fire, a slim top toast celebrates, then a **centred bottom stack**: a big, clearly-labelled
+**"Play again"** button (owner clay loop-arrows art `assets/images/ui-replay.png` + text — owner wanted it
+prominent and named, not a bare corner icon) over a small **countdown pill** that auto-returns to the
+picker after **~5s** (`seconds` default 5). Tapping Play again cancels the auto-return. The
+helper guards against firing after navigation (`box.isConnected`) and honours reduced-motion (keeps the
 auto-return, drops the ring animation). **Don't reintroduce a covering popup** — `.banner.name-done` CSS
 is now dead. (Demo done; mobile port pending.)
 **Picker icons**: game tiles never use the category illustration or the old 🐣 chick — each template
