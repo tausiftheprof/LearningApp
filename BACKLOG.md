@@ -9,6 +9,20 @@ Status key: `[ ]` open · `[~]` in progress · `[x]` done (move to the bottom or
 
 ## Open
 
+- [ ] **Completion card → Option B (auto-return + replay), non-covering.** Owner picked Option B
+  from the mockup (artifact `382698d1-c693-4ed5-9a83-9005bbeb6cb0`). Replace the big covering
+  end-of-set card (`.banner.name-done` — the "🎉 You finished all the …! / 🔁 Play again / ⬅️ Back"
+  card) in all three bespoke end screens — **tracing section-complete** (`sectionDoneCard`), **Feed
+  the Animal** (`🍽️ Feed again` card), **Guided Drawing** (`✏️ Draw again` card) — with the Option-B
+  treatment: fire the star burst + chime, drop the slim non-covering top toast ("🎉 All finished!"),
+  then **auto-return to the picker after ~3s** via a small countdown ring, with a single floating
+  **🔁 replay** button so a child can stay and go again (cancels the auto-return). Finished work
+  stays fully visible (honours the "nothing covers the child's work" rule). **Blocked on owner art:**
+  the return/countdown icon needs to change from the placeholder — owner will supply the return icon
+  (drop into `assets/images/` under a clean key, e.g. `ui-return`/`ui-next`). Demo first
+  (`renderTracing`/`renderGuidedBuild`/feed renderer in `demo-shell.html` + the `.autoret`/ring
+  styling), then mobile port. Keep the generic quick-games auto-return untouched (already does this).
+
 - [ ] **Guided Drawing picker polish.** Two tweaks to the subject picker (demo `demo-shell.html`;
   mobile follows in the port item):
   - **Change the Flower icon** — the current Flower subject tile uses the wrong/placeholder icon;
