@@ -20,7 +20,9 @@ describe('starter content pack', () => {
 
   it('ships Cutting Practice and Number Path Hop games (owner art, July 2026)', () => {
     const cut = pack.activities.filter((a) => a.type === 'game' && a.template === 'cut-along');
-    expect(cut.map((a) => a.id).sort()).toEqual(['toddler-cut-car', 'toddler-cut-cake'].sort());
+    expect(cut.map((a) => a.id).sort()).toEqual(
+      ['toddler-cut-car', 'toddler-cut-cake', 'toddler-cut-strawberry', 'toddler-cut-cupcake', 'toddler-cut-watermelon'].sort(),
+    );
     for (const a of cut) {
       const p = (a as { params: Record<string, unknown> }).params;
       expect(typeof p.image).toBe('string');

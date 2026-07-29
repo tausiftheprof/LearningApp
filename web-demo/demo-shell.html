@@ -3951,6 +3951,8 @@ function renderGame(activity) {
       const openName = imageNameFromRef(params.scissorsOpen || '');
       const closedName = imageNameFromRef(params.scissorsClosed || '');
       const lineKind = params.line || 'straight';
+      const vertical = params.orientation === 'vertical';
+      const baseRot = vertical ? 180 : 90;
       const canvas = el(`<canvas class="stage" aria-label="Cut along the dotted line" style="touch-action:none"></canvas>`);
       stage.append(canvas);
       const ctx = canvas.getContext('2d');
@@ -3961,16 +3963,27 @@ function renderGame(activity) {
       const flecks = [];
 
       function buildPath() {
-        const x0 = irect.x + irect.w * 0.05, x1 = irect.x + irect.w * 0.95, ymid = irect.y + irect.h * 0.5, amp = irect.h * 0.13;
         const n = 48; path = [];
-        for (let i = 0; i <= n; i++) {
-          const t = i / n, x = x0 + (x1 - x0) * t; let y = ymid;
-          if (lineKind === 'wavy') y = ymid + Math.sin(t * Math.PI * 3) * amp;
-          else if (lineKind === 'zigzag') y = ymid + (Math.abs(((t * 3) % 1) - 0.5) * 4 - 1) * amp;
-          path.push({ x, y });
+        if (vertical) {
+          // Top-to-bottom cut down the middle (watermelon slice).
+          const y0 = irect.y + irect.h * 0.05, y1 = irect.y + irect.h * 0.95, xmid = irect.x + irect.w * 0.5, amp = irect.w * 0.13;
+          for (let i = 0; i <= n; i++) {
+            const t = i / n, y = y0 + (y1 - y0) * t; let x = xmid;
+            if (lineKind === 'wavy') x = xmid + Math.sin(t * Math.PI * 3) * amp;
+            else if (lineKind === 'zigzag') x = xmid + (Math.abs(((t * 3) % 1) - 0.5) * 4 - 1) * amp;
+            path.push({ x, y });
+          }
+        } else {
+          const x0 = irect.x + irect.w * 0.05, x1 = irect.x + irect.w * 0.95, ymid = irect.y + irect.h * 0.5, amp = irect.h * 0.13;
+          for (let i = 0; i <= n; i++) {
+            const t = i / n, x = x0 + (x1 - x0) * t; let y = ymid;
+            if (lineKind === 'wavy') y = ymid + Math.sin(t * Math.PI * 3) * amp;
+            else if (lineKind === 'zigzag') y = ymid + (Math.abs(((t * 3) % 1) - 0.5) * 4 - 1) * amp;
+            path.push({ x, y });
+          }
         }
         const cfg = { ...LH.tracingConfigFor(2), coverageToComplete: 0.9 };
-        cfg.corridorWidth = Math.max(38, irect.h * 0.16);
+        cfg.corridorWidth = Math.max(38, (vertical ? irect.w : irect.h) * 0.16);
         session = new LH.TracingSession(path, cfg);
         progress = 0;
       }
@@ -3983,7 +3996,7 @@ function renderGame(activity) {
         const w = iw * s, h = ih * s;
         irect = { x: (r.width - w) / 2, y: (r.height - h) / 2, w, h };
         buildPath();
-        if (!started && path[0]) { scissors.style.left = (path[0].x - 36) + 'px'; scissors.style.top = (path[0].y - 45) + 'px'; scissors.style.transform = 'rotate(90deg)'; }
+        if (!started && path[0]) { scissors.style.left = (path[0].x - 36) + 'px'; scissors.style.top = (path[0].y - 45) + 'px'; scissors.style.transform = 'rotate(' + baseRot + 'deg)'; }
         draw();
       }
       // A half of the picture, clipped along the cut line. k (0..1) is the
@@ -3992,16 +4005,24 @@ function renderGame(activity) {
       // slide, which read as the picture "breaking").
       function half(side, k) {
         const mid = path[Math.floor(path.length / 2)] || { x: irect.x + irect.w / 2, y: irect.y + irect.h / 2 };
-        const dir = side === 'top' ? -1 : 1;
+        const dir = (side === 'top' || side === 'left') ? -1 : 1;
         ctx.save();
         if (k > 0) {
-          ctx.translate(dir * k * Math.min(30, irect.w * 0.06), dir * k * Math.min(20, irect.h * 0.05));
+          if (vertical) ctx.translate(dir * k * Math.min(30, irect.w * 0.06), 0);
+          else ctx.translate(dir * k * Math.min(30, irect.w * 0.06), dir * k * Math.min(20, irect.h * 0.05));
           ctx.translate(mid.x, mid.y);
           ctx.rotate(dir * k * 0.11);
           ctx.translate(-mid.x, -mid.y);
         }
         ctx.beginPath();
-        if (side === 'top') {
+        if (vertical) {
+          // Left/right halves of a vertical cut — the region on one side of the
+          // path. Single simple polygon (down the path, out along the far edge).
+          const outX = side === 'left' ? irect.x - 60 : irect.x + irect.w + 60;
+          ctx.moveTo(outX, irect.y - 60);
+          for (let i = 0; i < path.length; i++) ctx.lineTo(path[i].x, path[i].y);
+          ctx.lineTo(outX, irect.y + irect.h + 60);
+        } else if (side === 'top') {
           ctx.moveTo(irect.x - 60, irect.y - 60); ctx.lineTo(irect.x + irect.w + 60, irect.y - 60);
           for (let i = path.length - 1; i >= 0; i--) ctx.lineTo(path[i].x, path[i].y);
         } else {
@@ -4020,7 +4041,7 @@ function renderGame(activity) {
       function draw() {
         const r = stage.getBoundingClientRect();
         ctx.clearRect(0, 0, r.width, r.height);
-        if (img.complete && img.naturalWidth) { half('top', splitK); half('bottom', splitK); }
+        if (img.complete && img.naturalWidth) { if (vertical) { half('left', splitK); half('right', splitK); } else { half('top', splitK); half('bottom', splitK); } }
         const cutIdx = Math.max(0, Math.floor(progress * (path.length - 1)));
         if (!done && cutIdx > 0) {
           // The cut opens progressively behind the blades: a widening sliver of
@@ -4094,7 +4115,7 @@ function renderGame(activity) {
       img.onload = fit;
       requestAnimationFrame(() => {
         fit();
-        if (scissors.animate) wig = scissors.animate([{ transform: 'rotate(90deg) scale(1)' }, { transform: 'rotate(90deg) scale(1.09)' }, { transform: 'rotate(90deg) scale(1)' }], { duration: 900, iterations: Infinity });
+        if (scissors.animate) wig = scissors.animate([{ transform: `rotate(${baseRot}deg) scale(1)` }, { transform: `rotate(${baseRot}deg) scale(1.09)` }, { transform: `rotate(${baseRot}deg) scale(1)` }], { duration: 900, iterations: Infinity });
       });
       if (window.ResizeObserver) new ResizeObserver(fit).observe(stage);
     },

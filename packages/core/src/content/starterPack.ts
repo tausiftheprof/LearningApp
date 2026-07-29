@@ -421,6 +421,20 @@ const games: GameSpec[] = [
     image: 'images/cut-cake.png', line: 'wavy',
     scissorsOpen: 'images/cut-scissors-open.png', scissorsClosed: 'images/cut-scissors-closed.png',
   } },
+  { id: 'toddler-cut-strawberry', title: 'Cut the strawberry', template: 'cut-along', category: 'toddler', ageBands: ['3-5', '5-7'], difficulty: 2, motorSkills: ['controlled-movement', 'holding-moving', 'bilateral'], minutes: 2, theme: 'food', params: {
+    image: 'images/feed-strawberry.png', line: 'straight',
+    scissorsOpen: 'images/cut-scissors-open.png', scissorsClosed: 'images/cut-scissors-closed.png',
+  } },
+  { id: 'toddler-cut-cupcake', title: 'Cut the cupcake', template: 'cut-along', category: 'toddler', ageBands: ['3-5', '5-7'], difficulty: 2, motorSkills: ['controlled-movement', 'holding-moving', 'bilateral'], minutes: 2, theme: 'food', params: {
+    image: 'images/feed-cupcake.png', line: 'straight',
+    scissorsOpen: 'images/cut-scissors-open.png', scissorsClosed: 'images/cut-scissors-closed.png',
+  } },
+  // Vertical slice (top-to-bottom) — the cut-along renderer splits left/right
+  // for orientation: 'vertical'.
+  { id: 'toddler-cut-watermelon', title: 'Slice the watermelon', template: 'cut-along', category: 'toddler', ageBands: ['3-5', '5-7'], difficulty: 2, motorSkills: ['controlled-movement', 'holding-moving', 'bilateral'], minutes: 2, theme: 'food', params: {
+    image: 'images/feed-watermelon.png', line: 'straight', orientation: 'vertical',
+    scissorsOpen: 'images/cut-scissors-open.png', scissorsClosed: 'images/cut-scissors-closed.png',
+  } },
   // Number Path Hop (owner art, July 2026): tap the lily-pad stones in number
   // order; the mascot hops from pad to pad.
   { id: 'toddler-number-hop', title: 'Hop the numbers', template: 'number-hop', category: 'toddler', ageBands: ['2-3', '3-5'], difficulty: 1, motorSkills: ['tapping'], minutes: 2, theme: 'nature', params: { max: 5, stone: 'images/hop-stone.png' } },
