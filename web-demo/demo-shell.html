@@ -4000,7 +4000,12 @@ function renderGame(activity) {
           ctx.moveTo(irect.x - 60, irect.y - 60); ctx.lineTo(irect.x + irect.w + 60, irect.y - 60);
           for (let i = path.length - 1; i >= 0; i--) ctx.lineTo(path[i].x, path[i].y);
         } else {
-          ctx.moveTo(irect.x - 60, irect.y + irect.h + 60); ctx.lineTo(irect.x + irect.w + 60, irect.y + irect.h + 60);
+          // Iterate the cut path right-to-left (same winding as the top half) so
+          // the polygon stays simple. Going left-to-right here crossed the
+          // closing edges into a self-intersecting bow-tie, which clipped the
+          // bottom half into a pinched "hourglass" — the picture looked
+          // pre-cut before a single snip (affected both straight and wavy cuts).
+          ctx.moveTo(irect.x + irect.w + 60, irect.y + irect.h + 60); ctx.lineTo(irect.x - 60, irect.y + irect.h + 60);
           for (let i = 0; i < path.length; i++) ctx.lineTo(path[i].x, path[i].y);
         }
         ctx.closePath(); ctx.clip();
@@ -4612,12 +4617,16 @@ function renderParent(section) {
     });
     if (p) {
       const stats = el(`<div class="stat-cards"></div>`);
+      const actCard = el(`<div class="stat-card"><div class="v">🎯 —</div><div class="k">activities done</div></div>`);
       stats.append(
         el(`<div class="stat-card"><div class="v">⭐ ${state.rewards.totalStars}</div><div class="k">stars</div></div>`),
         el(`<div class="stat-card"><div class="v">${mins} min</div><div class="k">play today</div></div>`),
-        el(`<div class="stat-card"><div class="v">${lvlLabel(p.difficulty)}</div><div class="k">level</div></div>`),
+        actCard,
       );
       zone.append(stats);
+      repos.progress.forProfile(p.id).then((records) => {
+        actCard.querySelector('.v').textContent = '🎯 ' + LH.buildParentReport(records).totalCompleted;
+      });
       zone.append(el(`<div class="sub-h">${p.nickname}’s learning</div>`));
       const learn = [
         ['progress', '📈', 'Progress & skills', 'Skills, favourites and suggestions'],
