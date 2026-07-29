@@ -9,6 +9,13 @@ Status key: `[ ]` open · `[~]` in progress · `[x]` done (move to the bottom or
 
 ## Open
 
+- [ ] **Remove the whale from Guided Drawing.** The old whale pilot subject should no longer appear
+  in the Guided Drawing subject list — drop it so only the six build-a-picture subjects (Grip,
+  Cupcake, Car, Cake, Watermelon, Flower) show. Check both the demo (`renderGuidedBuild` /
+  Guided Drawing picker in `demo-shell.html`) and the core data source (the whale pilot activity in
+  `starterPack.ts` + any `guidedBuilds.ts` reference); the mobile `GuidedDrawingPlayer` still runs
+  the whale pilot, so removing the subject also unblocks/simplifies that port item.
+
 - [ ] **Guided Drawing — realistic/clay art + mobile port (follow-up to the shipped Option A).**
   The Option-A mechanic + flow shipped in the demo (see Done) using **simple geometric outlines**
   (authored as polylines in `packages/core/src/content/guidedBuilds.ts`, 0..400 space × 2.5). Two
