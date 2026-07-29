@@ -17,23 +17,38 @@ import { audioService } from '../../services/audio';
 // Candy home uses these floating art tiles (approved mockup); other themes and
 // high-contrast fall back to the emoji BigTile.
 const MASCOT_IMAGE = require('../../../../../assets/images/mascot.png');
-const TILE_ART: Record<string, number> = {
-  'tile-daily': require('../../../../../assets/images/tile-daily.png'),
-  'tile-draw': require('../../../../../assets/images/tile-draw.png'),
-  'tile-colour': require('../../../../../assets/images/tile-colour.png'),
-  'tile-tracing': require('../../../../../assets/images/tile-tracing.png'),
-  'tile-puzzles': require('../../../../../assets/images/tile-puzzles.png'),
-  'tile-toddler': require('../../../../../assets/images/tile-toddler.png'),
-  'tile-logic': require('../../../../../assets/images/tile-logic.png'),
-};
-// Category → tile-art key (mirrors the demo's CANDY_TILE_PHOTOS mapping).
-const CATEGORY_ART: Record<string, string> = {
-  drawing: 'tile-draw',
-  colouring: 'tile-colour',
-  puzzles: 'tile-puzzles',
-  tracing: 'tile-tracing',
-  toddler: 'tile-toddler',
-  logic: 'tile-logic',
+// Per-theme home-door art (mirrors the demo's THEME_TILE_PHOTOS): every theme
+// uses the same floating capped-tile layout, only the icon set differs. Keyed by
+// home category (daily/draw/colour/tracing/puzzles/toddler=Games/logic).
+type TileSet = Record<string, number>;
+const THEME_TILE_ART: Record<string, TileSet> = {
+  candy: {
+    daily: require('../../../../../assets/images/tile-daily.png'),
+    drawing: require('../../../../../assets/images/tile-draw.png'),
+    colouring: require('../../../../../assets/images/tile-colour.png'),
+    tracing: require('../../../../../assets/images/tile-tracing.png'),
+    puzzles: require('../../../../../assets/images/tile-puzzles.png'),
+    toddler: require('../../../../../assets/images/tile-games-play.png'),
+    logic: require('../../../../../assets/images/tile-logic.png'),
+  },
+  storybook: {
+    daily: require('../../../../../assets/images/sb-daily.png'),
+    drawing: require('../../../../../assets/images/sb-draw.png'),
+    colouring: require('../../../../../assets/images/sb-colour.png'),
+    tracing: require('../../../../../assets/images/sb-tracing.png'),
+    puzzles: require('../../../../../assets/images/sb-puzzles.png'),
+    toddler: require('../../../../../assets/images/sb-games.png'),
+    logic: require('../../../../../assets/images/sb-logic.png'),
+  },
+  aussie: {
+    daily: require('../../../../../assets/images/au-daily.png'),
+    drawing: require('../../../../../assets/images/au-draw.png'),
+    colouring: require('../../../../../assets/images/au-colour.png'),
+    tracing: require('../../../../../assets/images/au-tracing.png'),
+    puzzles: require('../../../../../assets/images/au-puzzles.png'),
+    toddler: require('../../../../../assets/images/au-games.png'),
+    logic: require('../../../../../assets/images/au-logic.png'),
+  },
 };
 
 const SPARK_EMOJI = ['✨', '⭐', '🌟'];
@@ -149,7 +164,8 @@ export function HomeScreen(): React.JSX.Element {
   const theme = childTheme(accessibility, profile?.themeId);
   const app = theme.app;
   const hc = accessibility.highContrast;
-  const candy = !hc && app.id === 'candy';
+  const tileSet = hc ? undefined : THEME_TILE_ART[app.id];
+  const themed = Boolean(tileSet);
 
   const ageBand = profile?.ageBand ?? '3-5';
   const visibleTiles = homeTilesForAge(ageBand);
@@ -181,10 +197,10 @@ export function HomeScreen(): React.JSX.Element {
   }
 
   function artFor(tile: HomeTile): number | undefined {
-    if (!candy) return undefined;
+    if (!tileSet) return undefined;
     const isDaily = 'special' in tile.target && tile.target.special === 'daily';
-    const key = isDaily ? 'tile-daily' : 'category' in tile.target ? CATEGORY_ART[tile.target.category] : undefined;
-    return key ? TILE_ART[key] : undefined;
+    const key = isDaily ? 'daily' : 'category' in tile.target ? tile.target.category : undefined;
+    return key ? tileSet[key] : undefined;
   }
 
   return (
@@ -224,17 +240,17 @@ export function HomeScreen(): React.JSX.Element {
             accessibilityRole="button"
             accessibilityLabel="For grown-ups: open parent settings"
             onPress={() => navigate({ name: 'gate' })}
-            style={[styles.grownUpsButton, { backgroundColor: candy ? '#F7CFE4' : theme.surface }]}
+            style={[styles.grownUpsButton, { backgroundColor: themed ? '#F7CFE4' : theme.surface }]}
           >
             <Text style={styles.grownUpsIcon}>🔒</Text>
             <Text style={[styles.grownUpsText, { color: theme.text }]}>Grown-ups</Text>
           </Pressable>
         </View>
       </View>
-      <ScrollView contentContainerStyle={candy ? styles.gridCandy : styles.grid}>
+      <ScrollView contentContainerStyle={themed ? styles.gridCandy : styles.grid}>
         {visibleTiles.map((tile: HomeTile, i) => {
           const artSource = artFor(tile);
-          if (candy && artSource != null) {
+          if (themed && artSource != null) {
             return (
               <FloatingTile
                 key={tile.label}
