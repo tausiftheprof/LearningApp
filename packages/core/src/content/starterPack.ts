@@ -422,11 +422,11 @@ const games: GameSpec[] = [
     scissorsOpen: 'images/cut-scissors-open.png', scissorsClosed: 'images/cut-scissors-closed.png',
   } },
   { id: 'toddler-cut-strawberry', title: 'Cut the strawberry', template: 'cut-along', category: 'toddler', ageBands: ['3-5', '5-7'], difficulty: 2, motorSkills: ['controlled-movement', 'holding-moving', 'bilateral'], minutes: 2, theme: 'food', params: {
-    image: 'images/feed-strawberry.png', line: 'straight',
+    image: 'images/feed-strawberry.png', line: 'zigzag',
     scissorsOpen: 'images/cut-scissors-open.png', scissorsClosed: 'images/cut-scissors-closed.png',
   } },
   { id: 'toddler-cut-cupcake', title: 'Cut the cupcake', template: 'cut-along', category: 'toddler', ageBands: ['3-5', '5-7'], difficulty: 2, motorSkills: ['controlled-movement', 'holding-moving', 'bilateral'], minutes: 2, theme: 'food', params: {
-    image: 'images/feed-cupcake.png', line: 'straight',
+    image: 'images/feed-cupcake.png', line: 'straight', orientation: 'vertical',
     scissorsOpen: 'images/cut-scissors-open.png', scissorsClosed: 'images/cut-scissors-closed.png',
   } },
   // Vertical slice (top-to-bottom) — the cut-along renderer splits left/right
