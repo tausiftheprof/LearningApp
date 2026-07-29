@@ -13,4 +13,5 @@ export const IMPLEMENTED_GAME_TEMPLATES: readonly string[] = [
   'counting',
   'odd-one-out',
   'feed-animal',
+  'number-hop',
 ];

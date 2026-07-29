@@ -76,6 +76,9 @@ export function GamePlayer(props: {
       {t === 'feed-animal' && (
         <FeedAnimalGame params={props.activity.params} theme={props.theme} onMiss={() => setAttempts((a) => a + 1)} onFinish={finish} />
       )}
+      {t === 'number-hop' && (
+        <NumberHopGame params={props.activity.params} theme={props.theme} onMiss={() => setAttempts((a) => a + 1)} onFinish={finish} />
+      )}
       <CompletionBanner visible={done} onDone={props.onDone} colour={props.theme.success} onReplay={props.onReplay} />
     </View>
   );
@@ -226,6 +229,57 @@ function CountingGame(props: { theme: Theme; onMiss: () => void; onFinish: () =>
         <Text accessibilityLiveRegion="polite" style={[styles.note, { color: props.theme.text }]}>
           {note}
         </Text>
+      )}
+    </View>
+  );
+}
+
+/* --- Number Path Hop: tap the stones 1..max in order (owner game) --- */
+function NumberHopGame(props: { params: Record<string, unknown>; theme: Theme; onMiss: () => void; onFinish: () => void }): React.JSX.Element {
+  const max = typeof props.params.max === 'number' ? props.params.max : 5;
+  const [next, setNext] = useState(1);
+  const [note, setNote] = useState<string | null>(null);
+  // A fixed, deterministic shuffle of the stone placement 1..max.
+  const order = useMemo(() => {
+    const a = Array.from({ length: max }, (_, i) => i + 1);
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = (i * 7 + 3) % (i + 1);
+      const tmp = a[i]!; a[i] = a[j]!; a[j] = tmp;
+    }
+    return a;
+  }, [max]);
+  function tap(n: number): void {
+    if (n === next) {
+      if (n >= max) { props.onFinish(); return; }
+      setNext(n + 1);
+      setNote(pickFeedback('completed'));
+    } else {
+      props.onMiss();
+      setNote(pickFeedback('try-again'));
+    }
+  }
+  return (
+    <View style={styles.playArea}>
+      <Text style={[styles.prompt, { color: props.theme.text }]}>Hop on {next}!</Text>
+      <View style={styles.hopWrap}>
+        {order.map((n) => {
+          const hopped = n < next;
+          return (
+            <Pressable
+              key={n}
+              accessibilityRole="button"
+              accessibilityLabel={`Stone ${n}`}
+              disabled={hopped}
+              onPress={() => tap(n)}
+              style={[styles.stone, { backgroundColor: hopped ? '#BDBDBD' : props.theme.success, opacity: hopped ? 0.5 : 1 }]}
+            >
+              <Text style={styles.stoneText}>{n}</Text>
+            </Pressable>
+          );
+        })}
+      </View>
+      {note && (
+        <Text accessibilityLiveRegion="polite" style={[styles.note, { color: props.theme.text }]}>{note}</Text>
       )}
     </View>
   );
@@ -429,6 +483,9 @@ const styles = StyleSheet.create({
   optionRow: { flexDirection: 'row', justifyContent: 'center', marginTop: 12 },
   numberOption: { width: 84, height: 84, margin: 10, borderRadius: 42, alignItems: 'center', justifyContent: 'center' },
   numberText: { fontSize: 34, fontWeight: '800', color: '#FFFFFF' },
+  hopWrap: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', alignItems: 'center', marginTop: 12 },
+  stone: { width: 76, height: 76, margin: 10, borderRadius: 38, alignItems: 'center', justifyContent: 'center', elevation: 2 },
+  stoneText: { fontSize: 30, fontWeight: '800', color: '#FFFFFF' },
   oddOption: { width: 84, height: 84, margin: 8, borderRadius: 16, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' },
   feedRoot: { flex: 1, padding: 12 },
   feedStage: { flex: 1, alignItems: 'center', justifyContent: 'flex-start' },
