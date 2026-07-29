@@ -1021,10 +1021,25 @@ function renderOnboarding(step = 'welcome', draft = { nickname: '', ageBand: '3-
 // Which doors appear (and their order) is chosen by the profile's age band in
 // core (LH.homeTilesForAge), shared with the mobile app; the littlest band gets
 // fewer, larger tiles. Tiles show icon + label only (no subtitle).
-const CANDY_TILE_PHOTOS = {
-  drawing: 'tile-draw', colouring: 'tile-colour', puzzles: 'tile-puzzles',
-  tracing: 'tile-tracing', toddler: 'tile-toddler', preschool: 'tile-preschool',
-  logic: 'tile-logic',
+// Per-theme home-tile artwork. The app's look/effects are the finalised
+// "Option 2" style (floating capped tiles) for every theme; only the icon set
+// differs per theme — Candy keeps its clay tiles (Games tile → the Option 2
+// "Play" badge), Storybook uses the Option 1 set, Aussie the Australian-animal
+// Option 3 set. High-contrast mode falls back to emoji medallions.
+const THEME_TILE_PHOTOS = {
+  candy: {
+    drawing: 'tile-draw', colouring: 'tile-colour', puzzles: 'tile-puzzles',
+    tracing: 'tile-tracing', toddler: 'tile-games-play', preschool: 'tile-preschool',
+    logic: 'tile-logic', daily: 'tile-daily',
+  },
+  storybook: {
+    drawing: 'sb-draw', colouring: 'sb-colour', puzzles: 'sb-puzzles',
+    tracing: 'sb-tracing', toddler: 'sb-games', logic: 'sb-logic', daily: 'sb-daily',
+  },
+  aussie: {
+    drawing: 'au-draw', colouring: 'au-colour', puzzles: 'au-puzzles',
+    tracing: 'au-tracing', toddler: 'au-games', logic: 'au-logic', daily: 'au-daily',
+  },
 };
 const homeTileCategory = (t) =>
   t.target && 'category' in t.target ? t.target.category : undefined;
@@ -1079,11 +1094,12 @@ function renderHome() {
   const ageBand = state.profile?.ageBand ?? '3-5';
   // Candy home matches the approved mockup: floating blob-card art with the label
   // under, size-capped & centre-packed (`capped`).
-  const grid = el(`<div class="tile-grid home-grid${ageBand === '2-3' ? ' age-littlest' : ''}${candy ? ' capped' : ''}"></div>`);
+  const grid = el(`<div class="tile-grid home-grid${ageBand === '2-3' ? ' age-littlest' : ''} capped"></div>`);
   LH.homeTilesForAge(ageBand).forEach((t, i) => {
     const isDaily = t.target.special === 'daily';
     const category = homeTileCategory(t);
-    const photoName = candy ? (isDaily ? 'tile-daily' : CANDY_TILE_PHOTOS[category]) : null;
+    const tmap = hc ? null : THEME_TILE_PHOTOS[th.id];
+    const photoName = tmap ? (isDaily ? tmap.daily : tmap[category]) : null;
     const usePhoto = photoName && RASTER_IMAGES[photoName];
     const imgName = t.image && IMAGES[t.image] ? t.image : th.tileImages?.[t.idx];
     const icon = t.icon ?? th.tileIcons[t.idx];
