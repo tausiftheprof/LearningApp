@@ -1,7 +1,7 @@
-import React, { useCallback, useEffect, useRef } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import type { Activity } from '@littlegrip/core';
-import { defaultAccessibilitySettings, pickFeedback } from '@littlegrip/core';
+import { defaultAccessibilitySettings } from '@littlegrip/core';
 import { useAppStore } from '../../state/appStore';
 import { childTheme } from '../../ui/theme';
 import { HoldToHomeButton, InstructionBar } from '../../ui/components';
@@ -95,6 +95,9 @@ export function ActivityPlayerScreen(props: { activity: Activity }): React.JSX.E
     () => navigate({ name: 'picker', category: activity.category }),
     [navigate, activity.category],
   );
+  // "Play again" (Option B): bump the key to remount the player fresh.
+  const [replayKey, setReplayKey] = useState(0);
+  const replay = useCallback(() => setReplayKey((k) => k + 1), []);
 
   return (
     <View style={styles.root}>
@@ -126,43 +129,80 @@ export function ActivityPlayerScreen(props: { activity: Activity }): React.JSX.E
       </View>
 
       {activity.type === 'guided-drawing' && activity.steps.length > 1 && (
-        <GuidedDrawingPlayer activity={activity} theme={theme} onComplete={complete} onDone={goHome} />
+        <GuidedDrawingPlayer key={replayKey} activity={activity} theme={theme} onComplete={complete} onDone={goHome} onReplay={replay} />
       )}
       {activity.type === 'guided-drawing' && activity.steps.length <= 1 && (
-        <DrawingBoard activity={activity} theme={theme} onComplete={complete} onDone={goHome} />
+        <DrawingBoard key={replayKey} activity={activity} theme={theme} onComplete={complete} onDone={goHome} />
       )}
       {activity.type === 'tracing' && (
         <TracingPlayer
+          key={replayKey}
           activity={activity}
           theme={theme}
           onComplete={complete}
           onDone={goHome}
+          onReplay={replay}
           onAdvance={nextT ? () => navigate({ name: 'activity', activity: nextT }) : undefined}
         />
       )}
       {activity.type === 'colouring' && (
-        <ColouringPlayer activity={activity} theme={theme} onComplete={complete} onDone={goHome} />
+        <ColouringPlayer key={replayKey} activity={activity} theme={theme} onComplete={complete} onDone={goHome} />
       )}
       {activity.type === 'jigsaw' && (
-        <PuzzlePlayer activity={activity} theme={theme} onComplete={complete} onDone={goHome} />
+        <PuzzlePlayer key={replayKey} activity={activity} theme={theme} onComplete={complete} onDone={goHome} onReplay={replay} />
       )}
       {activity.type === 'game' && (
-        <GamePlayer activity={activity} theme={theme} onComplete={complete} onDone={goHome} />
+        <GamePlayer key={replayKey} activity={activity} theme={theme} onComplete={complete} onDone={goHome} onReplay={replay} />
       )}
     </View>
   );
 }
 
-export function CompletionBanner(props: { visible: boolean; onDone: () => void; colour: string }): React.JSX.Element | null {
-  if (!props.visible) return null;
-  const phrase = pickFeedback('completed');
+/**
+ * "Option B" completion (owner-picked): NON-COVERING — a slim top toast
+ * celebrates, a bottom countdown auto-returns after ~5s, and (when a replay is
+ * wired) a big "Play again" button lets the child stay and go again. The
+ * finished work stays fully visible. Back-compatible: players that don't pass
+ * `onReplay` just get the toast + auto-return.
+ */
+export function CompletionBanner(props: {
+  visible: boolean;
+  onDone: () => void;
+  colour: string;
+  onReplay?: (() => void) | undefined;
+}): React.JSX.Element | null {
+  const [count, setCount] = useState(5);
+  const { visible, onDone } = props;
+  useEffect(() => {
+    if (!visible) return;
+    setCount(5);
+    const iv = setInterval(() => setCount((c) => (c > 1 ? c - 1 : 1)), 1000);
+    const to = setTimeout(onDone, 5000);
+    return () => {
+      clearInterval(iv);
+      clearTimeout(to);
+    };
+  }, [visible, onDone]);
+  if (!visible) return null;
   return (
-    <View style={[styles.banner, { backgroundColor: props.colour }]} accessibilityLiveRegion="polite">
-      <Text style={styles.bannerText}>🎉 {phrase}</Text>
-      <Text accessibilityRole="button" accessibilityLabel="Go home" onPress={props.onDone} style={styles.bannerHome}>
-        🏠 Home
-      </Text>
-    </View>
+    <>
+      <View style={styles.toastWrap} pointerEvents="none">
+        <View style={[styles.doneToast, { backgroundColor: props.colour }]} accessibilityLiveRegion="polite">
+          <Text style={styles.doneToastText}>🎉 All done!</Text>
+        </View>
+      </View>
+      <View style={styles.doneActions}>
+        {props.onReplay ? (
+          <Pressable accessibilityRole="button" accessibilityLabel="Play again" onPress={props.onReplay} style={styles.replayPill}>
+            <Image source={UI_ART.replay} resizeMode="contain" style={styles.replayArt} />
+            <Text style={styles.replayText}>Play again</Text>
+          </Pressable>
+        ) : null}
+        <Pressable accessibilityRole="button" accessibilityLabel="Go home" onPress={props.onDone} style={styles.autoPill}>
+          <Text style={styles.autoText}>Going home… {count}</Text>
+        </Pressable>
+      </View>
+    </>
   );
 }
 
@@ -173,15 +213,17 @@ const styles = StyleSheet.create({
   backIcon: { fontSize: 26, fontWeight: '700' },
   topBar: { flexDirection: 'row', alignItems: 'center' },
   instruction: { flex: 1 },
-  banner: {
-    position: 'absolute',
-    bottom: 24,
-    left: 24,
-    right: 24,
-    borderRadius: 24,
-    padding: 20,
-    alignItems: 'center',
+  toastWrap: { position: 'absolute', top: 12, left: 0, right: 0, alignItems: 'center' },
+  doneToast: { borderRadius: 999, paddingVertical: 8, paddingHorizontal: 20, shadowColor: '#3B2D2D', shadowOpacity: 0.22, shadowRadius: 8, shadowOffset: { width: 0, height: 4 }, elevation: 4 },
+  doneToastText: { color: '#FFFFFF', fontWeight: '800', fontSize: 16 },
+  doneActions: { position: 'absolute', bottom: 18, left: 0, right: 0, alignItems: 'center' },
+  replayPill: {
+    flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFFFFF', borderRadius: 999,
+    paddingVertical: 8, paddingHorizontal: 22, marginBottom: 9,
+    shadowColor: '#3B2D2D', shadowOpacity: 0.26, shadowRadius: 10, shadowOffset: { width: 0, height: 6 }, elevation: 6,
   },
-  bannerText: { fontSize: 26, fontWeight: '800', color: '#FFFFFF' },
-  bannerHome: { fontSize: 20, marginTop: 10, color: '#FFFFFF', fontWeight: '700', padding: 12 },
+  replayArt: { width: 44, height: 44, marginRight: 10 },
+  replayText: { fontSize: 20, fontWeight: '800', color: '#E1568F' },
+  autoPill: { backgroundColor: 'rgba(255,255,255,0.86)', borderRadius: 999, paddingVertical: 5, paddingHorizontal: 14 },
+  autoText: { fontSize: 13, fontWeight: '700', color: '#6A6076' },
 });

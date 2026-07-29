@@ -35,6 +35,7 @@ export function GuidedDrawingPlayer(props: {
   theme: Theme;
   onComplete: (r: { attempts: number; hintCount: number; accuracyScore: number | null }) => void;
   onDone: () => void;
+  onReplay?: () => void;
 }): React.JSX.Element {
   const { profile } = useAppStore();
   const accessibility = profile?.accessibility ?? defaultAccessibilitySettings();
@@ -230,7 +231,7 @@ export function GuidedDrawingPlayer(props: {
         <Tool label="💾 save" active={false} onPress={() => void save()} />
       </ScrollView>
 
-      <CompletionBanner visible={saved} onDone={props.onDone} colour={props.theme.success} />
+      <CompletionBanner visible={saved} onDone={props.onDone} colour={props.theme.success} onReplay={props.onReplay} />
     </View>
   );
 }

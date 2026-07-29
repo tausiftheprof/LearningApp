@@ -51,6 +51,7 @@ export function GamePlayer(props: {
   theme: Theme;
   onComplete: (r: { attempts: number; hintCount: number; accuracyScore: number | null }) => void;
   onDone: () => void;
+  onReplay?: () => void;
 }): React.JSX.Element {
   const [done, setDone] = useState(false);
   const [attempts, setAttempts] = useState(1);
@@ -75,7 +76,7 @@ export function GamePlayer(props: {
       {t === 'feed-animal' && (
         <FeedAnimalGame params={props.activity.params} theme={props.theme} onMiss={() => setAttempts((a) => a + 1)} onFinish={finish} />
       )}
-      <CompletionBanner visible={done} onDone={props.onDone} colour={props.theme.success} />
+      <CompletionBanner visible={done} onDone={props.onDone} colour={props.theme.success} onReplay={props.onReplay} />
     </View>
   );
 }

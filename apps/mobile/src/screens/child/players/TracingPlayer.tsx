@@ -172,6 +172,7 @@ export function TracingPlayer(props: {
   theme: Theme;
   onComplete: (r: { attempts: number; hintCount: number; accuracyScore: number | null }) => void;
   onDone: () => void;
+  onReplay?: () => void;
   /** If set, auto-advance to the next tracing item instead of a Home banner. */
   onAdvance?: (() => void) | undefined;
 }): React.JSX.Element {
@@ -412,7 +413,7 @@ export function TracingPlayer(props: {
           {encouragement}
         </Text>
       )}
-      <CompletionBanner visible={done && !props.onAdvance} onDone={props.onDone} colour={props.theme.success} />
+      <CompletionBanner visible={done && !props.onAdvance} onDone={props.onDone} colour={props.theme.success} onReplay={props.onReplay} />
     </View>
   );
 }

@@ -18,6 +18,7 @@ export function PuzzlePlayer(props: {
   theme: Theme;
   onComplete: (r: { attempts: number; hintCount: number; accuracyScore: number | null }) => void;
   onDone: () => void;
+  onReplay?: () => void;
 }): React.JSX.Element {
   const { activity, theme } = props;
   const { profile } = useAppStore();
@@ -216,7 +217,7 @@ export function PuzzlePlayer(props: {
           </View>
         ),
       )}
-      <CompletionBanner visible={done} onDone={props.onDone} colour={theme.success} />
+      <CompletionBanner visible={done} onDone={props.onDone} colour={theme.success} onReplay={props.onReplay} />
     </View>
   );
 }

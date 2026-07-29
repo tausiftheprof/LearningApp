@@ -7,4 +7,5 @@ export const UI_ART: ArtMap = {
   back: require('../../../../assets/images/back-icon.png'),
   next: require('../../../../assets/images/next-icon.png'),
   save: require('../../../../assets/images/save-with-label.png'),
+  replay: require('../../../../assets/images/ui-replay.png'),
 };
