@@ -9,34 +9,13 @@ Status key: `[ ]` open · `[~]` in progress · `[x]` done (move to the bottom or
 
 ## Open
 
-- [ ] **Completion card → Option B (auto-return + replay), non-covering.** Owner picked Option B
-  from the mockup (artifact `382698d1-c693-4ed5-9a83-9005bbeb6cb0`). Replace the big covering
-  end-of-set card (`.banner.name-done` — the "🎉 You finished all the …! / 🔁 Play again / ⬅️ Back"
-  card) in all three bespoke end screens — **tracing section-complete** (`sectionDoneCard`), **Feed
-  the Animal** (`🍽️ Feed again` card), **Guided Drawing** (`✏️ Draw again` card) — with the Option-B
-  treatment: fire the star burst + chime, drop the slim non-covering top toast ("🎉 All finished!"),
-  then **auto-return to the picker after ~3s** via a small countdown ring, with a single floating
-  **🔁 replay** button so a child can stay and go again (cancels the auto-return). Finished work
-  stays fully visible (honours the "nothing covers the child's work" rule). **Blocked on owner art:**
-  the return/countdown icon needs to change from the placeholder — owner will supply the return icon
-  (drop into `assets/images/` under a clean key, e.g. `ui-return`/`ui-next`). Demo first
-  (`renderTracing`/`renderGuidedBuild`/feed renderer in `demo-shell.html` + the `.autoret`/ring
-  styling), then mobile port. Keep the generic quick-games auto-return untouched (already does this).
-
-- [ ] **Guided Drawing picker polish.** Two tweaks to the subject picker (demo `demo-shell.html`;
-  mobile follows in the port item):
-  - **Change the Flower icon** — the current Flower subject tile uses the wrong/placeholder icon;
-    swap it for a proper flower icon (owner to supply art, or pick the flower clay art if one exists).
-  - **Remove labels from all Guided Drawing subject tiles** — picture-forward bubbles, no text
-    label under any Guided Drawing icon (aria-label + spoken name kept for accessibility, same
-    pattern as the games-list / Colour / Tracing picker `showLabel` false).
-
-- [ ] **Remove the whale from Guided Drawing.** The old whale pilot subject should no longer appear
-  in the Guided Drawing subject list — drop it so only the six build-a-picture subjects (Grip,
-  Cupcake, Car, Cake, Watermelon, Flower) show. Check both the demo (`renderGuidedBuild` /
-  Guided Drawing picker in `demo-shell.html`) and the core data source (the whale pilot activity in
-  `starterPack.ts` + any `guidedBuilds.ts` reference); the mobile `GuidedDrawingPlayer` still runs
-  the whale pilot, so removing the subject also unblocks/simplifies that port item.
+- [ ] **Change the Flower icon in the Guided Drawing picker.** The Flower subject
+  (`draw-guided-flower`) currently shows its `feed-plant1.png` reference (a potted plant) as the tile
+  icon — owner wants a proper flower icon. **Blocked on owner art:** no dedicated cute flower clay
+  tile exists in `assets/images/` yet (only `scene-cbn-flower.png`, a line-art colouring page, which
+  isn't tile-suitable). Owner to drop a flower PNG under a clean key (e.g. `guide-flower`), then wire
+  it as the tile icon for `draw-guided-flower` (per-activity override in the picker's icon resolver).
+  (Labels are already hidden on all Guided Drawing tiles — shipped July 2026.)
 
 - [ ] **Guided Drawing — realistic/clay art + mobile port (follow-up to the shipped Option A).**
   The Option-A mechanic + flow shipped in the demo (see Done) using **simple geometric outlines**
@@ -90,6 +69,31 @@ swap in cute art whenever ready.
 
 ## Done
 
+- [x] **End-of-activity card → Option B (auto-return + replay), non-covering.** Owner picked Option B
+  from the mockup (artifact `382698d1-c693-4ed5-9a83-9005bbeb6cb0`). The big covering
+  `.banner.name-done` card is gone from all four bespoke end screens — tracing **section-complete**,
+  **name-tracing**, **Feed the Animal**, **Guided Drawing**. New shared helper `completionOptionB(stage,
+  { replay, exit, toastText, exitLabel, seconds })` in `demo-shell.html`: the star burst + chime still
+  fire, a slim non-covering top toast celebrates, a bottom-corner **countdown ring** ("Back to the
+  list…", 3→1) auto-returns to the picker, and a big round **replay** button in the other corner
+  (owner's clay loop-arrows art, `assets/images/ui-replay.png` — keyed off the uploaded "return icon"
+  PNG, luminance-cut to just the arrows) lets a child stay and go again (tapping it cancels the
+  auto-return). Guards against firing after navigation (checks `wrap.isConnected`); reduced-motion
+  keeps the auto-return but drops the ring animation. Verified headless: affordances render, replay
+  fires + cancels exit, auto-return fires on the timer, zero console errors. Mobile port pending (in
+  the port item). `.banner.name-done` CSS now unused but left in place.
+- [x] **Removed the whale from Guided Drawing.** The `draw-guided-whale` pilot subject is gone from
+  `starterPack.ts` (and its now-orphaned outline helpers `whaleFin/whaleSpout/whaleEye/whaleOutline`);
+  `whaleBody`/`whaleTail` stay for the `draw-dotdot-whale` dot-to-dot (unchanged), and the colouring /
+  jigsaw whales are untouched. The Guided Drawing picker now lists only the six build-a-picture
+  subjects (Grip, Cupcake, Car, Cake, Watermelon, Flower). 161 core tests + typecheck green.
+- [x] **Guided Drawing tiles: labels hidden.** `draw-guided` added to the picker's no-label set, so
+  the subject bubbles are picture-forward (aria-label + spoken name kept). (Flower-icon swap is a
+  separate Open item, blocked on owner art.)
+- [x] **Child-delete (and all dialogs) work in the sandboxed iframe.** Native `window.confirm()/alert()`
+  are silently ignored inside a sandboxed iframe (the published artifact), so the Delete button looked
+  dead. Replaced the four native dialogs with in-app modal helpers (`uiConfirm`/`uiAlert`) rendered in
+  our own DOM. Verified headless (native dialogs forced to throw): delete drops the child, zero errors.
 - [x] **Polygon tracing start points — confirmed already top-start, clockwise** (owner approved the
   convention). Verified square, rectangle, pentagon and hexagon in `content/starterPack.ts`: the
   `polygonPath` helper begins at `-90°` (top) and increments the angle, i.e. clockwise in screen

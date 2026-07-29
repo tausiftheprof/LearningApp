@@ -456,6 +456,21 @@
   }
   .done-toast.gone { opacity: 0; transform: translateX(-50%) translateY(-8px); }
   @media (prefers-reduced-motion: reduce) { .done-toast { transition: none; } }
+  /* Option-B end-of-activity affordances — non-covering: a countdown "going back"
+     pill in one bottom corner, a big round replay button in the other. */
+  .done-auto { position: absolute; bottom: 14px; left: 14px; display: flex; align-items: center; gap: 11px;
+    background: rgba(255,255,255,.94); border-radius: 999px; padding: 7px 8px 7px 15px;
+    box-shadow: 0 8px 18px rgba(74,59,50,.2); z-index: 7; }
+  .done-auto .da-txt { font-size: 13px; font-weight: 800; color: #6a6076; }
+  .done-auto .da-ring { position: relative; width: 46px; height: 46px; flex: none; }
+  .done-auto .da-num { position: absolute; inset: 0; display: grid; place-items: center; font-size: 17px; font-weight: 800; color: var(--accent, #F17BA6); font-variant-numeric: tabular-nums; }
+  .done-replay { position: absolute; bottom: 12px; right: 14px; width: 66px; height: 66px; border-radius: 50%;
+    border: none; background: #fff; box-shadow: 0 8px 18px rgba(74,59,50,.26); cursor: pointer; padding: 0;
+    display: grid; place-items: center; z-index: 7; animation: doneReplayIn .42s cubic-bezier(.34,1.3,.5,1); }
+  .done-replay img { width: 82%; height: 82%; object-fit: contain; pointer-events: none; }
+  .done-replay:active { transform: scale(.92); }
+  @keyframes doneReplayIn { from { transform: scale(.5); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+  #app.reduced-motion .done-replay { animation: none; }
   /* Parent area — Option 1 "Family Link" layout: a child-tinted zone bounds
      everything about the selected child; general settings sit outside it. */
   #app.parent-mode .kid-zone { background: var(--kz, #EAF3F1); border: 1px solid var(--kzl, #D8E6E2); border-radius: 16px; padding: 13px; display: flex; flex-direction: column; gap: 12px; }
@@ -935,6 +950,48 @@ function doneToast(text = '🎉 All done!') {
   const t = el(`<div class="done-toast" role="status">${text}</div>`);
   setTimeout(() => { t.classList.add('gone'); setTimeout(() => t.remove(), 420); }, 1900);
   return t;
+}
+
+/* End-of-activity celebration — "Option B" (owner-picked, July 2026): instead of
+   the big card that covered the child's finished work, celebrate with the slim
+   top toast, then DRIFT BACK to the list on a countdown ring, leaving one big
+   round "play again" button (owner's clay loop-arrows art) so a child who wants
+   another go can stay put — tapping it cancels the auto-return. The finished
+   work stays fully visible the whole time. Shared by the tracing set-complete,
+   Feed the Animal, Guided Drawing and name-tracing end screens. */
+function completionOptionB(stage, { replay, exit, toastText = '🎉 All finished!', exitLabel = 'Going back…', seconds = 3 }) {
+  stage.append(doneToast(toastText));
+  const reduced = document.getElementById('app').classList.contains('reduced-motion');
+  const R = 19, CIRC = 2 * Math.PI * R;
+  const wrap = el(`<div class="done-auto" role="status" aria-label="${exitLabel}">
+    <span class="da-txt">${exitLabel}</span>
+    <span class="da-ring">
+      <svg width="46" height="46" viewBox="0 0 46 46" aria-hidden="true">
+        <circle cx="23" cy="23" r="${R}" fill="none" stroke="rgba(74,59,50,.14)" stroke-width="5"/>
+        <circle class="da-arc" cx="23" cy="23" r="${R}" fill="none" stroke="var(--accent, #F17BA6)" stroke-width="5" stroke-linecap="round" transform="rotate(-90 23 23)" stroke-dasharray="${CIRC.toFixed(1)}" stroke-dashoffset="0"/>
+      </svg>
+      <span class="da-num">${seconds}</span>
+    </span>
+  </div>`);
+  const art = RASTER_IMAGES['ui-replay'];
+  const replayBtn = el(`<button class="done-replay" aria-label="Play again">${art ? `<img alt="" src="${art}">` : '🔁'}</button>`);
+  const arc = wrap.querySelector('.da-arc'), num = wrap.querySelector('.da-num');
+  let cancelled = false, raf = 0;
+  const cleanup = () => { cancelled = true; if (raf) cancelAnimationFrame(raf); wrap.remove(); replayBtn.remove(); };
+  const doExit = () => { if (cancelled || !wrap.isConnected) return; cleanup(); exit(); };
+  replayBtn.onclick = () => { if (cancelled) return; cleanup(); replay(); };
+  stage.append(wrap, replayBtn);
+  if (reduced) { setTimeout(doExit, seconds * 1000); return; }
+  const start = performance.now(), total = seconds * 1000;
+  const tick = (now) => {
+    if (cancelled || !wrap.isConnected) return;
+    const p = Math.min((now - start) / total, 1);
+    arc.style.strokeDashoffset = (CIRC * p).toFixed(1);
+    num.textContent = String(Math.max(1, Math.ceil(seconds * (1 - p))));
+    if (p >= 1) { doExit(); return; }
+    raf = requestAnimationFrame(tick);
+  };
+  raf = requestAnimationFrame(tick);
 }
 
 function targetPx() { return state.profile?.accessibility.largerTouchTargets ? '112px' : '96px'; }
@@ -1516,7 +1573,7 @@ function renderPicker(category) {
     // Hide the redundant name under bubbles whose picture already says it all:
     // puzzles, letter/number tracing, both Colour lists, and the games lists
     // (games-sort/count/pattern/hands) — owner direction, picture-forward tiles.
-    const showLabel = !(String(category).startsWith('games-') || ['puzzles', 'tracing-letters', 'tracing-numbers', 'colour-bynum', 'colour-yourway'].includes(category));
+    const showLabel = !(String(category).startsWith('games-') || ['puzzles', 'tracing-letters', 'tracing-numbers', 'colour-bynum', 'colour-yourway', 'draw-guided'].includes(category));
     // Tracing glyphs float without the coloured circle (owner direction) — just
     // the clay letter/number/shape art, keeping the bob/pop/sparkle.
     const bare = ['tracing-letters', 'tracing-numbers', 'tracing-shapes'].includes(category);
@@ -1894,29 +1951,26 @@ function renderTracing(firstActivity) {
     } else if (sec) {
       const msg = '🎉 You finished all the ' + sec.kind + '! Amazing!';
       note.textContent = msg; speak('Hooray! You finished all the ' + sec.kind + '! Amazing job!');
-      stage.append(sectionDoneCard(sec));
+      completionOptionB(stage, {
+        replay: () => loadActivity(sec.seq[0]),
+        exit: () => navigate({ name: 'picker', category: state.screen.pickerCategory || activity.category }),
+        toastText: '🎉 You finished all the ' + sec.kind + '!',
+        exitLabel: 'Back to the list…',
+      });
     } else if (activity.id === 'trace-name') {
       speak('Hooray! You wrote your name! Amazing job!');
-      stage.append(nameDoneCard());
+      const nick = state.profile?.nickname || 'friend';
+      completionOptionB(stage, {
+        replay: () => { const nm = state.traceCaps ? nick.toUpperCase() : nick; loadActivity({ ...activity, title: 'My name: ' + nm, paths: LH.nameStrokes(nm) }); },
+        exit: onDone,
+        toastText: '🎉 Hooray, ' + nick + '! You wrote your name!',
+        exitLabel: 'Going home…',
+      });
     } else {
       stage.append(doneToast());
     }
   }
 
-  function sectionDoneCard(sec) {
-    // Game-completion pattern (Feed the Animal is the reference): play again
-    // restarts the set from the first item; back goes up one screen to the list.
-    const card = el(`<div class="banner name-done" role="status">
-      <div class="big">🎉 You finished all the ${sec.kind}! 🌟</div>
-      <div class="name-done-btns">
-        <button data-a="again">🔁 Play again</button>
-        <button data-a="back">⬅️ Back</button>
-      </div>
-    </div>`);
-    card.querySelector('[data-a="again"]').onclick = () => { card.remove(); loadActivity(sec.seq[0]); };
-    card.querySelector('[data-a="back"]').onclick = () => navigate({ name: 'picker', category: state.screen.pickerCategory || activity.category });
-    return card;
-  }
 
   // Stylus + palm rejection: follow exactly one pointer, but PEN-FIRST — a pen
   // always takes over from a resting palm/finger (a palm landing first must
@@ -2001,25 +2055,6 @@ function renderTracing(firstActivity) {
     strokeIndex = 0; session = new LH.TracingSession(strokes[0], config);
     dots = []; filledStrokes = []; lastPos = 0; scores = [];
     note.textContent = ''; draw();
-  }
-
-  // Fun finish for the name: celebrate + offer to practise it again.
-  function nameDoneCard() {
-    const nick = state.profile?.nickname || 'friend';
-    const card = el(`<div class="banner name-done" role="status">
-      <div class="big">🎉 Hooray, ${nick}! You wrote your name! 🌟</div>
-      <div class="name-done-btns">
-        <button data-a="again">✏️ Practise again</button>
-        <button data-a="home">🏠 Home</button>
-      </div>
-    </div>`);
-    card.querySelector('[data-a="again"]').onclick = () => {
-      card.remove();
-      const nm = state.traceCaps ? nick.toUpperCase() : nick;
-      loadActivity({ ...activity, title: 'My name: ' + nm, paths: LH.nameStrokes(nm) });
-    };
-    card.querySelector('[data-a="home"]').onclick = onDone;
-    return card;
   }
 
   // No colour picker (owner direction — single-colour ink, matching the mock).
@@ -2213,16 +2248,12 @@ function renderGuidedBuild(activity) {
     completeActivity(activity, { attempts: 1 });
     note.textContent = LH.pickFeedback('completed') + ' You drew a ' + activity.title.replace(/^Draw (a |an )?/i, '') + '!';
     speak(note.textContent);
-    const card = el(`<div class="banner name-done" role="status">
-      <div class="big">🌟 All done! ${activity.title}! 🎨</div>
-      <div class="name-done-btns">
-        <button data-a="again">✏️ Draw again</button>
-        <button data-a="back">⬅️ Back</button>
-      </div>
-    </div>`);
-    card.querySelector('[data-a="again"]').onclick = () => navigate({ name: 'activity', activity, from: sc.from, pickerCategory: sc.pickerCategory });
-    card.querySelector('[data-a="back"]').onclick = () => navigate({ name: 'picker', category: sc.pickerCategory || 'draw-guided' });
-    stage.append(card);
+    completionOptionB(stage, {
+      replay: () => navigate({ name: 'activity', activity, from: sc.from, pickerCategory: sc.pickerCategory }),
+      exit: () => navigate({ name: 'picker', category: sc.pickerCategory || 'draw-guided' }),
+      toastText: '🌟 All done! ' + activity.title + '!',
+      exitLabel: 'Back to drawing…',
+    });
   }
 
   const pt = (e) => { const r = canvas.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; };
@@ -3862,25 +3893,19 @@ function renderGame(activity) {
       }
 
       // Owner feedback (July 2026): feeding must be seamless — a drop mid-chomp
-      // is accepted (never bounced back), and finishing offers only "feed
-      // again" / "back one screen", never a Home prompt.
+      // is accepted (never bounced back), and finishing celebrates without
+      // covering the scene (Option B): auto-return + a big replay button.
       const feedDone = () => {
         if (finished) return;
         finished = true;
         completeActivity(activity, { attempts });
         const sc = state.screen || {};
-        const card = el(`<div class="banner name-done" role="status">
-          <div class="big">😋 All full! Thank you! 🌟</div>
-          <div class="name-done-btns">
-            <button data-a="again">🍽️ Feed again</button>
-            <button data-a="back">⬅️ Back</button>
-          </div>
-        </div>`);
-        card.querySelector('[data-a="again"]').onclick = () =>
-          navigate({ name: 'activity', activity, from: sc.from, pickerCategory: sc.pickerCategory });
-        card.querySelector('[data-a="back"]').onclick = () =>
-          navigate({ name: 'picker', category: sc.pickerCategory || 'toddler' });
-        stage.append(card);
+        completionOptionB(stage, {
+          replay: () => navigate({ name: 'activity', activity, from: sc.from, pickerCategory: sc.pickerCategory }),
+          exit: () => navigate({ name: 'picker', category: sc.pickerCategory || 'toddler' }),
+          toastText: '😋 All full! Thank you!',
+          exitLabel: 'Back to games…',
+        });
       };
       const zones = [{ el: mouthZone, onDrop: (it) => {
         const label = it.dataset.name || 'yum';

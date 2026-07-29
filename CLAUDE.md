@@ -222,9 +222,16 @@ it; it is retired from every activity — tracing, drawing/guided save, colour-b
 colouring, jigsaw and dot-to-dot now append a slim, non-covering **`doneToast`** ("🎉 All done!") that
 pins to the top, celebrates and fades on its own, leaving the artwork fully visible (the top bar's
 back/home handle navigation). Generic games still **auto-return** to the games list on their own
-(`renderGame`'s `finish()` after ~1.2s). Games with a **bespoke** end card — **play again + back one
-screen** — keep it (Feed the Animal is the reference; tracing's name-finish card is the same idea).
-Don't reintroduce a covering popup.
+(`renderGame`'s `finish()` after ~1.2s). The four **bespoke** end screens — tracing **section-complete**,
+**name-tracing**, **Feed the Animal**, **Guided Drawing** — used to pop a big covering `.banner.name-done`
+card (owner: "covers half the screen"); they now share **`completionOptionB(stage, { replay, exit,
+toastText, exitLabel, seconds })`** ("Option B", owner-picked from mockup `382698d1-…`): the star burst +
+chime fire, a slim top toast celebrates, a bottom-corner **countdown ring** auto-returns to the picker
+after ~3s, and a big round **replay** button in the other corner (owner clay loop-arrows art,
+`assets/images/ui-replay.png`) lets a child stay and go again (tapping it cancels the auto-return). The
+helper guards against firing after navigation (`wrap.isConnected`) and honours reduced-motion (keeps the
+auto-return, drops the ring animation). **Don't reintroduce a covering popup** — `.banner.name-done` CSS
+is now dead. (Demo done; mobile port pending.)
 **Picker icons**: game tiles never use the category illustration or the old 🐣 chick — each template
 resolves its own art (feed → `params.open` character, **cut → the activity's own `params.image`
 picture** — cake/car/strawberry/cupcake/watermelon, not the scissors — hop → lily-pad), else a

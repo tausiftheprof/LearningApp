@@ -488,12 +488,10 @@ const gameActivities: Activity[] = games.map((g) => ({
 /* ---------- Drawing board entry (free drawing is app-native; this catalogues it) ---------- */
 
 /**
- * Simplified whale silhouette for the guided-drawing / dot-to-dot pilot
- * (owner direction, July 2026): body, tail flukes, fin, spout and eye, each
- * its own traceable stroke in the same 0..1000 design space as tracing
- * shapes. Proportions echo the whale.svg icon (head/eye at left, tail at
- * right). If the pilot lands well, the same technique extends to the other
- * jigsaw/sketch subjects (dolphin, dinosaur, unicorn, ...) later.
+ * Simplified whale silhouette used by the dot-to-dot pilot (owner direction,
+ * July 2026): the body oval + tail flukes, in the same 0..1000 design space as
+ * tracing shapes. (The guided-drawing whale pilot was retired once the six
+ * build-a-picture subjects shipped — see guidedDrawingSubjects().)
  */
 function whaleBody(): Point[] {
   // A circle squished vertically into an oval, same technique as trace-oval.
@@ -508,19 +506,6 @@ function whaleTail(): Point[] {
     ...line(865, 480, 945, 645, 6),
     ...line(945, 645, 800, 480, 6),
   ];
-}
-function whaleFin(): Point[] {
-  return arc(480, 650, 110, 20, 160, 14);
-}
-function whaleSpout(): Point[] {
-  return [...line(235, 175, 280, 340, 6), ...line(280, 340, 325, 185, 6)];
-}
-function whaleEye(): Point[] {
-  return arc(235, 430, 24, -90, 270, 16);
-}
-/** Five strokes, drawn in a natural order: body, tail, fin, spout, eye. */
-function whaleOutline(): Point[][] {
-  return [whaleBody(), whaleTail(), whaleFin(), whaleSpout(), whaleEye()];
 }
 /**
  * Evenly re-spaces points along a path by arc length (not by index), so a
@@ -559,17 +544,6 @@ const drawingActivities: Activity[] = [
     motorSkills: ['holding-moving', 'controlled-movement', 'swiping'],
     estimatedMinutes: 5, theme: 'creative', locale: 'en-AU', instructionAudio: audio('draw-free'),
     steps: [{ prompt: 'images/blank.png', overlay: [{ x: 0, y: 0 }, { x: 1000, y: 1000 }] }],
-  },
-  // Guided drawing pilot (owner direction, July 2026): a real traceable
-  // outline, not just a faint reference image - each step is one stroke the
-  // child follows with their own chosen brush/colour (web-demo's
-  // renderGuidedDrawing; mobile GuidedDrawingPlayer). More subjects land
-  // once this is validated.
-  {
-    type: 'guided-drawing', id: 'draw-guided-whale', title: 'Whale', category: 'drawing',
-    ageBands: ['3-5', '5-7'], difficulty: 2, motorSkills: ['holding-moving', 'controlled-movement', 'tracing'],
-    estimatedMinutes: 4, theme: 'underwater', locale: 'en-AU', instructionAudio: audio('draw-guided'),
-    steps: whaleOutline().map((overlay) => ({ prompt: 'images/whale.svg', overlay })),
   },
   // Build-a-picture subjects (owner Option A): one part per step, child colours
   // each part, fixed-colour parts (wheels/seeds/eyes) aren't colourable. Geometry
