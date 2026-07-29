@@ -311,7 +311,12 @@ Magic-drawer panel, the **Guided Drawing "build a picture"** subjects (Grip/Cupc
 Watermelon/Flower — one part traced at a time, each locking in filled with the child's colour;
 geometry authored as polylines in `packages/core/src/content/guidedBuilds.ts`, single source of
 truth for the mobile port; guided-drawing steps carry `label`/`strokes`/`fill`/`fixedColour`;
-demo renderer `renderGuidedBuild`), the tracing clay-art **header** cue, and the tracing controls; the tracing
+demo renderer `renderGuidedBuild`. `fit()` centres the picture's own bounding box in the space left
+of the colour rail — for EVERY subject, not the raw 0..1000 box. On a **fixed-colour step** (wheels,
+seeds, eyes…) the rail is NOT a dead grey palette — `updateRail` shows a **single lively swatch** of
+that set colour (idle pulse + `pop` bounce/`playPop` on touch) so a child feels it respond instead of
+getting frustrated. Test seam `window.__lgTest.guided` (`fixed()`/`goToStep`) jumps steps for headless
+checks. Also the tracing clay-art **header** cue, and the tracing controls; the tracing
 **fill is contiguous** on both surfaces now (a new `pathPosition` is accepted only within ~0.15 of
 `lastPos`, so a touch near the end can't flash-fill the glyph — this also enforces start-on-the-dot).
 Responsive grids on mobile size tiles/bubbles from `useWindowDimensions()` (viewport-driven columns,

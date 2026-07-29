@@ -405,9 +405,16 @@
     display: flex; flex-direction: column; gap: 8px; padding: 8px 7px; background: rgba(255,255,255,0.86);
     border-radius: 999px; box-shadow: 0 4px 12px rgba(69,61,91,0.12); }
   .gb-rail.locked { opacity: 0.38; pointer-events: none; }
+  /* Fixed-colour step: the rail holds a single, roomy swatch centred on the rail. */
+  .gb-rail.fixed { padding: 10px; }
   .gb-swatch { width: 26px; height: 26px; border-radius: 50%; border: 3px solid transparent; cursor: pointer;
     box-shadow: 0 1px 3px rgba(0,0,0,0.18); padding: 0; }
   .gb-swatch.active { border-color: #fff; outline: 3px solid var(--accent, #FF8A65); }
+  .gb-swatch.fixed-swatch { width: 38px; height: 38px; animation: fixedPulse 1.8s ease-in-out infinite; }
+  .gb-swatch.fixed-swatch.pop { animation: swatchPop 0.42s ease; }
+  @keyframes fixedPulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.1); } }
+  @keyframes swatchPop { 0% { transform: scale(1); } 35% { transform: scale(1.42); } 100% { transform: scale(1); } }
+  #app.reduced-motion .gb-swatch.fixed-swatch { animation: none; }
   .gb-restart { position: absolute; top: 8px; left: 8px; z-index: 4; width: 34px; height: 34px; border-radius: 50%;
     border: none; background: rgba(255,255,255,0.86); color: #8a7f7a; font-size: 18px; font-weight: 900;
     cursor: pointer; box-shadow: 0 2px 6px rgba(69,61,91,0.12); }
@@ -2647,14 +2654,40 @@ function renderGuidedBuild(activity) {
   }
   function updateRail() {
     rail.innerHTML = '';
-    const fixed = !finished && steps[stepIndex] && steps[stepIndex].fixedColour;
-    rail.classList.toggle('locked', Boolean(fixed));
+    rail.classList.remove('locked');
+    const fixedC = !finished && steps[stepIndex] ? steps[stepIndex].fixedColour : null;
+    if (fixedC) {
+      // This part has a set colour (wheels, seeds, eyes…). Instead of a dead grey
+      // rail, show ONE lively swatch of that colour — it bounces + pops on every
+      // touch so a child feels it responding, and it fills the part as they trace.
+      rail.classList.add('fixed');
+      const sw = el(`<button class="gb-swatch active fixed-swatch" style="background:${fixedC}" aria-label="This part is this colour"></button>`);
+      const bounce = () => { sw.classList.add('pop'); playPop(); };
+      sw.addEventListener('pointerdown', bounce);
+      sw.addEventListener('animationend', () => sw.classList.remove('pop'));
+      rail.append(sw);
+      return;
+    }
+    rail.classList.remove('fixed');
     for (const c of PALETTE) {
       const sw = el(`<button class="gb-swatch ${colour === c ? 'active' : ''}" style="background:${c}" aria-label="Colour ${c}"></button>`);
-      sw.onclick = () => { if (fixed) return; colour = c; updateRail(); };
+      sw.onclick = () => { colour = c; updateRail(); };
       rail.append(sw);
     }
   }
+
+  // Test seam: jump to a step so headless checks can inspect the colour rail on a
+  // fixed-colour part without hand-tracing every earlier part.
+  if (window.__lgTest) window.__lgTest.guided = {
+    fixed: () => steps.map((s, i) => ({ i, label: s.label, fixed: Boolean(s.fixedColour) })),
+    goToStep: (i) => {
+      finished = false;
+      stepIndex = Math.max(0, Math.min(steps.length - 1, i));
+      strokeIndex = 0;
+      session = new LH.TracingSession(steps[stepIndex].strokes[0], config);
+      updateStrip(); updateRail(); paint();
+    },
+  };
 
   function advance() {
     const step = steps[stepIndex];
