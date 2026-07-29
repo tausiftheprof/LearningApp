@@ -1611,7 +1611,7 @@ const GAME_GROUPS = [
   { key: 'games-sort', label: 'Sort & Match', glyph: '🧩', has: (a) => (a.template === 'drag-sort' && !a.params?.ordered) || a.template === 'match-pairs' || a.template === 'shadow-match' || a.template === 'letter-match' },
   { key: 'games-tap', label: 'Tap & Count', glyph: '🔢', has: (a) => a.template === 'pop-bubbles' || a.template === 'tap-target' || a.template === 'counting' || a.template === 'number-hop' || a.template === 'odd-one-out' },
   { key: 'games-patterns', label: 'Patterns', glyph: '🔁', has: (a) => a.template === 'sequence' || a.template === 'pattern-complete' },
-  { key: 'games-hands', label: 'Busy Hands', glyph: '✂️', has: (a) => a.template === 'feed-animal' || a.template === 'cut-along' || a.template === 'stack-blocks' || a.template === 'reveal-wipe' },
+  { key: 'games-hands', label: 'Busy Hands', glyph: '✂️', img: 'cut-scissors-open', has: (a) => a.template === 'feed-animal' || a.template === 'cut-along' || a.template === 'stack-blocks' || a.template === 'reveal-wipe' },
 ];
 const gameGroupFor = (key) => GAME_GROUPS.find((g) => g.key === key);
 
@@ -1635,7 +1635,11 @@ function renderGameSections() {
     64,
   );
   GAME_GROUPS.filter((g) => set.some(g.has)).forEach((g, i) => {
-    const iconHtml = `<span class="glyph-big" aria-hidden="true">${g.glyph}</span>`;
+    // A group can supply its own clay artwork (Busy Hands → the scissors image);
+    // high-contrast mode falls back to the emoji glyph for legibility.
+    const iconHtml = (g.img && !highContrast() && (IMAGES[g.img] || RASTER_IMAGES[g.img]))
+      ? `<span class="tile-illo" aria-hidden="true">${imgHtml(g.img, 62)}</span>`
+      : `<span class="glyph-big" aria-hidden="true">${g.glyph}</span>`;
     grid.append(bubbleTile(iconHtml, g.label, tiles()[(i + 2) % tiles().length], () => {
       speak(g.label); navigate({ name: 'picker', category: g.key });
     }));
