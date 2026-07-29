@@ -9,6 +9,14 @@ Status key: `[ ]` open · `[~]` in progress · `[x]` done (move to the bottom or
 
 ## Open
 
+- [ ] **Guided Drawing picker polish.** Two tweaks to the subject picker (demo `demo-shell.html`;
+  mobile follows in the port item):
+  - **Change the Flower icon** — the current Flower subject tile uses the wrong/placeholder icon;
+    swap it for a proper flower icon (owner to supply art, or pick the flower clay art if one exists).
+  - **Remove labels from all Guided Drawing subject tiles** — picture-forward bubbles, no text
+    label under any Guided Drawing icon (aria-label + spoken name kept for accessibility, same
+    pattern as the games-list / Colour / Tracing picker `showLabel` false).
+
 - [ ] **Remove the whale from Guided Drawing.** The old whale pilot subject should no longer appear
   in the Guided Drawing subject list — drop it so only the six build-a-picture subjects (Grip,
   Cupcake, Car, Cake, Watermelon, Flower) show. Check both the demo (`renderGuidedBuild` /
