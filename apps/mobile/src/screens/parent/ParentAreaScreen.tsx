@@ -68,11 +68,17 @@ function Dashboard(): React.JSX.Element {
   const { navigate, screenTime, rewards, profile, account } = useAppStore();
   const theme = parentTheme;
   const today = secondsUsed(screenTime, dayKeyFrom(new Date()));
-  const rows: Array<{ title: string; subtitle: string; section: Section }> = [
-    { title: 'Child profile', subtitle: profile ? `${profile.nickname}, ${profile.ageBand} years` : 'Not set up', section: 'profile' },
+  // Family-Link layout (owner direction): a child-tinted zone bounds everything
+  // about the selected child; general/account settings sit outside it.
+  const accent = profile ? themeById(profile.themeId).accent : '#7E7AA6';
+  const level = profile ? (profile.difficulty === 1 ? 'Beginner' : profile.difficulty === 2 ? 'Developing' : 'Confident') : '';
+  const childRows: Array<{ title: string; subtitle: string; section: Section }> = [
     { title: 'Progress', subtitle: 'Skills, favourites and suggestions', section: 'progress' },
     { title: 'Screen time', subtitle: `${Math.round(today / 60)} min today`, section: 'screen-time' },
-    { title: 'Accessibility', subtitle: 'See, hear, touch and pace settings', section: 'accessibility' },
+    { title: `Settings for ${profile?.nickname ?? 'your child'}`, subtitle: 'Difficulty, theme, sound, handedness', section: 'profile' },
+    { title: 'Accessibility', subtitle: 'See, hear, touch and pace', section: 'accessibility' },
+  ];
+  const generalRows: Array<{ title: string; subtitle: string; section: Section }> = [
     { title: 'Privacy & data', subtitle: 'Notice, export and delete', section: 'privacy' },
     { title: 'Cloud backup & sync', subtitle: cloudSyncSubtitle(account), section: 'cloud-sync' },
     { title: 'Subscription', subtitle: 'Free plan', section: 'subscription' },
@@ -80,9 +86,33 @@ function Dashboard(): React.JSX.Element {
   ];
   return (
     <View>
-      <Text style={styles.h1}>Parent dashboard</Text>
-      <Text style={styles.stat}>⭐ {rewards.totalStars} stars earned · {Math.round(today / 60)} minutes today</Text>
-      {rows.map((row) => (
+      <View style={styles.kidZone}>
+        <Text style={styles.kidBadge}>FOR {(profile?.nickname ?? 'YOUR CHILD').toUpperCase()}</Text>
+        <View style={styles.kidHead}>
+          <View style={[styles.kidAvatar, { backgroundColor: accent }]}>
+            <Text style={styles.kidAvatarText}>{(profile?.nickname ?? '?').slice(0, 1).toUpperCase()}</Text>
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.kidName}>{profile?.nickname ?? 'Not set up'}</Text>
+            <View style={styles.kidMetaRow}>
+              {profile && <Text style={styles.kidMeta}>{profile.ageBand} years</Text>}
+              {profile && (
+                <View style={[styles.levelPill, { backgroundColor: accent }]}>
+                  <Text style={styles.levelPillText}>{level}</Text>
+                </View>
+              )}
+            </View>
+          </View>
+        </View>
+        <Text style={styles.kidStat}>⭐ {rewards.totalStars} stars · {Math.round(today / 60)} min today</Text>
+        {childRows.map((row) => (
+          <ParentRow key={row.section} title={row.title} subtitle={row.subtitle} theme={theme} onPress={() => navigate({ name: 'parent', section: row.section })} />
+        ))}
+      </View>
+
+      <Text style={styles.scopeDivider}>GENERAL APP SETTINGS</Text>
+      <Text style={styles.deviceNote}>These apply to this device, not to one child.</Text>
+      {generalRows.map((row) => (
         <ParentRow key={row.section} title={row.title} subtitle={row.subtitle} theme={theme} onPress={() => navigate({ name: 'parent', section: row.section })} />
       ))}
     </View>
@@ -453,6 +483,19 @@ const styles = StyleSheet.create({
   h2: { fontSize: 16, fontWeight: '700', color: '#1F2933', marginTop: 16, marginBottom: 4, marginLeft: 8 },
   body: { fontSize: 15, lineHeight: 22, color: '#1F2933', margin: 8 },
   stat: { fontSize: 15, color: '#1F2933', marginLeft: 8, marginBottom: 12 },
+  kidZone: { backgroundColor: '#EDF2F0', borderColor: '#D8E4DF', borderWidth: 1, borderRadius: 16, padding: 12, marginBottom: 8 },
+  kidBadge: { fontSize: 11, fontWeight: '800', letterSpacing: 1, color: '#4A5B54', marginBottom: 8 },
+  kidHead: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 8 },
+  kidAvatar: { width: 52, height: 52, borderRadius: 26, alignItems: 'center', justifyContent: 'center' },
+  kidAvatarText: { color: '#FFFFFF', fontSize: 24, fontWeight: '800' },
+  kidName: { fontSize: 21, fontWeight: '800', color: '#1F2933' },
+  kidMetaRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 3 },
+  kidMeta: { fontSize: 13, color: '#52606D' },
+  levelPill: { borderRadius: 999, paddingHorizontal: 8, paddingVertical: 1 },
+  levelPillText: { color: '#FFFFFF', fontSize: 11, fontWeight: '800' },
+  kidStat: { fontSize: 14, color: '#3B4A54', marginBottom: 6 },
+  scopeDivider: { fontSize: 12, fontWeight: '800', letterSpacing: 1, color: '#7B8794', marginTop: 18, marginBottom: 4, marginLeft: 8 },
+  deviceNote: { fontSize: 12.5, color: '#7B8794', marginLeft: 8, marginBottom: 8, fontStyle: 'italic' },
   radio: { fontSize: 20, color: '#2F6F62' },
   disclaimer: { fontSize: 13, fontStyle: 'italic', color: '#52606D', margin: 8, marginTop: 16 },
   textInput: {
