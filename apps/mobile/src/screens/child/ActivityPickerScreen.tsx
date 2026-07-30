@@ -7,6 +7,7 @@ import { childTheme } from '../../ui/theme';
 import { HoldToHomeButton } from '../../ui/components';
 import { IMPLEMENTED_GAME_TEMPLATES } from './games/registry';
 import { tracingArtFor, gameArtFor, sectionIcon } from '../../ui/tracingArt';
+import { puzzleArtFor } from '../../ui/puzzleArt';
 
 const SPARK_EMOJI = ['✨', '⭐', '🌟'];
 
@@ -285,7 +286,9 @@ export function ActivityPickerScreen(props: { category: PickerCategory }): React
           const traceArt = activity.type === 'tracing' ? tracingArtFor(activity.id) : undefined;
           // "Make a shape" dot-to-dot games show their clay shape art in a bubble.
           const gameArt = activity.type === 'game' ? gameArtFor(activity.id) : undefined;
-          const art = traceArt ?? gameArt;
+          // Photo puzzles show their own picture as the tile (not a generic 🧩).
+          const puzzleArt = activity.type === 'jigsaw' ? (puzzleArtFor(activity.image) ?? undefined) : undefined;
+          const art = traceArt ?? gameArt ?? puzzleArt;
           const bare = (isGlyphList || isShapeList) && traceArt != null;
           return (
             <BubbleTile
