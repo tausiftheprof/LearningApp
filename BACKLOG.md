@@ -79,11 +79,16 @@ swap in cute art whenever ready.
   (colouring) + **onboarding Next**; (5) **per-theme home icons** (`THEME_TILE_ART`
   candy/storybook/aussie in `HomeScreen`); (6) **Guided Drawing build-a-picture** — `GuidedDrawingPlayer`
   rewritten to the part-by-part trace→fill mechanic reading `guidedBuilds` (replaces the removed whale
-  pilot); (7) **Number Path Hop** game (`number-hop` registered + `NumberHopGame`). **Still pending
-  (large, complex interactions — best done with device feedback):** `cut-along` (drag-to-split),
-  Colour-by-Numbers number-locked line-art, the Draw Magic-drawer panel, and the labelled game-group
-  tiles + Little Games chooser. Build to verify: `eas build -p android --profile preview` (owner's
-  machine).
+  pilot); (7) **Number Path Hop** game (`number-hop` registered + `NumberHopGame`). **On-device round 1
+  fixes (owner-verified):** puzzle pieces drag (RN `locationX` is child-relative → gesture window coords
+  minus a `measureInWindow` origin; same fix for Feed the Animal's mouth/food), a **2×2/3×3/4×4 size
+  picker**, real Fisher-Yates scatter, board+tray fit-to-screen (reachable without scrolling), puzzle
+  picker tiles show each photo; plus the **Family-Link parent dashboard** (child-tinted zone + "General
+  app settings" divider). **Still pending (large, complex — best with device feedback):** `cut-along`
+  (drag-to-split), Colour-by-Numbers number-locked line-art, the Draw Magic-drawer panel, the labelled
+  game-group tiles + Little Games chooser, and the **multi-child switcher** (needs a "set active
+  profile" store action — mobile is single-active-profile today). Build to verify: `eas build -p
+  android --profile preview` (owner's machine).
 - [x] **End-of-activity card → Option B (auto-return + replay), non-covering.** Owner picked Option B
   from the mockup (artifact `382698d1-c693-4ed5-9a83-9005bbeb6cb0`). The big covering
   `.banner.name-done` card is gone from all four bespoke end screens — tracing **section-complete**,

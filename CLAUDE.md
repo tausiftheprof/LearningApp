@@ -318,16 +318,26 @@ fills the centre-line, glowing leader dot, ruled-between-lines, chime + star bur
 glyph/section/shape-game art is enumerated in `apps/mobile/src/ui/tracingArt.ts`
 (`TRACING_ART`/`SECTION_ICONS`/`SHAPE_GAME_ART`, keyed by activity id / section key) — add new art
 there, not via a computed path; UI-button art lives in `ui/uiArt.ts` and photo-puzzle art in
-`ui/puzzleArt.ts`. **Also ported (July 2026, typecheck-clean, pending on-device verify):**
-**picture puzzle pieces** (`PuzzlePlayer` slices the real photo + ghost target for the 11 photo
-jigsaws, colour-tile fallback otherwise), the **clay UI buttons** (home/back top bar via `clayBtn`
-pattern, colouring Save, onboarding Next — `Theme.highContrast` gates the emoji fallback), the
-**non-covering Option-B completion** (`CompletionBanner` → slim toast + ~5s auto-return countdown +
-"Play again" remount via a `replayKey` in `ActivityPlayerScreen`; wired for puzzle/tracing/guided/
-game), and **per-theme home icons** (`THEME_TILE_ART` candy/storybook/aussie in `HomeScreen`).
-**Still demo-only** (mobile port pending): the new games
-(`feed-animal` new layout, `cut-along`, `number-hop`, number-locked `colour-cbn-*`), the Draw
-Magic-drawer panel, the **Guided Drawing "build a picture"** subjects (Grip/Cupcake/Car/Cake/
+`ui/puzzleArt.ts`. **Also ported (July 2026, typecheck-clean, on-device verified except where noted):**
+**picture puzzle pieces** — `PuzzlePlayer` slices the real photo into draggable pieces (+ faint ghost
+target) for the 11 photo jigsaws (colour-tile fallback for the procedural SVG ones), with a **2×2/3×3/
+4×4 size picker** (`PuzzleBoard` split out, keyed per grid), a real Fisher-Yates scatter, and a
+board+tray both sized to the viewport (tray = `cols`-wide grid directly below, so pieces are reachable
+without scrolling); the puzzle **picker tiles show each photo** (via `puzzleArtFor`). **Drag house-rule
+for RN:** `nativeEvent.locationX/Y` is relative to the *touched child*, so drag hit-testing MUST use the
+gesture's window coords (`g.x0/moveX`) minus the surface's `measureInWindow` origin — this bit both the
+puzzle and **Feed the Animal** (whose mouth + food also had to be measured in window coords, not their
+different parent frames). Ported too: the **clay UI buttons** (home/back top bar via a `clayBtn` pattern,
+colouring Save, onboarding Next — `Theme.highContrast` gates the emoji fallback), the **non-covering
+Option-B completion** (`CompletionBanner` → slim toast + ~5s auto-return countdown + "Play again" remount
+via a `replayKey` in `ActivityPlayerScreen`; wired for puzzle/tracing/guided/game), **per-theme home
+icons** (`THEME_TILE_ART` candy/storybook/aussie in `HomeScreen`), the **Guided Drawing build-a-picture**
+mechanic (`GuidedDrawingPlayer` rewritten to part-by-part trace→fill reading `guidedBuilds`; replaced the
+removed whale pilot), the **Number Path Hop** game (`number-hop` registered + `NumberHopGame`), and the
+**Family-Link parent dashboard** (`ParentAreaScreen` Dashboard → child-tinted zone + "General app
+settings" divider). **Still demo-only** (mobile port pending): the multi-child switcher (the mobile store
+is single-active-profile — `profiles[0]`), `cut-along`, number-locked `colour-cbn-*`, and the Draw
+Magic-drawer panel. (Geometry note for the ported Guided Drawing — subjects Grip/Cupcake/Car/Cake/
 Watermelon/Flower — one part traced at a time, each locking in filled with the child's colour;
 geometry authored as polylines in `packages/core/src/content/guidedBuilds.ts`, single source of
 truth for the mobile port; guided-drawing steps carry `label`/`strokes`/`fill`/`fixedColour`;
