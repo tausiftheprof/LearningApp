@@ -27,7 +27,13 @@ export function PuzzlePlayer(props: {
   // jigsaws with no bundled photo fall back to the coloured-tile scaffold.
   const picture = puzzleArtFor(activity.image);
 
-  const cell = Math.min(board.w / activity.cols, (board.h * 0.6) / activity.rows);
+  // Board fills the top ~half; the piece tray sits below it. Cell is capped so a
+  // 2-piece-wide puzzle doesn't blow up to giant pieces on a big tablet.
+  const M = 14;
+  const cell = Math.max(
+    44,
+    Math.min((board.w - 2 * M) / activity.cols, (board.h * 0.5) / activity.rows, 168),
+  );
   const config = useMemo(() => puzzleConfigFor(profile?.difficulty ?? 1), [profile]);
 
   interface PieceView {
@@ -41,30 +47,51 @@ export function PuzzlePlayer(props: {
   }
 
   const initialPieces = useMemo<PieceView[]>(() => {
+    const n = activity.rows * activity.cols;
+    // Deterministic shuffle of the tray order so pieces aren't already in place.
+    const order = Array.from({ length: n }, (_, i) => i);
+    for (let i = n - 1; i > 0; i--) {
+      const j = (i * 7 + 3) % (i + 1);
+      const t = order[i]!; order[i] = order[j]!; order[j] = t;
+    }
+    // A tidy, non-overlapping grid tray centred below the board.
+    const gap = 14;
+    const trayCols = Math.max(1, Math.floor((board.w - 2 * M + gap) / (cell + gap)));
+    const trayW = trayCols * cell + (trayCols - 1) * gap;
+    const trayX0 = (board.w - trayW) / 2;
+    const trayTop = 16 + cell * activity.rows + 30;
     const pieces: PieceView[] = [];
     for (let r = 0; r < activity.rows; r++) {
       for (let c = 0; c < activity.cols; c++) {
+        const idx = r * activity.cols + c;
+        const slot = order[idx]!;
+        const tc = slot % trayCols;
+        const tr = Math.floor(slot / trayCols);
         pieces.push({
           id: `${r}-${c}`,
           row: r,
           col: c,
-          // Tray along the bottom, shuffled deterministically.
-          x: 20 + ((r * activity.cols + c) * 90) % Math.max(90, board.w - 120),
-          y: board.h * 0.66 + ((r + c) % 2) * 95,
+          x: trayX0 + tc * (cell + gap) + cell / 2,
+          y: trayTop + tr * (cell + gap) + cell / 2,
           placed: false,
-          colour: theme.tileColours[(r * activity.cols + c) % theme.tileColours.length]!,
+          colour: theme.tileColours[idx % theme.tileColours.length]!,
         });
       }
     }
     return pieces;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activity, board.w, board.h]);
+  }, [activity, board.w, board.h, cell]);
 
   const [pieces, setPieces] = useState<PieceView[]>(initialPieces);
   const [hintFor, setHintFor] = useState<string | null>(null);
   const [done, setDone] = useState(false);
   const session = useRef<PuzzleSession | null>(null);
   const dragging = useRef<string | null>(null);
+  // Board's absolute (window) origin, so we can turn gesture page coords into
+  // board-local coords. locationX/Y is relative to the touched child (a piece),
+  // which is why hit-testing with it never matched — pieces wouldn't move.
+  const rootRef = useRef<View>(null);
+  const boardOrigin = useRef({ x: 0, y: 0 });
 
   // (Re)build the session once layout is known.
   React.useEffect(() => {
@@ -85,26 +112,30 @@ export function PuzzlePlayer(props: {
     () =>
       PanResponder.create({
         onStartShouldSetPanResponder: () => !done,
-        onPanResponderGrant: (e) => {
-          const { locationX, locationY } = e.nativeEvent;
+        onMoveShouldSetPanResponder: () => !done,
+        onPanResponderGrant: (_e, g) => {
+          const lx = g.x0 - boardOrigin.current.x;
+          const ly = g.y0 - boardOrigin.current.y;
           const hit = [...pieces]
             .reverse()
-            .find((p) => !p.placed && Math.abs(p.x - locationX) < cell * 0.6 && Math.abs(p.y - locationY) < cell * 0.6);
+            .find((p) => !p.placed && Math.abs(p.x - lx) < cell * 0.6 && Math.abs(p.y - ly) < cell * 0.6);
           dragging.current = hit?.id ?? null;
         },
-        onPanResponderMove: (e) => {
+        onPanResponderMove: (_e, g) => {
           const id = dragging.current;
           if (!id) return;
-          const { locationX, locationY } = e.nativeEvent;
-          setPieces((prev) => prev.map((p) => (p.id === id ? { ...p, x: locationX, y: locationY } : p)));
+          const lx = g.moveX - boardOrigin.current.x;
+          const ly = g.moveY - boardOrigin.current.y;
+          setPieces((prev) => prev.map((p) => (p.id === id ? { ...p, x: lx, y: ly } : p)));
         },
-        onPanResponderRelease: (e) => {
+        onPanResponderRelease: (_e, g) => {
           const id = dragging.current;
           dragging.current = null;
           const s = session.current;
           if (!id || !s) return;
-          const { locationX, locationY } = e.nativeEvent;
-          const result = s.drop(id, { x: locationX, y: locationY });
+          const lx = g.moveX - boardOrigin.current.x;
+          const ly = g.moveY - boardOrigin.current.y;
+          const result = s.drop(id, { x: lx, y: ly });
           if (result.kind === 'snapped') {
             setHintFor(null);
             setPieces((prev) =>
@@ -135,7 +166,15 @@ export function PuzzlePlayer(props: {
   }
 
   return (
-    <View style={styles.root} onLayout={(e) => setBoard({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })} {...pan.panHandlers}>
+    <View
+      ref={rootRef}
+      style={styles.root}
+      onLayout={(e) => {
+        setBoard({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height });
+        rootRef.current?.measureInWindow((x, y) => { boardOrigin.current = { x, y }; });
+      }}
+      {...pan.panHandlers}
+    >
       {/* Faint whole-picture target behind the slots, so the goal is visible */}
       {picture && (
         <View
@@ -209,7 +248,6 @@ export function PuzzlePlayer(props: {
               left: p.x - cell / 2 + 5,
               top: p.y - cell / 2 + 5,
               backgroundColor: p.colour,
-              opacity: p.placed ? 1 : 0.95,
               borderRadius: p.placed ? 6 : 14,
             }]}
           >

@@ -2,7 +2,6 @@ import React, { useMemo, useRef, useState } from 'react';
 import {
   Animated,
   Image,
-  LayoutRectangle,
   PanResponder,
   Pressable,
   StyleSheet,
@@ -336,6 +335,7 @@ function OddOneOutGame(props: { theme: Theme; onMiss: () => void; onFinish: () =
 }
 
 /* --- Feed the animal: drag the food into the hungry character's mouth --- */
+type Measurable = { measureInWindow: (cb: (x: number, y: number, w: number, h: number) => void) => void };
 type Mouth = { x: number; y: number; r: number };
 type FoodSpec = { name: string; image: string };
 
@@ -357,14 +357,16 @@ function FeedAnimalGame(props: {
   const [eaten, setEaten] = useState<Set<number>>(new Set());
   const [chomping, setChomping] = useState(false);
   const mouthRef = useRef<Mouth | null>(null);
+  const charRef = useRef<Measurable | null>(null);
   const bounce = useRef(new Animated.Value(1)).current;
 
-  function onCharLayout(rect: LayoutRectangle): void {
-    mouthRef.current = {
-      x: rect.x + rect.width * mouthFrac.x,
-      y: rect.y + rect.height * mouthFrac.y,
-      r: rect.width * mouthFrac.r,
-    };
+  // Measure the mouth in WINDOW coords so it matches the food's window position
+  // (the character and the food tray live in different parents — comparing their
+  // parent-relative layouts made feeding never register).
+  function onCharLayout(): void {
+    charRef.current?.measureInWindow((x: number, y: number, w: number, h: number) => {
+      mouthRef.current = { x: x + w * mouthFrac.x, y: y + h * mouthFrac.y, r: w * mouthFrac.r };
+    });
   }
 
   function eat(index: number): void {
@@ -388,8 +390,9 @@ function FeedAnimalGame(props: {
       <Text style={[styles.prompt, { color: props.theme.text }]}>Drag the food to the mouth! 🍓</Text>
       <View style={styles.feedStage}>
         <Animated.View
+          ref={(n) => { charRef.current = (n as unknown as Measurable | null); }}
           style={[styles.feedCharacter, { transform: [{ scale: bounce }] }]}
-          onLayout={(e) => onCharLayout(e.nativeEvent.layout)}
+          onLayout={() => onCharLayout()}
         >
           {(chomping ? chompSrc : openSrc) != null && (
             <Image source={chomping ? chompSrc : openSrc} style={styles.feedCharacterImg} resizeMode="contain" />
@@ -425,6 +428,7 @@ function DraggableFood(props: {
 }): React.JSX.Element {
   const pan = useRef(new Animated.ValueXY()).current;
   const home = useRef({ cx: 0, cy: 0 }).current;
+  const foodRef = useRef<Measurable | null>(null);
   const responder = useMemo(
     () =>
       PanResponder.create({
@@ -454,11 +458,13 @@ function DraggableFood(props: {
 
   return (
     <Animated.View
+      ref={(n) => { foodRef.current = (n as unknown as Measurable | null); }}
       {...responder.panHandlers}
-      onLayout={(e) => {
-        const { x, y, width, height } = e.nativeEvent.layout;
-        home.cx = x + width / 2;
-        home.cy = y + height / 2;
+      onLayout={() => {
+        foodRef.current?.measureInWindow((x: number, y: number, width: number, height: number) => {
+          home.cx = x + width / 2;
+          home.cy = y + height / 2;
+        });
       }}
       accessibilityRole="image"
       accessibilityLabel={props.label}
