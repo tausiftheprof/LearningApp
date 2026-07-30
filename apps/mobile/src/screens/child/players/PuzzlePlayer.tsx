@@ -77,13 +77,22 @@ function PuzzleBoard(props: {
 }): React.JSX.Element {
   const { theme, rows, cols, picture } = props;
   const [board, setBoard] = useState({ w: 1, h: 1 });
-  const config = useMemo(() => puzzleConfigFor(props.difficulty), [props.difficulty]);
+  const base = useMemo(() => puzzleConfigFor(props.difficulty), [props.difficulty]);
 
   const M = 14, TOP = 12, MIDGAP = 22, GAP = 8;
   const availW = Math.max(120, board.w - 2 * M);
   const availH = Math.max(160, board.h - TOP - MIDGAP - 16);
   // Board grid on top, an equal tray-grid below → both fit in the viewport.
   const cell = Math.max(36, Math.min((availW - (cols - 1) * GAP) / cols, availH / (2 * rows), 150));
+
+  // Snap tolerance must scale with the DRAWN piece, not the pack's fixed
+  // design-space pixels — on a tablet a 48-80px radius is far smaller than a
+  // 150px piece, so a piece that looks placed springs back. Forgiveness is a
+  // feature for 2-7yos: a drop within ~0.6-0.9 of a cell of the slot snaps.
+  const config = useMemo(() => {
+    const frac = props.difficulty === 3 ? 0.65 : props.difficulty === 2 ? 0.8 : 0.95;
+    return { ...base, snapRadius: Math.max(44, cell * frac) };
+  }, [base, cell, props.difficulty]);
 
   // A real random scatter, computed once per grid size (stable across resizes).
   const order = useMemo(() => {
