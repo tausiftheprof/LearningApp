@@ -99,11 +99,18 @@ swap in cute art whenever ready.
   (right rail + white ring, crayon/paint/eraser/🪄 bar, size pod, corner undo-redo/start-over/save, wand
   drawer of rainbow/glitter/glow/star+heart stamps); Skia renders every kind (glow = blurred underlay,
   stamps = filled Skia star/heart paths); core `BrushKind` gained `glow`/`stampStar`/`stampHeart`.
-  **Still pending (the one remaining large engine):** **line-art flood-fill colouring** — both the free
-  flood-fill scenes and the number-locked `colour-cbn-*` pages — needs a native raster pixel flood-fill
-  engine (mobile `ColouringPlayer` handles only polygon regions and shows "coming soon" for
-  `mode: 'line-art'`); wants on-device performance profiling before it ships. Build to verify: `eas build
-  -p android --profile preview` (owner's machine).
+  **Mobile port batch 3 (July 2026, typecheck-clean; on-device profiling pending):** the **line-art
+  flood-fill colouring engine** — the last large engine — is now ported (`LineArtColouringPlayer` in
+  `ColouringPlayer`, faithful port of the demo's `renderColouringLineArt`): offscreen Skia rasterise →
+  `readPixels` → ink "wall" mask + background-keyed overlay → tap BFS flood-fill into a paint buffer
+  rebuilt as an `SkImage` under the ink; taps on ink hop to the nearest open pixel; a paint-inside-lines
+  brush stamps only non-ink pixels; **Colour-by-Numbers** is number-locked (current-number colour only, a
+  region accepted only if a printed target of that number falls inside the flood). The picker un-filters
+  line-art, shows each scene's picture on its tile, and gained the two-door **Colour chooser** (Colour by
+  Numbers vs Colour Your Way). `ui/sceneArt.ts` enumerates the 10 scenes. **With this, no large engine is
+  demo-only** — mobile mirrors the demo's activity set. **Only remaining check:** on-device flood-fill
+  performance (RES=720 BFS + per-fill `SkImage` rebuild — confirm it's snappy on a real tablet). Build to
+  verify: `eas build -p android --profile preview` (owner's machine).
 - [x] **End-of-activity card → Option B (auto-return + replay), non-covering.** Owner picked Option B
   from the mockup (artifact `382698d1-c693-4ed5-9a83-9005bbeb6cb0`). The big covering
   `.banner.name-done` card is gone from all four bespoke end screens — tracing **section-complete**,

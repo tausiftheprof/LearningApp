@@ -348,11 +348,19 @@ child-switcher chip row + a **Children** screen with per-child Switch/Delete + A
 Free Draw board** (`DrawingBoard` rebuilt to the owner layout — right colour rail + white selected ring,
 slim crayon/paint/eraser/🪄 bar, floating size pod, corner undo-redo/start-over/save, wand drawer of
 rainbow/glitter/glow/star+heart stamps; Skia renders every kind, glow via a blurred underlay, stamps as
-filled Skia star/heart paths; core `BrushKind` extended with `glow`/`stampStar`/`stampHeart`). **Still
-demo-only** (mobile port pending): **line-art flood-fill colouring** — both the free flood-fill scenes and
-the number-locked `colour-cbn-*` pages — which needs a native raster pixel flood-fill engine (the mobile
-`ColouringPlayer` handles only polygon regions and shows a "coming soon" for `mode: 'line-art'`); this is
-the one remaining large engine and wants on-device performance profiling before it ships. (Geometry note
+filled Skia star/heart paths; core `BrushKind` extended with `glow`/`stampStar`/`stampHeart`). Also the
+**line-art flood-fill colouring engine** — the last large engine — is now **ported** (`ColouringPlayer`'s
+`mode: 'line-art'` branch = `LineArtColouringPlayer`, a faithful port of the demo's `renderColouringLineArt`):
+rasterises the owner scene once into an offscreen Skia surface at RES², reads pixels via `readPixels`,
+builds the ink "wall" mask (dark pixels) + a background-keyed crisp overlay, then a tap BFS-flood-fills the
+connected non-ink area into a paint buffer rebuilt as an `SkImage` (via `Skia.Image.MakeImage` +
+`Skia.Data.fromBytes`) drawn under the ink; taps on ink hop to the nearest open pixel; brush stamps skip
+ink; **Colour-by-Numbers** is number-locked (only the current number's colour is pickable; a region is
+accepted only if one of that number's printed `byNumberPlan` targets falls in the flooded area). The mobile
+picker no longer filters line-art out, shows each scene's picture on its tile, and gained the two-door
+**Colour chooser** (Colour by Numbers vs Colour Your Way). **On-device flood-fill performance profiling is
+still pending** (RES=720 BFS + per-fill `SkImage` rebuild — verify it stays snappy on a real tablet). With
+this, **no large engine remains demo-only** — the mobile app mirrors the demo's activity set. (Geometry note
 for the ported Guided Drawing — subjects Grip/Cupcake/Car/Cake/
 Watermelon/Flower — one part traced at a time, each locking in filled with the child's colour;
 geometry authored as polylines in `packages/core/src/content/guidedBuilds.ts`, single source of
