@@ -16,7 +16,7 @@ import { ParentRow, PrimaryButton } from '../../ui/components';
 
 type Section =
   | 'dashboard' | 'profile' | 'progress' | 'screen-time'
-  | 'accessibility' | 'privacy' | 'cloud-sync' | 'subscription' | 'help';
+  | 'accessibility' | 'privacy' | 'cloud-sync' | 'subscription' | 'help' | 'children';
 
 /**
  * Parent area (FR-018, docs/03 S20-S29). Visually distinct standard UI
@@ -59,13 +59,14 @@ export function ParentAreaScreen(props: { section: Section }): React.JSX.Element
         {props.section === 'cloud-sync' && <CloudSyncSection />}
         {props.section === 'subscription' && <SubscriptionSection />}
         {props.section === 'help' && <HelpSection />}
+        {props.section === 'children' && <ChildrenSection />}
       </ScrollView>
     </View>
   );
 }
 
 function Dashboard(): React.JSX.Element {
-  const { navigate, screenTime, rewards, profile, account } = useAppStore();
+  const { navigate, screenTime, rewards, profile, account, profiles, setActiveProfile } = useAppStore();
   const theme = parentTheme;
   const today = secondsUsed(screenTime, dayKeyFrom(new Date()));
   // Family-Link layout (owner direction): a child-tinted zone bounds everything
@@ -105,9 +106,30 @@ function Dashboard(): React.JSX.Element {
           </View>
         </View>
         <Text style={styles.kidStat}>⭐ {rewards.totalStars} stars · {Math.round(today / 60)} min today</Text>
+        {/* Child switcher: one chip per child; tap to make that child active.
+            (Multi-child parity with the demo's Family-Link zone.) */}
+        {profiles.length > 1 && (
+          <View style={styles.chipRow}>
+            {profiles.map((p) => {
+              const active = p.id === profile?.id;
+              return (
+                <Text
+                  key={p.id}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Switch to ${p.nickname}`}
+                  onPress={() => { if (!active) void setActiveProfile(p.id); }}
+                  style={[styles.kidChip, active ? { backgroundColor: accent, color: '#FFFFFF' } : null]}
+                >
+                  {p.nickname}
+                </Text>
+              );
+            })}
+          </View>
+        )}
         {childRows.map((row) => (
           <ParentRow key={row.section} title={row.title} subtitle={row.subtitle} theme={theme} onPress={() => navigate({ name: 'parent', section: row.section })} />
         ))}
+        <ParentRow title="＋ Add / manage children" subtitle={`${profiles.length} ${profiles.length === 1 ? 'child' : 'children'}`} theme={theme} onPress={() => navigate({ name: 'parent', section: 'children' })} />
       </View>
 
       <Text style={styles.scopeDivider}>GENERAL APP SETTINGS</Text>
@@ -115,6 +137,70 @@ function Dashboard(): React.JSX.Element {
       {generalRows.map((row) => (
         <ParentRow key={row.section} title={row.title} subtitle={row.subtitle} theme={theme} onPress={() => navigate({ name: 'parent', section: row.section })} />
       ))}
+    </View>
+  );
+}
+
+/**
+ * Children management (owner direction): every local child with Switch + Delete,
+ * plus "Add a child". Delete runs the orchestrated deleteAllChildData wipe, then
+ * the store re-activates a remaining child or returns to onboarding.
+ */
+function ChildrenSection(): React.JSX.Element {
+  const { profiles, profile, navigate, setActiveProfile, deleteChildData } = useAppStore();
+  const theme = parentTheme;
+
+  function confirmDelete(id: string, name: string): void {
+    Alert.alert(
+      `Delete ${name}?`,
+      'This permanently removes this child’s profile, progress, stars and saved artwork from this device. This cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete everything',
+          style: 'destructive',
+          onPress: () => {
+            // deleteChildData wipes the ACTIVE child, so switch to the target
+            // first if it isn't already active (a no-op when it is).
+            void (async () => {
+              if (id !== profile?.id) await setActiveProfile(id);
+              await deleteChildData();
+            })();
+          },
+        },
+      ],
+    );
+  }
+
+  return (
+    <View>
+      <Text style={styles.h1}>Children</Text>
+      <Text style={styles.body}>Everyone who plays on this device. Tap Switch to change who’s playing.</Text>
+      {profiles.map((p) => {
+        const active = p.id === profile?.id;
+        return (
+          <ParentRow
+            key={p.id}
+            title={active ? `${p.nickname} (playing now)` : p.nickname}
+            subtitle={`${p.ageBand} years`}
+            theme={theme}
+            right={
+              <View style={styles.childActions}>
+                {!active && (
+                  <Text accessibilityRole="button" accessibilityLabel={`Switch to ${p.nickname}`} onPress={() => void setActiveProfile(p.id)} style={styles.switchLink}>
+                    Switch
+                  </Text>
+                )}
+                <Text accessibilityRole="button" accessibilityLabel={`Delete ${p.nickname}`} onPress={() => confirmDelete(p.id, p.nickname)} style={styles.deleteLink}>
+                  Delete
+                </Text>
+              </View>
+            }
+          />
+        );
+      })}
+      <View style={{ height: 16 }} />
+      <PrimaryButton label="＋ Add a child" onPress={() => navigate({ name: 'onboarding' })} theme={theme} />
     </View>
   );
 }
@@ -494,6 +580,15 @@ const styles = StyleSheet.create({
   levelPill: { borderRadius: 999, paddingHorizontal: 8, paddingVertical: 1 },
   levelPillText: { color: '#FFFFFF', fontSize: 11, fontWeight: '800' },
   kidStat: { fontSize: 14, color: '#3B4A54', marginBottom: 6 },
+  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 10 },
+  kidChip: {
+    fontSize: 14, fontWeight: '700', color: '#3B4A54', backgroundColor: '#FFFFFF',
+    borderRadius: 999, paddingVertical: 6, paddingHorizontal: 14, overflow: 'hidden',
+    borderWidth: 1, borderColor: 'rgba(0,0,0,0.08)',
+  },
+  childActions: { flexDirection: 'row', alignItems: 'center', gap: 16 },
+  switchLink: { fontSize: 15, fontWeight: '700', color: '#2F6FEB' },
+  deleteLink: { fontSize: 15, fontWeight: '700', color: '#C0392B' },
   scopeDivider: { fontSize: 12, fontWeight: '800', letterSpacing: 1, color: '#7B8794', marginTop: 18, marginBottom: 4, marginLeft: 8 },
   deviceNote: { fontSize: 12.5, color: '#7B8794', marginLeft: 8, marginBottom: 8, fontStyle: 'italic' },
   radio: { fontSize: 20, color: '#2F6F62' },

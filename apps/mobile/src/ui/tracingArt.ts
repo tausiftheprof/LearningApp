@@ -65,6 +65,11 @@ export const SECTION_ICONS: ArtMap = {
   "sec-draw-dotdot": require("../../../../assets/images/sec-draw-dotdot.png"),
   "sec-colour-bynum": require("../../../../assets/images/sec-colour-bynum.png"),
   "sec-colour-yourway": require("../../../../assets/images/sec-colour-yourway.png"),
+  // Little Games group tiles (three carry the group name baked into the art).
+  "games-sort": require("../../../../assets/images/sort-and-match-with-label.png"),
+  "games-tap": require("../../../../assets/images/tap-and-count-with-label.png"),
+  "games-patterns": require("../../../../assets/images/patterns-with-label.png"),
+  "games-hands": require("../../../../assets/images/cut-scissors-open.png"),
 };
 
 // The "make a shape" dot-to-dot games reuse the clay shapes (+ the clay star)

@@ -8,6 +8,21 @@ import { HoldToHomeButton } from '../../ui/components';
 import { IMPLEMENTED_GAME_TEMPLATES } from './games/registry';
 import { tracingArtFor, gameArtFor, sectionIcon } from '../../ui/tracingArt';
 import { puzzleArtFor } from '../../ui/puzzleArt';
+import { gamePictureFor } from '../../ui/cutArt';
+
+/**
+ * Little Games groups (owner direction, July 2026): the toddler door opens a
+ * chooser — Sort & Match, Tap & Count, Patterns, Busy Hands — each listing only
+ * its own games. Membership is a template predicate; empty groups are hidden.
+ * Three tiles carry the group name baked into the clay art (`labelled`).
+ */
+const GAME_GROUPS = [
+  { key: 'games-sort' as const, label: 'Sort & Match', icon: 'games-sort', labelled: true, has: (t: string) => t === 'match-pairs' || t === 'memory-cards' || t === 'shadow-match' || t === 'letter-match' || t === 'drag-sort' },
+  { key: 'games-tap' as const, label: 'Tap & Count', icon: 'games-tap', labelled: true, has: (t: string) => t === 'pop-bubbles' || t === 'tap-target' || t === 'counting' || t === 'number-hop' || t === 'odd-one-out' },
+  { key: 'games-patterns' as const, label: 'Patterns', icon: 'games-patterns', labelled: true, has: (t: string) => t === 'sequence' || t === 'pattern-complete' },
+  { key: 'games-hands' as const, label: 'Busy Hands', icon: 'games-hands', labelled: false, has: (t: string) => t === 'feed-animal' || t === 'cut-along' || t === 'stack-blocks' || t === 'reveal-wipe' },
+];
+type GameGroupKey = (typeof GAME_GROUPS)[number]['key'];
 
 const SPARK_EMOJI = ['✨', '⭐', '🌟'];
 
@@ -123,7 +138,7 @@ function BubbleTile(props: {
  * demo look), with the owner's cloud section icons on the tracing chooser and
  * clay glyph art on the letter/number/shape bubbles.
  */
-type PickerCategory = ActivityCategory | 'tracing-letters' | 'tracing-numbers' | 'tracing-shapes';
+type PickerCategory = ActivityCategory | 'tracing-letters' | 'tracing-numbers' | 'tracing-shapes' | GameGroupKey;
 
 export function ActivityPickerScreen(props: { category: PickerCategory }): React.JSX.Element {
   const { profile, catalogue, navigate } = useAppStore();
@@ -161,6 +176,22 @@ export function ActivityPickerScreen(props: { category: PickerCategory }): React
         kind === 'letters' ? /^trace-letter-/.test(a.id) : kind === 'numbers' ? /^trace-number-/.test(a.id) : !/^trace-(letter|number)-/.test(a.id),
       )
       .sort(numericSort);
+  const recommendIn = (list: Activity[], limit = 24) =>
+    recommendActivities(
+      list,
+      {
+        ageBand: profile?.ageBand ?? '3-5',
+        difficulty: profile?.difficulty ?? 2,
+        favouriteCategories: profile?.favouriteCategories ?? [],
+        enabledCategories: [...ACTIVITY_CATEGORIES],
+        recentActivityIds: [],
+      },
+      limit,
+    );
+  // Age-appropriate toddler games, then split into the four Little Games groups.
+  const toddlerRanked = recommendIn(playable.filter((a) => a.category === 'toddler'), 40);
+  const templateOf = (a: Activity) => (a.type === 'game' ? a.template : '');
+  const gameGroup = GAME_GROUPS.find((g) => g.key === category);
   const ranked =
     category === 'tracing-letters'
       ? tracingOf('letters')
@@ -168,17 +199,9 @@ export function ActivityPickerScreen(props: { category: PickerCategory }): React
         ? tracingOf('numbers')
         : category === 'tracing-shapes'
           ? tracingOf('shapes')
-          : recommendActivities(
-              playable.filter((a) => a.category === category),
-              {
-                ageBand: profile?.ageBand ?? '3-5',
-                difficulty: profile?.difficulty ?? 2,
-                favouriteCategories: profile?.favouriteCategories ?? [],
-                enabledCategories: [...ACTIVITY_CATEGORIES],
-                recentActivityIds: [],
-              },
-              24,
-            );
+          : gameGroup
+            ? toddlerRanked.filter((a) => gameGroup.has(templateOf(a)))
+            : recommendIn(playable.filter((a) => a.category === category));
 
   // Per-game icons (owner direction): every game tile shows its own emoji.
   const GAME_EMOJI: Record<string, string> = {
@@ -259,7 +282,42 @@ export function ActivityPickerScreen(props: { category: PickerCategory }): React
     );
   }
 
+  // The toddler door ("Little Games") opens a chooser of the four game groups
+  // (owner direction). Empty groups (fewest for the youngest band) are hidden.
+  if (category === 'toddler') {
+    const groups = GAME_GROUPS.filter((g) => toddlerRanked.some((a) => g.has(templateOf(a))));
+    const cellW = gridFor(groups.length);
+    return (
+      <View style={styles.root}>
+        <View style={styles.topBar}>
+          <HoldToHomeButton theme={theme} onHome={() => navigate({ name: 'home' })} />
+          <Text style={[styles.title, { color: theme.text }]}>Pick a game box!</Text>
+        </View>
+        <ScrollView contentContainerStyle={styles.grid}>
+          {groups.map((g, i) => (
+            <BubbleTile
+              key={g.key}
+              label={g.label}
+              // Labelled art bakes the group name into the picture → hide the
+              // text label and float it bare (no coloured bubble), like the demo.
+              showLabel={theme.highContrast || !g.labelled}
+              bare={!theme.highContrast && g.labelled}
+              colour={theme.tileColours[i % theme.tileColours.length]!}
+              textColour={theme.text}
+              artSource={theme.highContrast ? undefined : sectionIcon(g.icon)}
+              emoji={theme.highContrast ? ({ 'games-sort': '🧩', 'games-tap': '🔢', 'games-patterns': '🔁', 'games-hands': '✂️' }[g.key]) : undefined}
+              index={i}
+              cellW={cellW}
+              onPress={() => navigate({ name: 'picker', category: g.key })}
+            />
+          ))}
+        </ScrollView>
+      </View>
+    );
+  }
+
   const isTracingSection = /^tracing-/.test(category) && !littlest;
+  const isGameGroup = gameGroup != null;
   const isGlyphList = category === 'tracing-letters' || category === 'tracing-numbers';
   const isShapeList = category === 'tracing-shapes';
   const cellW = gridFor(ranked.length);
@@ -267,11 +325,11 @@ export function ActivityPickerScreen(props: { category: PickerCategory }): React
     <View style={styles.root}>
       <View style={styles.topBar}>
         <HoldToHomeButton theme={theme} onHome={() => navigate({ name: 'home' })} />
-        {isTracingSection && (
+        {(isTracingSection || isGameGroup) && (
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Back"
-            onPress={() => navigate({ name: 'picker', category: 'tracing' })}
+            onPress={() => navigate({ name: 'picker', category: isGameGroup ? 'toddler' : 'tracing' })}
             style={[styles.backBtn, { backgroundColor: theme.surface }]}
           >
             <Text style={styles.backIcon}>←</Text>
@@ -286,9 +344,11 @@ export function ActivityPickerScreen(props: { category: PickerCategory }): React
           const traceArt = activity.type === 'tracing' ? tracingArtFor(activity.id) : undefined;
           // "Make a shape" dot-to-dot games show their clay shape art in a bubble.
           const gameArt = activity.type === 'game' ? gameArtFor(activity.id) : undefined;
+          // Owner-art games (cut/feed/hop) show their own picture, not an emoji.
+          const gamePic = activity.type === 'game' ? gamePictureFor(activity) : undefined;
           // Photo puzzles show their own picture as the tile (not a generic 🧩).
           const puzzleArt = activity.type === 'jigsaw' ? (puzzleArtFor(activity.image) ?? undefined) : undefined;
-          const art = traceArt ?? gameArt ?? puzzleArt;
+          const art = traceArt ?? gameArt ?? gamePic ?? puzzleArt;
           const bare = (isGlyphList || isShapeList) && traceArt != null;
           return (
             <BubbleTile

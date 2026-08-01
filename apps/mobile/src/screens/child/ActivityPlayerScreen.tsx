@@ -14,6 +14,7 @@ import { TracingPlayer } from './players/TracingPlayer';
 import { ColouringPlayer } from './players/ColouringPlayer';
 import { PuzzlePlayer } from './players/PuzzlePlayer';
 import { GamePlayer } from './players/GamePlayer';
+import { CutAlongPlayer } from './players/CutAlongPlayer';
 
 /**
  * Activity player shell (docs/03 S10-S14): instruction bar with replay,
@@ -151,7 +152,10 @@ export function ActivityPlayerScreen(props: { activity: Activity }): React.JSX.E
       {activity.type === 'jigsaw' && (
         <PuzzlePlayer key={replayKey} activity={activity} theme={theme} onComplete={complete} onDone={goHome} onReplay={replay} />
       )}
-      {activity.type === 'game' && (
+      {activity.type === 'game' && activity.template === 'cut-along' && (
+        <CutAlongPlayer key={replayKey} activity={activity} theme={theme} onComplete={complete} onDone={goHome} onReplay={replay} />
+      )}
+      {activity.type === 'game' && activity.template !== 'cut-along' && (
         <GamePlayer key={replayKey} activity={activity} theme={theme} onComplete={complete} onDone={goHome} onReplay={replay} />
       )}
     </View>

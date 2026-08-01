@@ -39,18 +39,20 @@ import { getRepositories } from '../storage/db';
 export type Screen =
   | { name: 'onboarding' }
   | { name: 'home' }
-  | { name: 'picker'; category: Activity['category'] | 'tracing-letters' | 'tracing-numbers' | 'tracing-shapes' }
+  | { name: 'picker'; category: Activity['category'] | 'tracing-letters' | 'tracing-numbers' | 'tracing-shapes' | 'games-sort' | 'games-tap' | 'games-patterns' | 'games-hands' }
   | { name: 'activity'; activity: Activity }
   | { name: 'daily-adventure' }
   | { name: 'rewards' }
   | { name: 'times-up' }
   | { name: 'gate' }
-  | { name: 'parent'; section: 'dashboard' | 'profile' | 'progress' | 'screen-time' | 'accessibility' | 'privacy' | 'cloud-sync' | 'subscription' | 'help' };
+  | { name: 'parent'; section: 'dashboard' | 'profile' | 'progress' | 'screen-time' | 'accessibility' | 'privacy' | 'cloud-sync' | 'subscription' | 'help' | 'children' };
 
 interface AppState {
   ready: boolean;
   screen: Screen;
   profile: ChildProfile | null;
+  /** Every local child profile (one parent owns many). `profile` is the active one. */
+  profiles: ChildProfile[];
   rewards: RewardsState;
   screenTime: ScreenTimeState;
   gate: GateState;
@@ -60,6 +62,8 @@ interface AppState {
   init(): Promise<void>;
   navigate(screen: Screen): void;
   saveProfile(profile: ChildProfile): Promise<void>;
+  /** Switch which child is active, loading that child's rewards + screen time. */
+  setActiveProfile(profileId: string): Promise<void>;
   recordPlaySeconds(seconds: number): Promise<void>;
   applyReward(event: Omit<RewardEvent, 'todayKey' | 'at'>): Promise<void>;
   gateBegin(): void;
@@ -79,6 +83,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   ready: false,
   screen: { name: 'onboarding' },
   profile: null,
+  profiles: [],
   rewards: emptyRewardsState(dayKeyFrom(new Date())),
   screenTime: emptyScreenTime(15),
   gate: initialGateState(),
@@ -97,13 +102,14 @@ export const useAppStore = create<AppState>((set, get) => ({
       set({
         ready: true,
         profile,
+        profiles,
         rewards: rewards ?? emptyRewardsState(dayKeyFrom(new Date())),
         screenTime: screenTime ?? emptyScreenTime(profile.dailyScreenTimeMinutes),
         screen: { name: 'home' },
         account: account ?? emptyAccountState(),
       });
     } else {
-      set({ ready: true, screen: { name: 'onboarding' }, account: account ?? emptyAccountState() });
+      set({ ready: true, profiles: [], screen: { name: 'onboarding' }, account: account ?? emptyAccountState() });
     }
   },
 
@@ -120,7 +126,29 @@ export const useAppStore = create<AppState>((set, get) => ({
   async saveProfile(profile) {
     const repos = await getRepositories();
     await repos.profiles.save(profile);
-    set({ profile });
+    // Keep the all-children list in sync: replace the edited child, or append a
+    // newly created one (so "Add child" never drops the existing children).
+    const existing = get().profiles;
+    const profiles = existing.some((p) => p.id === profile.id)
+      ? existing.map((p) => (p.id === profile.id ? profile : p))
+      : [...existing, profile];
+    set({ profile, profiles });
+  },
+
+  async setActiveProfile(profileId) {
+    const target = get().profiles.find((p) => p.id === profileId);
+    if (!target || target.id === get().profile?.id) return;
+    const repos = await getRepositories();
+    const [rewards, screenTime] = await Promise.all([
+      repos.rewards.forProfile(target.id),
+      repos.screenTime.forProfile(target.id),
+    ]);
+    set({
+      profile: target,
+      rewards: rewards ?? emptyRewardsState(dayKeyFrom(new Date())),
+      screenTime: screenTime ?? emptyScreenTime(target.dailyScreenTimeMinutes),
+      screen: { name: 'home' },
+    });
   },
 
   async recordPlaySeconds(seconds) {
@@ -171,12 +199,31 @@ export const useAppStore = create<AppState>((set, get) => ({
     if (!profile) return;
     const repos = await getRepositories();
     await deleteAllChildData(repos, profile.id);
-    set({
-      profile: null,
-      rewards: emptyRewardsState(dayKeyFrom(new Date())),
-      screenTime: emptyScreenTime(15),
-      screen: { name: 'onboarding' },
-    });
+    const remaining = get().profiles.filter((p) => p.id !== profile.id);
+    // Re-activate a remaining child, or fall back to onboarding when the last
+    // one is deleted (owner direction: the Children screen switches or resets).
+    const next = remaining[0] ?? null;
+    if (next) {
+      const [rewards, screenTime] = await Promise.all([
+        repos.rewards.forProfile(next.id),
+        repos.screenTime.forProfile(next.id),
+      ]);
+      set({
+        profile: next,
+        profiles: remaining,
+        rewards: rewards ?? emptyRewardsState(dayKeyFrom(new Date())),
+        screenTime: screenTime ?? emptyScreenTime(next.dailyScreenTimeMinutes),
+        screen: { name: 'home' },
+      });
+    } else {
+      set({
+        profile: null,
+        profiles: [],
+        rewards: emptyRewardsState(dayKeyFrom(new Date())),
+        screenTime: emptyScreenTime(15),
+        screen: { name: 'onboarding' },
+      });
+    }
     // Deliberately NOT touching `account` here - deleting one child's local
     // data must never sign a parent out of their own cloud account.
   },
