@@ -335,9 +335,25 @@ icons** (`THEME_TILE_ART` candy/storybook/aussie in `HomeScreen`), the **Guided 
 mechanic (`GuidedDrawingPlayer` rewritten to part-by-part trace→fill reading `guidedBuilds`; replaced the
 removed whale pilot), the **Number Path Hop** game (`number-hop` registered + `NumberHopGame`), and the
 **Family-Link parent dashboard** (`ParentAreaScreen` Dashboard → child-tinted zone + "General app
-settings" divider). **Still demo-only** (mobile port pending): the multi-child switcher (the mobile store
-is single-active-profile — `profiles[0]`), `cut-along`, number-locked `colour-cbn-*`, and the Draw
-Magic-drawer panel. (Geometry note for the ported Guided Drawing — subjects Grip/Cupcake/Car/Cake/
+settings" divider). **Also ported (July 2026, typecheck-clean, on-device rebuild pending):** **cut-along**
+(`CutAlongPlayer`, Skia + the shared `TracingSession` corridor engine — drag the scissors, blades snip,
+the picture splits into two clipped halves that tip open; `'cut-along'` registered + routed ahead of the
+emoji `GamePlayer`; owner cut art in `ui/cutArt.ts`); the **Little Games chooser** (the toddler door opens
+the four game groups — Sort & Match / Tap & Count / Patterns / Busy Hands — as a bubble chooser via a
+`GAME_GROUPS` predicate in `ActivityPickerScreen`, empty groups hidden, labelled clay group tiles, and
+owner-art game tiles cut/feed/hop show their own picture via `gamePictureFor`); the **multi-child switcher**
+(the store now tracks all `profiles` + `setActiveProfile`; `saveProfile` appends new children so "Add child"
+never drops the others; deleting the active child re-activates a remaining one; parent Dashboard gains a
+child-switcher chip row + a **Children** screen with per-child Switch/Delete + Add); and the **Magic-drawer
+Free Draw board** (`DrawingBoard` rebuilt to the owner layout — right colour rail + white selected ring,
+slim crayon/paint/eraser/🪄 bar, floating size pod, corner undo-redo/start-over/save, wand drawer of
+rainbow/glitter/glow/star+heart stamps; Skia renders every kind, glow via a blurred underlay, stamps as
+filled Skia star/heart paths; core `BrushKind` extended with `glow`/`stampStar`/`stampHeart`). **Still
+demo-only** (mobile port pending): **line-art flood-fill colouring** — both the free flood-fill scenes and
+the number-locked `colour-cbn-*` pages — which needs a native raster pixel flood-fill engine (the mobile
+`ColouringPlayer` handles only polygon regions and shows a "coming soon" for `mode: 'line-art'`); this is
+the one remaining large engine and wants on-device performance profiling before it ships. (Geometry note
+for the ported Guided Drawing — subjects Grip/Cupcake/Car/Cake/
 Watermelon/Flower — one part traced at a time, each locking in filled with the child's colour;
 geometry authored as polylines in `packages/core/src/content/guidedBuilds.ts`, single source of
 truth for the mobile port; guided-drawing steps carry `label`/`strokes`/`fill`/`fixedColour`;

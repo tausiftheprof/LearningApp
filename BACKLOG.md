@@ -84,11 +84,26 @@ swap in cute art whenever ready.
   minus a `measureInWindow` origin; same fix for Feed the Animal's mouth/food), a **2×2/3×3/4×4 size
   picker**, real Fisher-Yates scatter, board+tray fit-to-screen (reachable without scrolling), puzzle
   picker tiles show each photo; plus the **Family-Link parent dashboard** (child-tinted zone + "General
-  app settings" divider). **Still pending (large, complex — best with device feedback):** `cut-along`
-  (drag-to-split), Colour-by-Numbers number-locked line-art, the Draw Magic-drawer panel, the labelled
-  game-group tiles + Little Games chooser, and the **multi-child switcher** (needs a "set active
-  profile" store action — mobile is single-active-profile today). Build to verify: `eas build -p
-  android --profile preview` (owner's machine).
+  app settings" divider). **On-device round 2 fixes (owner-reported):** puzzle **snap tolerance** now
+  scales with the drawn piece size (fixed pieces "not accepting" on the big-celled tablet — the pack's
+  fixed 48–80px design-space radius was far smaller than a 150px piece; now ~0.65–0.95 of a cell).
+  **Mobile port batch 2 (July 2026, typecheck-clean; on-device rebuild pending):** (1) **cut-along** —
+  `CutAlongPlayer` (Skia + shared `TracingSession`), scissors drag, blades snip, picture splits into two
+  clipped halves that tip open; `'cut-along'` registered + routed ahead of `GamePlayer`; `ui/cutArt.ts`.
+  (2) **Little Games chooser** — the toddler door opens the four groups (Sort & Match / Tap & Count /
+  Patterns / Busy Hands) via a `GAME_GROUPS` predicate, empty groups hidden, labelled clay group tiles,
+  owner-art game tiles show their own picture (`gamePictureFor`). (3) **Multi-child switcher** — store
+  tracks all `profiles` + `setActiveProfile`; `saveProfile` appends new children; deleting the active
+  child re-activates a remaining one; parent Dashboard child-switcher chips + a **Children** screen
+  (Switch/Delete/Add). (4) **Magic-drawer Free Draw board** — `DrawingBoard` rebuilt to the owner layout
+  (right rail + white ring, crayon/paint/eraser/🪄 bar, size pod, corner undo-redo/start-over/save, wand
+  drawer of rainbow/glitter/glow/star+heart stamps); Skia renders every kind (glow = blurred underlay,
+  stamps = filled Skia star/heart paths); core `BrushKind` gained `glow`/`stampStar`/`stampHeart`.
+  **Still pending (the one remaining large engine):** **line-art flood-fill colouring** — both the free
+  flood-fill scenes and the number-locked `colour-cbn-*` pages — needs a native raster pixel flood-fill
+  engine (mobile `ColouringPlayer` handles only polygon regions and shows "coming soon" for
+  `mode: 'line-art'`); wants on-device performance profiling before it ships. Build to verify: `eas build
+  -p android --profile preview` (owner's machine).
 - [x] **End-of-activity card → Option B (auto-return + replay), non-covering.** Owner picked Option B
   from the mockup (artifact `382698d1-c693-4ed5-9a83-9005bbeb6cb0`). The big covering
   `.banner.name-done` card is gone from all four bespoke end screens — tracing **section-complete**,
