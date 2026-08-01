@@ -9,6 +9,7 @@ import { IMPLEMENTED_GAME_TEMPLATES } from './games/registry';
 import { tracingArtFor, gameArtFor, sectionIcon } from '../../ui/tracingArt';
 import { puzzleArtFor } from '../../ui/puzzleArt';
 import { gamePictureFor } from '../../ui/cutArt';
+import { sceneArtFor } from '../../ui/sceneArt';
 
 /**
  * Little Games groups (owner direction, July 2026): the toddler door opens a
@@ -138,7 +139,7 @@ function BubbleTile(props: {
  * demo look), with the owner's cloud section icons on the tracing chooser and
  * clay glyph art on the letter/number/shape bubbles.
  */
-type PickerCategory = ActivityCategory | 'tracing-letters' | 'tracing-numbers' | 'tracing-shapes' | GameGroupKey;
+type PickerCategory = ActivityCategory | 'tracing-letters' | 'tracing-numbers' | 'tracing-shapes' | GameGroupKey | 'colour-cbn' | 'colour-free';
 
 export function ActivityPickerScreen(props: { category: PickerCategory }): React.JSX.Element {
   const { profile, catalogue, navigate } = useAppStore();
@@ -161,11 +162,7 @@ export function ActivityPickerScreen(props: { category: PickerCategory }): React
   };
 
   const playable = catalogue.filter(
-    (a) =>
-      (a.type !== 'game' || IMPLEMENTED_GAME_TEMPLATES.includes(a.template)) &&
-      // Line-art colouring scenes flood-fill a rasterised SVG - shipped in the
-      // web demo only for now, since the native app has no SVG pipeline yet.
-      !(a.type === 'colouring' && a.mode === 'line-art'),
+    (a) => a.type !== 'game' || IMPLEMENTED_GAME_TEMPLATES.includes(a.template),
   );
   // Tracing splits into Letters / Numbers / Shapes (owner direction).
   const numericSort = (a: Activity, b: Activity) => a.id.localeCompare(b.id, undefined, { numeric: true });
@@ -192,6 +189,8 @@ export function ActivityPickerScreen(props: { category: PickerCategory }): React
   const toddlerRanked = recommendIn(playable.filter((a) => a.category === 'toddler'), 40);
   const templateOf = (a: Activity) => (a.type === 'game' ? a.template : '');
   const gameGroup = GAME_GROUPS.find((g) => g.key === category);
+  // Colour splits into "Colour by Numbers" (colour-cbn-*) and "Colour Your Way".
+  const colouring = playable.filter((a) => a.category === 'colouring');
   const ranked =
     category === 'tracing-letters'
       ? tracingOf('letters')
@@ -199,9 +198,13 @@ export function ActivityPickerScreen(props: { category: PickerCategory }): React
         ? tracingOf('numbers')
         : category === 'tracing-shapes'
           ? tracingOf('shapes')
-          : gameGroup
-            ? toddlerRanked.filter((a) => gameGroup.has(templateOf(a)))
-            : recommendIn(playable.filter((a) => a.category === category));
+          : category === 'colour-cbn'
+            ? colouring.filter((a) => /^colour-cbn-/.test(a.id))
+            : category === 'colour-free'
+              ? recommendIn(colouring.filter((a) => !/^colour-cbn-/.test(a.id)))
+              : gameGroup
+                ? toddlerRanked.filter((a) => gameGroup.has(templateOf(a)))
+                : recommendIn(playable.filter((a) => a.category === category));
 
   // Per-game icons (owner direction): every game tile shows its own emoji.
   const GAME_EMOJI: Record<string, string> = {
@@ -316,8 +319,43 @@ export function ActivityPickerScreen(props: { category: PickerCategory }): React
     );
   }
 
+  // The Colour door opens a two-door chooser (owner direction): Colour by
+  // Numbers (number-locked owner pages) vs Colour Your Way (free flood-fill).
+  if (category === 'colouring') {
+    const doors = [
+      { key: 'colour-cbn' as const, label: 'Colour by Numbers', icon: 'sec-colour-bynum', has: colouring.some((a) => /^colour-cbn-/.test(a.id)) },
+      { key: 'colour-free' as const, label: 'Colour Your Way', icon: 'sec-colour-yourway', has: colouring.some((a) => !/^colour-cbn-/.test(a.id)) },
+    ].filter((d) => d.has);
+    const cellW = gridFor(doors.length);
+    return (
+      <View style={styles.root}>
+        <View style={styles.topBar}>
+          <HoldToHomeButton theme={theme} onHome={() => navigate({ name: 'home' })} />
+          <Text style={[styles.title, { color: theme.text }]}>How shall we colour?</Text>
+        </View>
+        <ScrollView contentContainerStyle={styles.grid}>
+          {doors.map((d, i) => (
+            <BubbleTile
+              key={d.key}
+              label={d.label}
+              showLabel
+              bare={false}
+              colour={theme.tileColours[(i + 1) % theme.tileColours.length]!}
+              textColour={theme.text}
+              artSource={sectionIcon(d.icon)}
+              index={i}
+              cellW={cellW}
+              onPress={() => navigate({ name: 'picker', category: d.key })}
+            />
+          ))}
+        </ScrollView>
+      </View>
+    );
+  }
+
   const isTracingSection = /^tracing-/.test(category) && !littlest;
   const isGameGroup = gameGroup != null;
+  const isColourSection = category === 'colour-cbn' || category === 'colour-free';
   const isGlyphList = category === 'tracing-letters' || category === 'tracing-numbers';
   const isShapeList = category === 'tracing-shapes';
   const cellW = gridFor(ranked.length);
@@ -325,11 +363,11 @@ export function ActivityPickerScreen(props: { category: PickerCategory }): React
     <View style={styles.root}>
       <View style={styles.topBar}>
         <HoldToHomeButton theme={theme} onHome={() => navigate({ name: 'home' })} />
-        {(isTracingSection || isGameGroup) && (
+        {(isTracingSection || isGameGroup || isColourSection) && (
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Back"
-            onPress={() => navigate({ name: 'picker', category: isGameGroup ? 'toddler' : 'tracing' })}
+            onPress={() => navigate({ name: 'picker', category: isGameGroup ? 'toddler' : isColourSection ? 'colouring' : 'tracing' })}
             style={[styles.backBtn, { backgroundColor: theme.surface }]}
           >
             <Text style={styles.backIcon}>←</Text>
@@ -348,13 +386,15 @@ export function ActivityPickerScreen(props: { category: PickerCategory }): React
           const gamePic = activity.type === 'game' ? gamePictureFor(activity) : undefined;
           // Photo puzzles show their own picture as the tile (not a generic 🧩).
           const puzzleArt = activity.type === 'jigsaw' ? (puzzleArtFor(activity.image) ?? undefined) : undefined;
-          const art = traceArt ?? gameArt ?? gamePic ?? puzzleArt;
+          // Line-art colouring scenes show the scene picture as the tile.
+          const sceneArt = activity.type === 'colouring' && activity.mode === 'line-art' ? (sceneArtFor(activity.image) ?? undefined) : undefined;
+          const art = traceArt ?? gameArt ?? gamePic ?? puzzleArt ?? sceneArt;
           const bare = (isGlyphList || isShapeList) && traceArt != null;
           return (
             <BubbleTile
               key={activity.id}
               label={activity.title}
-              showLabel={!isGlyphList}
+              showLabel={!isGlyphList && !isColourSection}
               bare={bare}
               colour={theme.tileColours[i % theme.tileColours.length]!}
               textColour={theme.text}

@@ -39,7 +39,7 @@ import { getRepositories } from '../storage/db';
 export type Screen =
   | { name: 'onboarding' }
   | { name: 'home' }
-  | { name: 'picker'; category: Activity['category'] | 'tracing-letters' | 'tracing-numbers' | 'tracing-shapes' | 'games-sort' | 'games-tap' | 'games-patterns' | 'games-hands' }
+  | { name: 'picker'; category: Activity['category'] | 'tracing-letters' | 'tracing-numbers' | 'tracing-shapes' | 'games-sort' | 'games-tap' | 'games-patterns' | 'games-hands' | 'colour-cbn' | 'colour-free' }
   | { name: 'activity'; activity: Activity }
   | { name: 'daily-adventure' }
   | { name: 'rewards' }

@@ -1,13 +1,29 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { GestureResponderEvent } from 'react-native';
-import { Canvas, Circle, Group, LinearGradient, Path, Skia, useCanvasRef, vec } from '@shopify/react-native-skia';
+import {
+  AlphaType,
+  Canvas,
+  Circle,
+  ColorType,
+  Group,
+  Image as SkiaImage,
+  LinearGradient,
+  Path,
+  Skia,
+  useCanvasRef,
+  useImage,
+  vec,
+} from '@shopify/react-native-skia';
+import type { SkImage } from '@shopify/react-native-skia';
 import type { ColouringActivity } from '@littlegrip/core';
 import { PALETTES } from '@littlegrip/core';
 import { useAppStore } from '../../../state/appStore';
 import { getRepositories } from '../../../storage/db';
 import type { Theme } from '../../../ui/theme';
 import { UI_ART } from '../../../ui/uiArt';
+import { sceneArtFor } from '../../../ui/sceneArt';
+import { audioService } from '../../../services/audio';
 import { CompletionBanner } from '../ActivityPlayerScreen';
 
 const DESIGN = 1000;
@@ -33,19 +49,13 @@ export function ColouringPlayer(props: {
   onComplete: (r: { attempts: number; hintCount: number; accuracyScore: number | null }) => void;
   onDone: () => void;
 }): React.JSX.Element {
-  // Line-art scenes (flood-fill over a rasterised SVG) ship in the web demo
-  // only for now - the native app has no SVG pipeline yet. The picker already
-  // filters these out (ActivityPickerScreen.tsx); this is a defensive guard.
-  // Branching here (rather than an early return inside RegionColouringPlayer)
-  // keeps every hook call unconditional, as React requires.
+  // Line-art scenes flood-fill a rasterised picture (owner art) bounded by its
+  // ink lines - the free "Colour Your Way" scenes and the number-locked
+  // Colour-by-Numbers pages. Region (polygon) colouring is a separate path.
+  // Branching here (rather than an early return inside a sub-player) keeps every
+  // hook call unconditional, as React requires.
   if (props.activity.mode === 'line-art') {
-    return (
-      <View style={styles.unavailable}>
-        <Text style={styles.unavailableText}>
-          This picture is ready on the web demo - it's coming to the tablet app soon!
-        </Text>
-      </View>
-    );
+    return <LineArtColouringPlayer {...props} />;
   }
   return <RegionColouringPlayer {...props} />;
 }
@@ -443,6 +453,428 @@ function RegionColouringPlayer(props: {
   );
 }
 
+/**
+ * Line-art flood-fill colouring (owner scenes) — ported from the web demo's
+ * `renderColouringLineArt`. The picture is rasterised once into an offscreen
+ * Skia surface at RES², its ink read into a "wall" mask (dark pixels), and the
+ * background keyed to transparent so the same buffer doubles as the crisp top
+ * overlay. A tap flood-fills (BFS) the connected non-ink area into a paint
+ * buffer; the buffer is rebuilt into an SkImage drawn UNDER the ink overlay.
+ * Colour-by-Numbers pages are number-locked: only the current number's colour
+ * is pickable, and a region is accepted only if one of that number's printed
+ * targets falls inside the flooded area (targets sit on the printed digits,
+ * which are ink and never flooded, so the check samples a neighbourhood).
+ */
+const RES = 720;
+const CBN_TARGET_R = Math.round(RES * 0.045);
+
+function LineArtColouringPlayer(props: {
+  activity: ColouringActivity;
+  theme: Theme;
+  onComplete: (r: { attempts: number; hintCount: number; accuracyScore: number | null }) => void;
+  onDone: () => void;
+}): React.JSX.Element {
+  const { activity } = props;
+  const profile = useAppStore((st) => st.profile);
+  const image = useImage(sceneArtFor(activity.image) ?? 0);
+  const cbnPlan = activity.byNumberPlan && activity.byNumberPlan.length ? activity.byNumberPlan : null;
+
+  const [size, setSize] = useState({ w: 1, h: 1 });
+  const [ready, setReady] = useState(false);
+  const [done, setDone] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(true);
+  const [mode, setMode] = useState<'fill' | 'brush'>('fill');
+  const [brushWidth, setBrushWidth] = useState(14);
+  const [cbnStep, setCbnStep] = useState(0);
+  const [note, setNote] = useState<string | null>(null);
+  const [swatch, setSwatch] = useState<Swatch>(
+    cbnPlan ? { kind: 'solid', colour: cbnPlan[0]!.colour } : { kind: 'solid', colour: PALETTES.standard[0]! },
+  );
+  const [paintImg, setPaintImg] = useState<SkImage | null>(null);
+  const [lineImg, setLineImg] = useState<SkImage | null>(null);
+
+  const canvasRef = useCanvasRef();
+  const wall = useRef<Uint8Array | null>(null);
+  const buf = useRef<Uint8Array | null>(null);
+  const cbnFilled = useRef<boolean[][]>(cbnPlan ? cbnPlan.map((s) => s.targets.map(() => false)) : []);
+  const cbnStepRef = useRef(0);
+  const swatchRef = useRef(swatch);
+  swatchRef.current = swatch;
+  const modeRef = useRef(mode);
+  modeRef.current = mode;
+  const builtFor = useRef<number | null>(null);
+  const lastBrush = useRef<{ x: number; y: number } | null>(null);
+  const lastBake = useRef(0);
+
+  const IMG_INFO = { width: RES, height: RES, colorType: ColorType.RGBA_8888, alphaType: AlphaType.Unpremul };
+
+  // Build the wall mask + crisp overlay once the raster decodes.
+  useEffect(() => {
+    if (!image) return;
+    const key = sceneArtFor(activity.image) ?? 0;
+    if (builtFor.current === key) return;
+    builtFor.current = key;
+    const surface = Skia.Surface.MakeOffscreen(RES, RES);
+    if (!surface) return;
+    const paint = Skia.Paint();
+    surface.getCanvas().drawImageRect(
+      image,
+      Skia.XYWHRect(0, 0, image.width(), image.height()),
+      Skia.XYWHRect(0, 0, RES, RES),
+      paint,
+    );
+    const px = surface.makeImageSnapshot().readPixels(0, 0, IMG_INFO) as Uint8Array | null;
+    if (!px) return;
+    const w = new Uint8Array(RES * RES);
+    const line = new Uint8Array(RES * RES * 4);
+    for (let i = 0; i < RES * RES; i++) {
+      const o = i * 4;
+      const whiteness = (px[o]! + px[o + 1]! + px[o + 2]!) / 3;
+      w[i] = whiteness < 170 ? 1 : 0;
+      line[o] = px[o]!;
+      line[o + 1] = px[o + 1]!;
+      line[o + 2] = px[o + 2]!;
+      line[o + 3] = Math.max(0, Math.min(255, Math.round((255 - whiteness) * 4)));
+    }
+    wall.current = w;
+    buf.current = new Uint8Array(RES * RES * 4);
+    setLineImg(Skia.Image.MakeImage(IMG_INFO, Skia.Data.fromBytes(line), RES * 4));
+    setPaintImg(Skia.Image.MakeImage(IMG_INFO, Skia.Data.fromBytes(buf.current.slice()), RES * 4));
+    setReady(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [image]);
+
+  const side = Math.max(1, Math.min(size.w, size.h));
+  const ox = (size.w - side) / 2;
+  const oy = (size.h - side) / 2;
+  const toRes = (x: number, y: number) => ({ x: ((x - ox) / side) * RES, y: ((y - oy) / side) * RES });
+
+  const rebuildPaint = () => {
+    if (!buf.current) return;
+    // Pass a copy so later in-place fills don't mutate the SkImage's backing data.
+    setPaintImg(Skia.Image.MakeImage(IMG_INFO, Skia.Data.fromBytes(buf.current.slice()), RES * 4));
+  };
+
+  const rgbOf = (hex: string): [number, number, number] => [
+    parseInt(hex.slice(1, 3), 16),
+    parseInt(hex.slice(3, 5), 16),
+    parseInt(hex.slice(5, 7), 16),
+  ];
+  const GLITTER_RGB = rgbOf(GLITTER_BASE);
+
+  function paintRegion(pixels: number[], minX: number, maxX: number, minY: number, maxY: number): void {
+    const b = buf.current;
+    if (!b) return;
+    const sw = swatchRef.current;
+    let base: [number, number, number] = sw.kind === 'solid' ? rgbOf(sw.colour) : sw.kind === 'glitter' ? GLITTER_RGB : [244, 143, 177];
+    for (let i = 0; i < pixels.length; i += 2) {
+      const x = pixels[i]!;
+      const y = pixels[i + 1]!;
+      let [r, g, bl] = base;
+      if (sw.kind === 'rainbow') {
+        const t = maxX > minX ? (x - minX) / (maxX - minX) : 0;
+        const t2 = maxY > minY ? (y - minY) / (maxY - minY) : 0;
+        const tt = Math.max(0, Math.min(1, (t + t2) / 2));
+        const seg = tt * (RAINBOW.length - 1);
+        const i0 = Math.floor(seg);
+        const frac = seg - i0;
+        const c0 = rgbOf(RAINBOW[Math.min(i0, RAINBOW.length - 1)]!);
+        const c1 = rgbOf(RAINBOW[Math.min(i0 + 1, RAINBOW.length - 1)]!);
+        r = c0[0] + (c1[0] - c0[0]) * frac;
+        g = c0[1] + (c1[1] - c0[1]) * frac;
+        bl = c0[2] + (c1[2] - c0[2]) * frac;
+      }
+      const idx = (y * RES + x) * 4;
+      b[idx] = r; b[idx + 1] = g; b[idx + 2] = bl; b[idx + 3] = 255;
+    }
+    if (sw.kind === 'glitter') {
+      const specks = [[255, 255, 255], [255, 224, 130], [248, 187, 208], [255, 245, 157]];
+      for (let i = 0; i < pixels.length; i += 2 * 23) {
+        const x = pixels[i]!;
+        const y = pixels[i + 1]!;
+        const sp = specks[(i / 46) % specks.length]!;
+        for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) {
+          const pxx = x + dx, pyy = y + dy;
+          if (pxx < 0 || pyy < 0 || pxx >= RES || pyy >= RES) continue;
+          const idx = (pyy * RES + pxx) * 4;
+          b[idx] = sp[0]!; b[idx + 1] = sp[1]!; b[idx + 2] = sp[2]!; b[idx + 3] = 255;
+        }
+      }
+    }
+    rebuildPaint();
+  }
+
+  function cbnAdvance(): void {
+    if (!cbnPlan) return;
+    if (!cbnFilled.current[cbnStepRef.current]!.every(Boolean)) return;
+    const next = cbnStepRef.current + 1;
+    cbnStepRef.current = next;
+    setCbnStep(next);
+    if (next >= cbnPlan.length) {
+      setDone(true);
+      setNote(null);
+      void audioService.playEffect('soft-chime');
+      props.onComplete({ attempts: 1, hintCount: 0, accuracyScore: 100 });
+    } else {
+      const sw: Swatch = { kind: 'solid', colour: cbnPlan[next]!.colour };
+      swatchRef.current = sw;
+      setSwatch(sw);
+      setNote(`Now number ${cbnPlan[next]!.number}!`);
+    }
+  }
+
+  function floodFill(sxIn: number, syIn: number): void {
+    const wmask = wall.current;
+    if (!ready || done || !wmask || !buf.current) return;
+    let sx = Math.round(sxIn);
+    let sy = Math.round(syIn);
+    if (sx < 0 || sy < 0 || sx >= RES || sy >= RES) return;
+    if (wmask[sy * RES + sx]) {
+      // Tapped on ink / a printed digit — hop to the nearest open pixel.
+      let found: { x: number; y: number } | null = null;
+      for (let r = 3; r <= 33 && !found; r += 3) {
+        for (let a = 0; a < 16 && !found; a++) {
+          const x = sx + Math.round(Math.cos((a * Math.PI) / 8) * r);
+          const y = sy + Math.round(Math.sin((a * Math.PI) / 8) * r);
+          if (x < 0 || y < 0 || x >= RES || y >= RES) continue;
+          if (!wmask[y * RES + x]) found = { x, y };
+        }
+      }
+      if (!found) return;
+      sx = found.x; sy = found.y;
+    }
+    const visited = new Uint8Array(RES * RES);
+    const qx = new Int32Array(RES * RES);
+    const qy = new Int32Array(RES * RES);
+    let head = 0;
+    let tail = 0;
+    qx[tail] = sx; qy[tail] = sy; tail++;
+    visited[sy * RES + sx] = 1;
+    let minX = sx, maxX = sx, minY = sy, maxY = sy;
+    const pts: number[] = [];
+    while (head < tail) {
+      const x = qx[head]!;
+      const y = qy[head]!;
+      head++;
+      pts.push(x, y);
+      if (x < minX) minX = x;
+      if (x > maxX) maxX = x;
+      if (y < minY) minY = y;
+      if (y > maxY) maxY = y;
+      const cand = [[x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]];
+      for (const c of cand) {
+        const nx = c[0]!;
+        const ny = c[1]!;
+        if (nx < 0 || ny < 0 || nx >= RES || ny >= RES) continue;
+        const idx = ny * RES + nx;
+        if (visited[idx] || wmask[idx]) continue;
+        visited[idx] = 1;
+        qx[tail] = nx; qy[tail] = ny; tail++;
+      }
+    }
+    if (cbnPlan) {
+      const near = (t: { x: number; y: number }) => {
+        const cx = Math.round(t.x * RES);
+        const cy = Math.round(t.y * RES);
+        for (let dy = -CBN_TARGET_R; dy <= CBN_TARGET_R; dy += 9) {
+          for (let dx = -CBN_TARGET_R; dx <= CBN_TARGET_R; dx += 9) {
+            const x = cx + dx;
+            const y = cy + dy;
+            if (x < 0 || y < 0 || x >= RES || y >= RES) continue;
+            if (visited[y * RES + x]) return true;
+          }
+        }
+        return false;
+      };
+      const hits: Array<[number, number]> = [];
+      cbnPlan.forEach((step, si) => step.targets.forEach((t, ti) => { if (near(t)) hits.push([si, ti]); }));
+      const current = hits.filter(([si]) => si === cbnStepRef.current);
+      if (!current.length) {
+        const other = hits.find(([si]) => si !== cbnStepRef.current);
+        setNote(
+          other
+            ? `That one is number ${cbnPlan[other[0]]!.number} — find the ${cbnPlan[cbnStepRef.current]!.number}s first!`
+            : `Find a space with a ${cbnPlan[cbnStepRef.current]!.number} in it!`,
+        );
+        return;
+      }
+      current.forEach(([si, ti]) => { cbnFilled.current[si]![ti] = true; });
+      paintRegion(pts, minX, maxX, minY, maxY);
+      cbnAdvance();
+      return;
+    }
+    paintRegion(pts, minX, maxX, minY, maxY);
+  }
+
+  // Brush: stamp a disc into the paint buffer, skipping ink pixels (paint stays
+  // inside the lines). Rebuild throttled during the drag, always on release.
+  function brushStamp(rx: number, ry: number, force: boolean): void {
+    const wmask = wall.current;
+    const b = buf.current;
+    if (!ready || done || !wmask || !b || cbnPlan) return;
+    const sw = swatchRef.current;
+    const col = sw.kind === 'solid' ? rgbOf(sw.colour) : sw.kind === 'glitter' ? GLITTER_RGB : rgbOf('#E53935');
+    const rad = Math.max(2, Math.round((brushWidth * RES) / 1000 / 2));
+    const prev = lastBrush.current ?? { x: rx, y: ry };
+    const steps = Math.max(1, Math.round(Math.hypot(rx - prev.x, ry - prev.y) / rad));
+    for (let s = 1; s <= steps; s++) {
+      const cx = Math.round(prev.x + ((rx - prev.x) * s) / steps);
+      const cy = Math.round(prev.y + ((ry - prev.y) * s) / steps);
+      for (let dy = -rad; dy <= rad; dy++) for (let dx = -rad; dx <= rad; dx++) {
+        if (dx * dx + dy * dy > rad * rad) continue;
+        const x = cx + dx;
+        const y = cy + dy;
+        if (x < 0 || y < 0 || x >= RES || y >= RES) continue;
+        const i = y * RES + x;
+        if (wmask[i]) continue;
+        const idx = i * 4;
+        b[idx] = col[0]; b[idx + 1] = col[1]; b[idx + 2] = col[2]; b[idx + 3] = 255;
+      }
+    }
+    lastBrush.current = { x: rx, y: ry };
+    const now = Date.now();
+    if (force || now - lastBake.current > 55) {
+      lastBake.current = now;
+      rebuildPaint();
+    }
+  }
+
+  async function saveArtwork(): Promise<void> {
+    const snap = canvasRef.current?.makeImageSnapshot();
+    const b64 = snap?.encodeToBase64();
+    if (b64 && profile) {
+      const repos = await getRepositories();
+      await repos.artwork.save({ id: 'art-' + Date.now(), profileId: profile.id, createdAt: Date.now(), ops: [], png: 'data:image/png;base64,' + b64 });
+    }
+    if (!done) {
+      setDone(true);
+      props.onComplete({ attempts: 1, hintCount: 0, accuracyScore: null });
+    }
+  }
+  function resetAll(): void {
+    if (buf.current) buf.current.fill(0);
+    cbnFilled.current = cbnPlan ? cbnPlan.map((s) => s.targets.map(() => false)) : [];
+    cbnStepRef.current = 0;
+    setCbnStep(0);
+    setDone(false);
+    if (cbnPlan) { const sw: Swatch = { kind: 'solid', colour: cbnPlan[0]!.colour }; swatchRef.current = sw; setSwatch(sw); }
+    rebuildPaint();
+  }
+
+  const brushTouch = mode === 'brush' && !cbnPlan
+    ? {
+        onStartShouldSetResponder: () => true,
+        onMoveShouldSetResponder: () => true,
+        onResponderGrant: (e: GestureResponderEvent) => { lastBrush.current = null; const p = toRes(e.nativeEvent.locationX, e.nativeEvent.locationY); brushStamp(p.x, p.y, true); },
+        onResponderMove: (e: GestureResponderEvent) => { const p = toRes(e.nativeEvent.locationX, e.nativeEvent.locationY); brushStamp(p.x, p.y, false); },
+        onResponderRelease: () => { rebuildPaint(); lastBrush.current = null; },
+        onResponderTerminate: () => { rebuildPaint(); lastBrush.current = null; },
+      }
+    : {};
+
+  const bgRect = useMemo(() => Skia.Path.Make().addRect(Skia.XYWHRect(0, 0, size.w, size.h)), [size.w, size.h]);
+
+  return (
+    <View style={styles.root}>
+      <Pressable
+        style={styles.canvasWrap}
+        onLayout={(e) => setSize({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })}
+        onPress={mode === 'fill' || cbnPlan ? (e) => { const p = toRes(e.nativeEvent.locationX, e.nativeEvent.locationY); floodFill(p.x, p.y); } : undefined}
+        accessibilityLabel="Colouring picture. Tap an area to fill it with colour."
+        {...brushTouch}
+      >
+        <Canvas style={styles.canvas} ref={canvasRef}>
+          <Path path={bgRect} color="#FFFFFF" style="fill" />
+          {paintImg && <SkiaImage image={paintImg} x={ox} y={oy} width={side} height={side} fit="fill" />}
+          {lineImg && <SkiaImage image={lineImg} x={ox} y={oy} width={side} height={side} fit="fill" />}
+        </Canvas>
+
+        {!ready && (
+          <View style={styles.loadingWrap} pointerEvents="none">
+            <Text style={styles.loadingText}>Getting your picture ready…</Text>
+          </View>
+        )}
+
+        {note && !done && (
+          <Text accessibilityLiveRegion="polite" style={styles.cbnNote} pointerEvents="none">{note}</Text>
+        )}
+
+        {/* Palette: number-locked for CBN, collapsible for free scenes. */}
+        {cbnPlan ? (
+          <ScrollView style={styles.panel} contentContainerStyle={styles.panelContent}>
+            {cbnPlan.map((step, i) =>
+              i < cbnStep ? null : (
+                <Pressable
+                  key={step.number}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Colour number ${step.number}${i === cbnStep ? '' : ' (locked)'}`}
+                  onPress={() => { if (i !== cbnStep) setNote(`Finish all the number ${cbnPlan[cbnStep]!.number}s first!`); }}
+                  style={[styles.swatch, { backgroundColor: step.colour, borderWidth: i === cbnStep ? 4 : 1, opacity: i === cbnStep ? 1 : 0.4 }]}
+                >
+                  <Text style={styles.swatchNumber}>{step.number}</Text>
+                </Pressable>
+              ),
+            )}
+          </ScrollView>
+        ) : menuOpen ? (
+          <ScrollView style={styles.panel} contentContainerStyle={styles.panelContent}>
+            <ModeButton label="🪣" aria="Fill with a tap" active={mode === 'fill'} onPress={() => setMode('fill')} />
+            <ModeButton label="🖌️" aria="Paint inside the lines" active={mode === 'brush'} onPress={() => setMode('brush')} />
+            {mode === 'brush' && ([[7, '•'], [14, '●'], [26, '⬤']] as const).map(([w, icon]) => (
+              <ModeButton key={w} label={icon} aria={`Brush width ${w}`} active={brushWidth === w} onPress={() => setBrushWidth(w)} />
+            ))}
+            <View style={styles.panelSep} />
+            {PALETTES.standard.map((c) => (
+              <Swatch key={c} colour={c} active={swatch.kind === 'solid' && swatch.colour === c} aria={`Colour ${c}`}
+                onPress={() => { setSwatch({ kind: 'solid', colour: c }); setMenuOpen(false); }} />
+            ))}
+            {PALETTES.pastel.map((c) => (
+              <Swatch key={c} colour={c} active={swatch.kind === 'solid' && swatch.colour === c} aria={`Pastel colour ${c}`}
+                onPress={() => { setSwatch({ kind: 'solid', colour: c }); setMenuOpen(false); }} />
+            ))}
+            <Swatch colour={GLITTER_BASE} active={swatch.kind === 'glitter'} aria="Glitter"
+              onPress={() => { setSwatch({ kind: 'glitter' }); setMenuOpen(false); }}>
+              <Text style={styles.swatchIcon}>✨</Text>
+            </Swatch>
+            <Pressable accessibilityRole="button" accessibilityLabel="Rainbow"
+              onPress={() => { setSwatch({ kind: 'rainbow' }); setMenuOpen(false); }}
+              style={[styles.swatch, { borderWidth: swatch.kind === 'rainbow' ? 4 : 1, overflow: 'hidden', backgroundColor: '#FFF' }]}>
+              <Canvas style={styles.rainbowSwatch}>
+                <Path path={Skia.Path.Make().addRect(Skia.XYWHRect(0, 0, 44, 44))} style="fill">
+                  <LinearGradient start={vec(0, 0)} end={vec(44, 44)} colors={RAINBOW} />
+                </Path>
+              </Canvas>
+            </Pressable>
+          </ScrollView>
+        ) : (
+          <Pressable accessibilityRole="button" accessibilityLabel="Open colours" onPress={() => setMenuOpen(true)}
+            style={[styles.fab, { backgroundColor: swatch.kind === 'solid' ? swatch.colour : GLITTER_BASE }]}>
+            {swatch.kind === 'glitter' && <Text style={styles.swatchIcon}>✨</Text>}
+            {swatch.kind === 'rainbow' && (
+              <Canvas style={styles.fabRainbow}>
+                <Path path={Skia.Path.Make().addRect(Skia.XYWHRect(0, 0, 58, 58))} style="fill">
+                  <LinearGradient start={vec(0, 0)} end={vec(58, 58)} colors={RAINBOW} />
+                </Path>
+              </Canvas>
+            )}
+          </Pressable>
+        )}
+
+        <View style={styles.actions}>
+          <Pressable accessibilityRole="button" accessibilityLabel="Save my picture" onPress={() => void saveArtwork()} style={props.theme.highContrast ? styles.actionBtn : undefined}>
+            {props.theme.highContrast ? <Text style={styles.actionIcon}>💾</Text> : <Image source={UI_ART.save} resizeMode="contain" style={{ width: 54, height: 54 }} />}
+          </Pressable>
+          <Pressable accessibilityRole="button" accessibilityLabel="Start again" onPress={resetAll} style={styles.actionBtn}>
+            <Text style={styles.actionIcon}>🗑️</Text>
+          </Pressable>
+        </View>
+      </Pressable>
+
+      <CompletionBanner visible={done} onDone={props.onDone} colour={props.theme.success} />
+    </View>
+  );
+}
+
 function ModeButton(props: { label: string; aria: string; active: boolean; onPress: () => void }): React.JSX.Element {
   return (
     <Pressable
@@ -477,8 +909,13 @@ function Swatch(props: {
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
-  unavailable: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 },
-  unavailableText: { fontSize: 18, textAlign: 'center', color: '#4A3B32' },
+  loadingWrap: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, alignItems: 'center', justifyContent: 'center' },
+  loadingText: { fontSize: 18, color: '#8A80A5', fontWeight: '700' },
+  cbnNote: {
+    position: 'absolute', top: 10, alignSelf: 'center', backgroundColor: 'rgba(74,59,50,0.86)', color: '#FFFFFF',
+    fontSize: 15, fontWeight: '700', paddingVertical: 6, paddingHorizontal: 16, borderRadius: 999, overflow: 'hidden',
+    marginHorizontal: 16, textAlign: 'center',
+  },
   canvasWrap: { flex: 1, margin: 8, borderRadius: 16, overflow: 'hidden', backgroundColor: '#FFFFFF' },
   canvas: { flex: 1 },
   panel: {
