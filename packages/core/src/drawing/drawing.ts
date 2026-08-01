@@ -6,7 +6,19 @@ import type { Point, Timestamp } from '../types';
  * Serialised to the device gallery only (A-04) - never uploaded, never logged.
  */
 
-export type BrushKind = 'crayon' | 'pencil' | 'marker' | 'paint' | 'glitter' | 'rainbow' | 'eraser';
+export type BrushKind =
+  | 'crayon'
+  | 'pencil'
+  | 'marker'
+  | 'paint'
+  | 'glitter'
+  | 'rainbow'
+  | 'eraser'
+  // "Magic drawer" brushes (owner-approved Draw board): a soft neon glow line
+  // and two stamp brushes that drop a shape along the path.
+  | 'glow'
+  | 'stampStar'
+  | 'stampHeart';
 
 export interface BrushStyle {
   kind: BrushKind;
