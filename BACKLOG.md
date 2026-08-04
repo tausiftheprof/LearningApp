@@ -69,6 +69,29 @@ swap in cute art whenever ready.
 
 ## Done
 
+- [x] **Tablet-testing feedback round (Aug 2026, typecheck-clean; on-device rebuild pending).** Eight
+  items across tracing / puzzles / colouring / cut-along, fixed in shared core + the mobile renderers:
+  **Tracing** — small `b`/`p` bowls start on the LEFT at the stem (not the top-middle); `i`/`j` carry a
+  real dot (a short tap-stroke the band fills solid) not a hollow circle; `6` redrawn (cane → proper
+  counter-clockwise loop); curves emit ≥1 point per ~4° so they render smooth not faceted (`arc`/`oval`
+  in `glyphs.ts` + `starterPack.ts`); all shapes normalised to the letters' ~640 design size so the
+  traced band is a consistent thickness; the ink no longer *looks* fully coloured before the stroke
+  actually completes (`currentInk` capped at 0.9 until completion); finishing a whole section (A-Z /
+  0-10 / shapes) shows a **sticker + congrats** then returns one screen after 3s (`tracingSection`
+  no-wrap + `CompletionBanner sticker`). **Completion nav** — every activity now returns ONE screen to
+  the list it came from (scene / letters / numbers / shapes / games group), never Home (`backCategory`
+  in `ActivityPlayerScreen`, all players `onDone={goBack}`). **Puzzles** — orientation-aware layout
+  (portrait = tray below, landscape = tray on the SIDE so the puzzle stays big), cell sized so board +
+  tray both fit with no scrolling, snap tolerance made generous (~0.8-0.95 of a cell, floor 52) so the
+  last piece sticks, and the faint guide image behind the board is visible again (0.16→0.32 + frame).
+  **Cut-along** — the whole picture draws immediately and stays whole while cutting, splitting into two
+  halves only in the final animation (fixes blank-until-touch + already-cut-in-half). **Colouring** —
+  erased the dark border frame from all 10 line-art scenes (script, edge-dark% 95→0), and Colour-by-
+  Numbers draws a **colour-coordinated number badge** on every planned region. **Still needs the owner:**
+  (a) item 1's completed *coloured* Colour-Your-Way tile icons — not in the repo, please push them or
+  confirm filenames; (b) numbering the blank decorative flower petals in bunny/car/puppy — needs printed
+  numbers added to those regions in the source art (cleanest) or on-device verification of hand-placed
+  targets, since a mis-placed target leaves a region uncolourable.
 - [x] **Mobile port batch 1 (July 2026, typecheck-clean; on-device verify pending).** Landed on
   `apps/mobile` in 5 commits: (1) **picture puzzle pieces** — `PuzzlePlayer` slices the real photo +
   faint target ghost for the 11 photo jigsaws (`ui/puzzleArt.ts`), colour-tile fallback for the
