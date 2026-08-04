@@ -44,6 +44,12 @@ export function CutAlongPlayer(props: {
   const doneRef = useRef(false);
   const lastSnip = useRef(-999);
   const session = useRef<TracingSession | null>(null);
+  // Force one repaint the moment the picture decodes, so it shows immediately
+  // instead of staying blank until the first touch (owner-reported).
+  const [, forceTick] = useState(0);
+  useEffect(() => {
+    if (picture) forceTick((t) => t + 1);
+  }, [picture]);
 
   // Contain-fit the picture into the stage (80% so the halves have room to
   // slide), then centre it. Same geometry as the demo's fit().
@@ -227,7 +233,14 @@ export function CutAlongPlayer(props: {
         {...pan.panHandlers}
       >
         <Canvas style={styles.canvas}>
-          {picture &&
+          {/* Draw the WHOLE picture until the final split animation begins. This
+              keeps the image visible from the start (no blank screen) and never
+              looks pre-cut — it only separates into two clipped halves once the
+              cut is finished (splitK > 0). */}
+          {picture && splitK <= 0 && (
+            <SkiaImage image={picture} x={irect.x} y={irect.y} width={irect.w} height={irect.h} fit="fill" />
+          )}
+          {picture && splitK > 0 &&
             sides.map((side) => (
               <Group key={side} clip={halfClip(side)} transform={halfTransform(side)}>
                 <SkiaImage image={picture} x={irect.x} y={irect.y} width={irect.w} height={irect.h} fit="fill" />

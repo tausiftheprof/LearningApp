@@ -78,56 +78,85 @@ function PuzzleBoard(props: {
   const { theme, rows, cols, picture } = props;
   const [board, setBoard] = useState({ w: 1, h: 1 });
   const base = useMemo(() => puzzleConfigFor(props.difficulty), [props.difficulty]);
+  const n = rows * cols;
+  const GAP = 8, M = 12;
 
-  const M = 14, TOP = 12, MIDGAP = 22, GAP = 8;
-  const availW = Math.max(120, board.w - 2 * M);
-  const availH = Math.max(160, board.h - TOP - MIDGAP - 16);
-  // Board grid on top, an equal tray-grid below → both fit in the viewport.
-  const cell = Math.max(36, Math.min((availW - (cols - 1) * GAP) / cols, availH / (2 * rows), 150));
+  // Orientation-aware layout (owner direction): in PORTRAIT the board sits on
+  // top with the tray below; in LANDSCAPE the board is on the left and the tray
+  // on the right — so the puzzle stays big instead of shrinking to a strip. The
+  // cell is sized so BOTH the board grid and the whole tray fit on screen with
+  // no scrolling (the tray pieces are the same size as the board slots).
+  const L = useMemo(() => {
+    const landscape = board.w >= board.h;
+    let boardR: { x: number; y: number; w: number; h: number };
+    let trayR: { x: number; y: number; w: number; h: number };
+    if (landscape) {
+      const split = Math.round(board.w * 0.62);
+      boardR = { x: M, y: M, w: split - 2 * M, h: board.h - 2 * M };
+      trayR = { x: split + M, y: M, w: board.w - split - 2 * M, h: board.h - 2 * M };
+    } else {
+      const split = Math.round(board.h * 0.56);
+      boardR = { x: M, y: M, w: board.w - 2 * M, h: split - 2 * M };
+      trayR = { x: M, y: split + M, w: board.w - 2 * M, h: board.h - split - 2 * M };
+    }
+    const boardCell = Math.min(boardR.w / cols, boardR.h / rows);
+    // Shrink the cell until the tray grid also fits its region (no scroll).
+    let cell = Math.min(boardCell, 170);
+    for (; cell >= 34; cell -= 2) {
+      const ct = Math.max(1, Math.floor((trayR.w + GAP) / (cell + GAP)));
+      const rt = Math.ceil(n / ct);
+      if (rt * (cell + GAP) <= trayR.h + GAP) break;
+    }
+    cell = Math.max(34, cell);
+    const gridW = cell * cols, gridH = cell * rows;
+    const bx = boardR.x + (boardR.w - gridW) / 2;
+    const by = boardR.y + (boardR.h - gridH) / 2;
+    const trayCols = Math.max(1, Math.floor((trayR.w + GAP) / (cell + GAP)));
+    const trayRows = Math.ceil(n / trayCols);
+    const trayGW = trayCols * (cell + GAP) - GAP, trayGH = trayRows * (cell + GAP) - GAP;
+    const tx0 = trayR.x + Math.max(0, (trayR.w - trayGW) / 2) + cell / 2;
+    const ty0 = trayR.y + Math.max(0, (trayR.h - trayGH) / 2) + cell / 2;
+    return { cell, bx, by, trayCols, tx0, ty0, ghost: { x: bx, y: by, w: gridW, h: gridH } };
+  }, [board.w, board.h, cols, rows, n]);
 
-  // Snap tolerance must scale with the DRAWN piece, not the pack's fixed
-  // design-space pixels — on a tablet a 48-80px radius is far smaller than a
-  // 150px piece, so a piece that looks placed springs back. Forgiveness is a
-  // feature for 2-7yos: a drop within ~0.6-0.9 of a cell of the slot snaps.
+  const cell = L.cell;
+
+  // Snap tolerance scales with the DRAWN piece (fixed design-space px were far
+  // smaller than a big tablet piece, so pieces "wouldn't stick"). Generous by
+  // design for 2-7yos: a drop within ~0.9 of a cell of the slot snaps.
   const config = useMemo(() => {
-    const frac = props.difficulty === 3 ? 0.65 : props.difficulty === 2 ? 0.8 : 0.95;
-    return { ...base, snapRadius: Math.max(44, cell * frac) };
+    const frac = props.difficulty === 3 ? 0.8 : 0.95;
+    return { ...base, snapRadius: Math.max(52, cell * frac) };
   }, [base, cell, props.difficulty]);
 
   // A real random scatter, computed once per grid size (stable across resizes).
   const order = useMemo(() => {
-    const n = rows * cols;
     const a = Array.from({ length: n }, (_, i) => i);
     for (let i = n - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       const t = a[i]!; a[i] = a[j]!; a[j] = t;
     }
     return a;
-  }, [rows, cols]);
+  }, [n]);
 
   function slotCentre(row: number, col: number): { x: number; y: number } {
-    const gridW = cell * cols;
-    const originX = (board.w - gridW) / 2;
-    return { x: originX + col * cell + cell / 2, y: TOP + row * cell + cell / 2 };
+    return { x: L.bx + col * cell + cell / 2, y: L.by + row * cell + cell / 2 };
   }
 
   const initialPieces = useMemo<PieceView[]>(() => {
-    const trayTop = TOP + cell * rows + MIDGAP;
-    const trayW = cols * cell + (cols - 1) * GAP;
-    const trayX0 = (board.w - trayW) / 2;
     const pieces: PieceView[] = [];
     for (let r = 0; r < rows; r++) {
       for (let c = 0; c < cols; c++) {
         const idx = r * cols + c;
         const slot = order[idx]!;
-        const tc = slot % cols;
-        const tr = Math.floor(slot / cols);
+        const tc = slot % L.trayCols;
+        const tr = Math.floor(slot / L.trayCols);
         pieces.push({
           id: `${r}-${c}`,
           row: r,
           col: c,
-          x: trayX0 + tc * (cell + GAP) + cell / 2,
-          y: trayTop + tr * (cell + GAP) + cell / 2,
+          x: L.tx0 + tc * (cell + GAP),
+          y: L.ty0 + tr * (cell + GAP),
           placed: false,
           colour: theme.tileColours[idx % theme.tileColours.length]!,
         });
@@ -135,7 +164,7 @@ function PuzzleBoard(props: {
     }
     return pieces;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [order, board.w, board.h, cell]);
+  }, [order, L, cell]);
 
   const [pieces, setPieces] = useState<PieceView[]>(initialPieces);
   const [hintFor, setHintFor] = useState<string | null>(null);
@@ -216,8 +245,10 @@ function PuzzleBoard(props: {
       }}
       {...pan.panHandlers}
     >
+      {/* Faint whole-picture guide behind the board slots (owner: it was invisible
+          at 0.16 — a clearer 0.32 with a soft frame so kids see where it goes). */}
       {picture && (
-        <View pointerEvents="none" style={{ position: 'absolute', left: (board.w - cell * cols) / 2, top: TOP, width: cell * cols, height: cell * rows, opacity: 0.16 }}>
+        <View pointerEvents="none" style={{ position: 'absolute', left: L.ghost.x, top: L.ghost.y, width: L.ghost.w, height: L.ghost.h, opacity: 0.32, borderRadius: 10, borderWidth: 2, borderColor: '#E6DCD3' }}>
           <Image source={picture} resizeMode="stretch" style={{ width: '100%', height: '100%', borderRadius: 10 }} />
         </View>
       )}
