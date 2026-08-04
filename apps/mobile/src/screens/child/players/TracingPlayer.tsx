@@ -175,6 +175,8 @@ export function TracingPlayer(props: {
   onReplay?: () => void;
   /** If set, auto-advance to the next tracing item instead of a Home banner. */
   onAdvance?: (() => void) | undefined;
+  /** True when this is the LAST item of a section — show a sticker + congrats. */
+  sectionComplete?: boolean;
 }): React.JSX.Element {
   const { profile } = useAppStore();
   const accessibility = profile?.accessibility ?? defaultAccessibilitySettings();
@@ -323,7 +325,10 @@ export function TracingPlayer(props: {
   const arrowH = Math.max(8, drawBand * 0.55 * scale);
 
   const cur = strokes[Math.min(strokeIndex, strokes.length - 1)]!;
-  const currentInk = !done ? partialPath(cur, lastPos, scale, ox, oy) : null;
+  // Cap the visible fill just short of the end so the glyph never LOOKS fully
+  // coloured until the stroke actually completes (owner: kids saw it coloured
+  // but the next step wouldn't start). On completion the stroke snaps to full.
+  const currentInk = !done ? partialPath(cur, Math.min(lastPos, 0.9), scale, ox, oy) : null;
 
   // Directional guide on the current stroke: dotted track + start arrow +
   // pulsing start dot + a single glowing leader dot sweeping in trace direction.
@@ -413,7 +418,15 @@ export function TracingPlayer(props: {
           {encouragement}
         </Text>
       )}
-      <CompletionBanner visible={done && !props.onAdvance} onDone={props.onDone} colour={props.theme.success} onReplay={props.onReplay} />
+      <CompletionBanner
+        visible={done && !props.onAdvance}
+        onDone={props.onDone}
+        colour={props.theme.success}
+        onReplay={props.onReplay}
+        sticker={props.sectionComplete}
+        title={props.sectionComplete ? 'You finished them all!' : undefined}
+        seconds={props.sectionComplete ? 3 : 5}
+      />
     </View>
   );
 }

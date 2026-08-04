@@ -22,9 +22,13 @@ function line(x1: number, y1: number, x2: number, y2: number, steps = 6): Point[
 }
 
 function arc(cx: number, cy: number, r: number, startDeg: number, endDeg: number, steps = 20): Point[] {
+  // At least one point per ~4° so curves render smooth (not faceted) even when
+  // scaled up on a big tablet — straight strokes are unaffected (owner: edges
+  // looked pixelated).
+  const n = Math.max(steps, Math.ceil(Math.abs(endDeg - startDeg) / 4));
   const pts: Point[] = [];
-  for (let i = 0; i <= steps; i++) {
-    const a = ((startDeg + ((endDeg - startDeg) * i) / steps) * Math.PI) / 180;
+  for (let i = 0; i <= n; i++) {
+    const a = ((startDeg + ((endDeg - startDeg) * i) / n) * Math.PI) / 180;
     pts.push({ x: cx + r * Math.cos(a), y: cy + r * Math.sin(a) });
   }
   return pts;
@@ -32,9 +36,10 @@ function arc(cx: number, cy: number, r: number, startDeg: number, endDeg: number
 
 /** Elliptical arc (rx != ry) — used for the tall, narrow number zero. */
 function oval(cx: number, cy: number, rx: number, ry: number, startDeg: number, endDeg: number, steps = 26): Point[] {
+  const n = Math.max(steps, Math.ceil(Math.abs(endDeg - startDeg) / 4));
   const pts: Point[] = [];
-  for (let i = 0; i <= steps; i++) {
-    const a = ((startDeg + ((endDeg - startDeg) * i) / steps) * Math.PI) / 180;
+  for (let i = 0; i <= n; i++) {
+    const a = ((startDeg + ((endDeg - startDeg) * i) / n) * Math.PI) / 180;
     pts.push({ x: cx + rx * Math.cos(a), y: cy + ry * Math.sin(a) });
   }
   return pts;
@@ -91,7 +96,10 @@ const LOWER: Record<string, Point[][]> = {
   // a: bowl starts at ~2 o'clock (right), anticlockwise all the way around
   // ("c, then close") — never from the top — then the down-stem.
   a: [arc(455, 625, 195, -35, -395, 20), line(650, 430, 650, 820, 4)],
-  b: [line(350, 180, 350, 820), arc(515, 640, 175, -90, 270, 20)],
+  // b/p: the bowl starts on the LEFT at the stem (owner direction) — the pen
+  // leaves the stem, bumps up and over to the right, and closes at the stem —
+  // rather than starting floating at the top-middle.
+  b: [line(350, 180, 350, 820), arc(515, 640, 175, 180, 540, 20)],
   c: [arc(520, 625, 200, -50, -310, 18)],
   // d: the round bowl first (start ~2 o'clock, anticlockwise), then the tall line.
   d: [arc(485, 640, 175, -35, -395, 20), line(650, 180, 650, 820)],
@@ -101,9 +109,10 @@ const LOWER: Record<string, Point[][]> = {
   f: [join(arc(610, 330, 150, 270, 180, 8), line(460, 330, 460, 820, 5)), line(330, 490, 620, 490, 4)],
   g: [arc(480, 610, 180, -35, -395, 20), join(line(660, 430, 660, 870, 4), arc(505, 870, 155, 0, 140, 10))],
   h: [line(350, 180, 350, 820), join(arc(500, 620, 150, 180, 360, 10), line(650, 620, 650, 820, 2))],
-  // Bigger round dots for i and j, sitting a little higher above the stem.
-  i: [line(500, 430, 500, 820, 4), arc(500, 255, 46, -90, -450, 10)],
-  j: [join(line(560, 430, 560, 870, 4), arc(420, 870, 140, 0, 140, 10)), arc(560, 255, 46, -90, -450, 10)],
+  // i and j carry a real DOT (owner direction) — a short tap-stroke that the fat
+  // band fills into a solid round dot, not a hollow circle to trace around.
+  i: [line(500, 430, 500, 820, 4), line(500, 250, 500, 258, 1)],
+  j: [join(line(560, 430, 560, 870, 4), arc(420, 870, 140, 0, 140, 10)), line(560, 250, 560, 258, 1)],
   k: [line(350, 180, 350, 820), join(line(650, 430, 360, 640, 3), line(360, 640, 660, 820, 3))],
   l: [line(500, 180, 500, 820)],
   m: [
@@ -113,7 +122,7 @@ const LOWER: Record<string, Point[][]> = {
   ],
   n: [line(350, 430, 350, 820, 3), join(arc(500, 615, 150, 180, 360, 10), line(650, 615, 650, 820, 2))],
   o: [arc(500, 625, 195, -35, -395, 20)],
-  p: [line(350, 430, 350, 980, 4), arc(520, 620, 170, -90, 270, 20)],
+  p: [line(350, 430, 350, 980, 4), arc(520, 620, 170, 180, 540, 20)],
   // q: bowl first (start ~2 o'clock, anticlockwise all the way around), then the tail.
   q: [arc(480, 620, 170, -35, -395, 20), line(650, 430, 650, 980, 4)],
   r: [line(400, 430, 400, 820, 3), arc(545, 595, 145, 180, 305, 8)],
@@ -141,8 +150,10 @@ const DIGITS: Record<string, Point[][]> = {
   // Stroke 1: line straight down + the round belly. Stroke 2: the top hat,
   // traced left-to-right — so the arrows teach "down and around, then the hat".
   '5': [join(line(370, 210, 370, 490, 3), arc(455, 610, 150, -125, 140, 16)), line(370, 210, 690, 210, 4)],
-  // Curve down from the top-right, then a full loop at the bottom.
-  '6': [join(line(650, 240, 430, 470, 4), arc(490, 640, 190, -110, -470, 24))],
+  // 6: a cane from the top-right sweeping down to the left of the loop, then a
+  // full loop traced counter-clockwise (down the left, round the bottom, up and
+  // closed) — the cane meets the loop's start so it's one continuous stroke.
+  '6': [join(line(645, 250, 342, 591, 5), arc(500, 665, 175, 205, -155, 22))],
   '7': [join(line(280, 220, 720, 220, 4), line(720, 220, 450, 800, 5))],
   // One continuous figure-eight that crosses in the middle (not two circles).
   '8': [join(arc(500, 350, 150, -90, -270, 14), arc(500, 675, 175, -90, 270, 18), arc(500, 350, 150, -270, -450, 14))],

@@ -25,11 +25,11 @@ export function ActivityPlayerScreen(props: { activity: Activity }): React.JSX.E
   const { activity } = props;
   const { profile, navigate, recordPlaySeconds, applyReward, catalogue } = useAppStore();
 
-  // Next item in the same tracing section (letters / numbers / shapes), wrapping
-  // after the last — so a finished tracing activity flows into the next with no
-  // "Home" prompt (owner direction).
-  const nextTracing = (): Activity | null => {
-    if (activity.type !== 'tracing' || activity.id === 'trace-name') return null;
+  // Next item in the same tracing section (letters / numbers / shapes). It does
+  // NOT wrap: finishing the LAST item ends the section (owner direction — after
+  // A-Z / 0-10 / all shapes, celebrate with a sticker and go back one screen).
+  const tracingSection = (): { next: Activity | null; isSectionEnd: boolean } => {
+    if (activity.type !== 'tracing' || activity.id === 'trace-name') return { next: null, isSectionEnd: false };
     const isLetter = /^trace-letter-/.test(activity.id);
     const isNumber = /^trace-number-/.test(activity.id);
     const inSection = (id: string) =>
@@ -37,11 +37,13 @@ export function ActivityPlayerScreen(props: { activity: Activity }): React.JSX.E
     const seq = catalogue
       .filter((x) => x.type === 'tracing' && inSection(x.id))
       .sort((x, y) => x.id.localeCompare(y.id, undefined, { numeric: true }));
-    if (seq.length <= 1) return null;
+    if (seq.length <= 1) return { next: null, isSectionEnd: false };
     const idx = seq.findIndex((x) => x.id === activity.id);
-    return idx >= 0 ? seq[(idx + 1) % seq.length]! : null;
+    if (idx < 0) return { next: null, isSectionEnd: false };
+    if (idx + 1 < seq.length) return { next: seq[idx + 1]!, isSectionEnd: false };
+    return { next: null, isSectionEnd: true }; // last item → celebrate the section
   };
-  const nextT = nextTracing();
+  const { next: nextT, isSectionEnd } = tracingSection();
   const theme = childTheme(profile?.accessibility ?? defaultAccessibilitySettings(), profile?.themeId);
   const startedAt = useRef(Date.now());
   const finished = useRef(false);
@@ -92,9 +94,24 @@ export function ActivityPlayerScreen(props: { activity: Activity }): React.JSX.E
   );
 
   const goHome = useCallback(() => navigate({ name: 'home' }), [navigate]);
+  // Back / completion returns ONE screen — to the list the child came from (the
+  // scene list, the letters/numbers/shapes list, …), not the top-level chooser
+  // and not Home (owner direction: "go back one screen so they can pick another").
+  const backCategory = ((): Activity['category'] | 'tracing' | 'tracing-letters' | 'tracing-numbers' | 'tracing-shapes' | 'colour-cbn' | 'colour-free' => {
+    if (activity.type === 'tracing') {
+      if (activity.id === 'trace-name') return 'tracing';
+      if (/^trace-letter-/.test(activity.id)) return 'tracing-letters';
+      if (/^trace-number-/.test(activity.id)) return 'tracing-numbers';
+      return 'tracing-shapes';
+    }
+    if (activity.type === 'colouring' && activity.mode === 'line-art') {
+      return /^colour-cbn-/.test(activity.id) ? 'colour-cbn' : 'colour-free';
+    }
+    return activity.category;
+  })();
   const goBack = useCallback(
-    () => navigate({ name: 'picker', category: activity.category }),
-    [navigate, activity.category],
+    () => navigate({ name: 'picker', category: backCategory }),
+    [navigate, backCategory],
   );
   // "Play again" (Option B): bump the key to remount the player fresh.
   const [replayKey, setReplayKey] = useState(0);
@@ -130,10 +147,10 @@ export function ActivityPlayerScreen(props: { activity: Activity }): React.JSX.E
       </View>
 
       {activity.type === 'guided-drawing' && activity.steps.length > 1 && (
-        <GuidedDrawingPlayer key={replayKey} activity={activity} theme={theme} onComplete={complete} onDone={goHome} onReplay={replay} />
+        <GuidedDrawingPlayer key={replayKey} activity={activity} theme={theme} onComplete={complete} onDone={goBack} onReplay={replay} />
       )}
       {activity.type === 'guided-drawing' && activity.steps.length <= 1 && (
-        <DrawingBoard key={replayKey} activity={activity} theme={theme} onComplete={complete} onDone={goHome} />
+        <DrawingBoard key={replayKey} activity={activity} theme={theme} onComplete={complete} onDone={goBack} />
       )}
       {activity.type === 'tracing' && (
         <TracingPlayer
@@ -141,22 +158,23 @@ export function ActivityPlayerScreen(props: { activity: Activity }): React.JSX.E
           activity={activity}
           theme={theme}
           onComplete={complete}
-          onDone={goHome}
+          onDone={goBack}
           onReplay={replay}
           onAdvance={nextT ? () => navigate({ name: 'activity', activity: nextT }) : undefined}
+          sectionComplete={isSectionEnd}
         />
       )}
       {activity.type === 'colouring' && (
-        <ColouringPlayer key={replayKey} activity={activity} theme={theme} onComplete={complete} onDone={goHome} />
+        <ColouringPlayer key={replayKey} activity={activity} theme={theme} onComplete={complete} onDone={goBack} />
       )}
       {activity.type === 'jigsaw' && (
-        <PuzzlePlayer key={replayKey} activity={activity} theme={theme} onComplete={complete} onDone={goHome} onReplay={replay} />
+        <PuzzlePlayer key={replayKey} activity={activity} theme={theme} onComplete={complete} onDone={goBack} onReplay={replay} />
       )}
       {activity.type === 'game' && activity.template === 'cut-along' && (
-        <CutAlongPlayer key={replayKey} activity={activity} theme={theme} onComplete={complete} onDone={goHome} onReplay={replay} />
+        <CutAlongPlayer key={replayKey} activity={activity} theme={theme} onComplete={complete} onDone={goBack} onReplay={replay} />
       )}
       {activity.type === 'game' && activity.template !== 'cut-along' && (
-        <GamePlayer key={replayKey} activity={activity} theme={theme} onComplete={complete} onDone={goHome} onReplay={replay} />
+        <GamePlayer key={replayKey} activity={activity} theme={theme} onComplete={complete} onDone={goBack} onReplay={replay} />
       )}
     </View>
   );
@@ -174,27 +192,45 @@ export function CompletionBanner(props: {
   onDone: () => void;
   colour: string;
   onReplay?: (() => void) | undefined;
+  /** A big celebratory sticker + congratulations (e.g. finishing a whole tracing
+   *  section). Shows a centred sticker card instead of just the slim toast. */
+  sticker?: boolean | undefined;
+  /** Congratulations line for the sticker card. */
+  title?: string | undefined;
+  /** Seconds before auto-returning one screen (default 5; sections use 3). */
+  seconds?: number | undefined;
 }): React.JSX.Element | null {
-  const [count, setCount] = useState(5);
+  const secs = props.seconds ?? 5;
+  const [count, setCount] = useState(secs);
   const { visible, onDone } = props;
   useEffect(() => {
     if (!visible) return;
-    setCount(5);
+    setCount(secs);
     const iv = setInterval(() => setCount((c) => (c > 1 ? c - 1 : 1)), 1000);
-    const to = setTimeout(onDone, 5000);
+    const to = setTimeout(onDone, secs * 1000);
     return () => {
       clearInterval(iv);
       clearTimeout(to);
     };
-  }, [visible, onDone]);
+  }, [visible, onDone, secs]);
   if (!visible) return null;
   return (
     <>
-      <View style={styles.toastWrap} pointerEvents="none">
-        <View style={[styles.doneToast, { backgroundColor: props.colour }]} accessibilityLiveRegion="polite">
-          <Text style={styles.doneToastText}>🎉 All done!</Text>
+      {props.sticker ? (
+        <View style={styles.stickerWrap} pointerEvents="none">
+          <View style={[styles.stickerCard, { borderColor: props.colour }]} accessibilityLiveRegion="polite">
+            <Text style={styles.stickerEmoji}>🏅</Text>
+            <Text style={styles.stickerText}>{props.title ?? 'You did it all!'}</Text>
+            <Text style={styles.stickerSub}>What a superstar! 🌟</Text>
+          </View>
         </View>
-      </View>
+      ) : (
+        <View style={styles.toastWrap} pointerEvents="none">
+          <View style={[styles.doneToast, { backgroundColor: props.colour }]} accessibilityLiveRegion="polite">
+            <Text style={styles.doneToastText}>🎉 All done!</Text>
+          </View>
+        </View>
+      )}
       <View style={styles.doneActions}>
         {props.onReplay ? (
           <Pressable accessibilityRole="button" accessibilityLabel="Play again" onPress={props.onReplay} style={styles.replayPill}>
@@ -202,8 +238,8 @@ export function CompletionBanner(props: {
             <Text style={styles.replayText}>Play again</Text>
           </Pressable>
         ) : null}
-        <Pressable accessibilityRole="button" accessibilityLabel="Go home" onPress={props.onDone} style={styles.autoPill}>
-          <Text style={styles.autoText}>Going home… {count}</Text>
+        <Pressable accessibilityRole="button" accessibilityLabel="Go back" onPress={props.onDone} style={styles.autoPill}>
+          <Text style={styles.autoText}>Going back… {count}</Text>
         </Pressable>
       </View>
     </>
@@ -217,6 +253,14 @@ const styles = StyleSheet.create({
   backIcon: { fontSize: 26, fontWeight: '700' },
   topBar: { flexDirection: 'row', alignItems: 'center' },
   instruction: { flex: 1 },
+  stickerWrap: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 90, alignItems: 'center', justifyContent: 'center' },
+  stickerCard: {
+    backgroundColor: '#FFFFFF', borderRadius: 26, borderWidth: 4, paddingVertical: 22, paddingHorizontal: 34, alignItems: 'center',
+    shadowColor: '#3B2D2D', shadowOpacity: 0.24, shadowRadius: 16, shadowOffset: { width: 0, height: 8 }, elevation: 8,
+  },
+  stickerEmoji: { fontSize: 72 },
+  stickerText: { fontSize: 24, fontWeight: '800', color: '#4A3B32', marginTop: 6, textAlign: 'center' },
+  stickerSub: { fontSize: 16, fontWeight: '700', color: '#8A80A5', marginTop: 4 },
   toastWrap: { position: 'absolute', top: 12, left: 0, right: 0, alignItems: 'center' },
   doneToast: { borderRadius: 999, paddingVertical: 8, paddingHorizontal: 20, shadowColor: '#3B2D2D', shadowOpacity: 0.22, shadowRadius: 8, shadowOffset: { width: 0, height: 4 }, elevation: 4 },
   doneToastText: { color: '#FFFFFF', fontWeight: '800', fontSize: 16 },

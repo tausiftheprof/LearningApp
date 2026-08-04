@@ -27,9 +27,12 @@ function line(x1: number, y1: number, x2: number, y2: number, steps = 8): Point[
 }
 
 function arc(cx: number, cy: number, r: number, startDeg: number, endDeg: number, steps = 24): Point[] {
+  // >= 1 point per ~4° so curved shapes (circle, oval, curve) stay smooth when
+  // scaled up on a tablet rather than looking faceted (owner: pixelated edges).
+  const n = Math.max(steps, Math.ceil(Math.abs(endDeg - startDeg) / 4));
   const pts: Point[] = [];
-  for (let i = 0; i <= steps; i++) {
-    const a = ((startDeg + ((endDeg - startDeg) * i) / steps) * Math.PI) / 180;
+  for (let i = 0; i <= n; i++) {
+    const a = ((startDeg + ((endDeg - startDeg) * i) / n) * Math.PI) / 180;
     pts.push({ x: cx + r * Math.cos(a), y: cy + r * Math.sin(a) });
   }
   return pts;
@@ -92,14 +95,14 @@ const tracingActivities: Activity[] = [
     type: 'tracing', id: 'trace-circle', title: 'Circle', category: 'tracing',
     ageBands: ['2-3', '3-5', '5-7'], difficulty: 1, motorSkills: ['tracing'],
     estimatedMinutes: 1, theme: 'shapes-patterns', locale: 'en-AU',
-    instructionAudio: audio('trace-circle'), paths: [arc(500, 500, 300, -90, -450)], closed: true,
+    instructionAudio: audio('trace-circle'), paths: [arc(500, 500, 320, -90, -450)], closed: true,
   },
   {
     type: 'tracing', id: 'trace-square', title: 'Square', category: 'tracing',
     ageBands: ['3-5', '5-7'], difficulty: 2, motorSkills: ['tracing'],
     estimatedMinutes: 1, theme: 'shapes-patterns', locale: 'en-AU',
     instructionAudio: audio('trace-square'),
-    paths: [[...line(250, 250, 750, 250, 4), ...line(750, 250, 750, 750, 4), ...line(750, 750, 250, 750, 4), ...line(250, 750, 250, 250, 4)]],
+    paths: [[...line(180, 180, 820, 180, 4), ...line(820, 180, 820, 820, 4), ...line(820, 820, 180, 820, 4), ...line(180, 820, 180, 180, 4)]],
     closed: true,
   },
   {
@@ -109,7 +112,7 @@ const tracingActivities: Activity[] = [
     instructionAudio: audio('trace-triangle'),
     // Start at the top (apex): down the left side, across the base left-to-right,
     // then up the right side back to the apex.
-    paths: [[...line(500, 200, 200, 750, 4), ...line(200, 750, 800, 750, 4), ...line(800, 750, 500, 200, 4)]],
+    paths: [[...line(500, 180, 180, 820, 4), ...line(180, 820, 820, 820, 4), ...line(820, 820, 500, 180, 4)]],
     closed: true,
   },
   {
@@ -117,7 +120,7 @@ const tracingActivities: Activity[] = [
     ageBands: ['3-5', '5-7'], difficulty: 2, motorSkills: ['tracing'],
     estimatedMinutes: 1, theme: 'shapes-patterns', locale: 'en-AU',
     instructionAudio: audio('trace-rectangle'),
-    paths: [[...line(180, 340, 820, 340, 5), ...line(820, 340, 820, 660, 3), ...line(820, 660, 180, 660, 5), ...line(180, 660, 180, 340, 3)]],
+    paths: [[...line(180, 320, 820, 320, 5), ...line(820, 320, 820, 680, 3), ...line(820, 680, 180, 680, 5), ...line(180, 680, 180, 320, 3)]],
     closed: true,
   },
   {
@@ -125,7 +128,7 @@ const tracingActivities: Activity[] = [
     ageBands: ['3-5', '5-7'], difficulty: 2, motorSkills: ['tracing'],
     estimatedMinutes: 1, theme: 'shapes-patterns', locale: 'en-AU',
     instructionAudio: audio('trace-oval'),
-    paths: [arc(500, 500, 340, -90, -450, 28).map((p) => ({ x: p.x, y: 500 + (p.y - 500) * 0.68 }))],
+    paths: [arc(500, 500, 320, -90, -450, 28).map((p) => ({ x: p.x, y: 500 + (p.y - 500) * 0.68 }))],
     closed: true,
   },
   {
@@ -133,7 +136,7 @@ const tracingActivities: Activity[] = [
     ageBands: ['5-7'], difficulty: 3, motorSkills: ['tracing'],
     estimatedMinutes: 1, theme: 'shapes-patterns', locale: 'en-AU',
     instructionAudio: audio('trace-pentagon'),
-    paths: [polygonPath(5, 350)],
+    paths: [polygonPath(5, 320)],
     closed: true,
   },
   {
@@ -141,7 +144,7 @@ const tracingActivities: Activity[] = [
     ageBands: ['5-7'], difficulty: 3, motorSkills: ['tracing'],
     estimatedMinutes: 1, theme: 'shapes-patterns', locale: 'en-AU',
     instructionAudio: audio('trace-hexagon'),
-    paths: [polygonPath(6, 350)],
+    paths: [polygonPath(6, 320)],
     closed: true,
   },
 ];
