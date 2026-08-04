@@ -174,6 +174,21 @@ function PuzzleBoard(props: {
   const rootRef = useRef<View>(null);
   const boardOrigin = useRef({ x: 0, y: 0 });
 
+  // Refs the ONCE-BUILT pan responder reads, so it never rebuilds mid-drag.
+  // (Rebuilding PanResponder while dragging resets its gestureState, so the
+  // release coords were garbage and pieces sprang back even when dead-on — the
+  // "not sticking" frustration.) All moving values flow through refs.
+  const piecesRef = useRef(pieces); piecesRef.current = pieces;
+  const cellRef = useRef(cell); cellRef.current = cell;
+  const geomRef = useRef(L); geomRef.current = L;
+  const doneRef = useRef(done); doneRef.current = done;
+  const initialRef = useRef(initialPieces); initialRef.current = initialPieces;
+
+  const slotOf = (row: number, col: number) => {
+    const c = cellRef.current, g = geomRef.current;
+    return { x: g.bx + col * c + c / 2, y: g.by + row * c + c / 2 };
+  };
+
   React.useEffect(() => {
     setPieces(initialPieces);
     session.current = new PuzzleSession(
@@ -181,59 +196,60 @@ function PuzzleBoard(props: {
       config,
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initialPieces]);
+  }, [initialPieces, config]);
 
-  function initialTrayPosition(p: PieceView): { x: number; y: number } {
-    const original = initialPieces.find((i) => i.id === p.id)!;
-    return { x: original.x, y: original.y };
-  }
-
-  const pan = useMemo(
-    () =>
-      PanResponder.create({
-        onStartShouldSetPanResponder: () => !done,
-        onMoveShouldSetPanResponder: () => !done,
-        onPanResponderGrant: (_e, g) => {
-          const lx = g.x0 - boardOrigin.current.x;
-          const ly = g.y0 - boardOrigin.current.y;
-          const hit = [...pieces].reverse().find((p) => !p.placed && Math.abs(p.x - lx) < cell * 0.6 && Math.abs(p.y - ly) < cell * 0.6);
-          dragging.current = hit?.id ?? null;
-        },
-        onPanResponderMove: (_e, g) => {
-          const id = dragging.current;
-          if (!id) return;
-          const lx = g.moveX - boardOrigin.current.x;
-          const ly = g.moveY - boardOrigin.current.y;
-          setPieces((prev) => prev.map((p) => (p.id === id ? { ...p, x: lx, y: ly } : p)));
-        },
-        onPanResponderRelease: (_e, g) => {
-          const id = dragging.current;
-          dragging.current = null;
-          const s = session.current;
-          if (!id || !s) return;
-          const lx = g.moveX - boardOrigin.current.x;
-          const ly = g.moveY - boardOrigin.current.y;
-          const result = s.drop(id, { x: lx, y: ly });
-          if (result.kind === 'snapped') {
-            setHintFor(null);
-            setPieces((prev) => prev.map((p) => {
-              if (p.id !== id) return p;
-              const slot = slotCentre(p.row, p.col);
-              return { ...p, x: slot.x, y: slot.y, placed: true };
-            }));
-            if (result.puzzleComplete) {
-              setDone(true);
-              props.onComplete({ attempts: 1, hintCount: s.hintCount, accuracyScore: null });
-            }
-          } else {
-            setPieces((prev) => prev.map((p) => (p.id === id ? { ...p, ...initialTrayPosition(p) } : p)));
-            setHintFor(result.showHint ? id : null);
-          }
-        },
-      }),
+  const pan = useMemo(() => {
+    const finishDrag = (g: { moveX: number; moveY: number }) => {
+      const id = dragging.current;
+      dragging.current = null;
+      const s = session.current;
+      if (!id || !s) return;
+      const lx = g.moveX - boardOrigin.current.x;
+      const ly = g.moveY - boardOrigin.current.y;
+      const result = s.drop(id, { x: lx, y: ly });
+      if (result.kind === 'snapped') {
+        setHintFor(null);
+        setPieces((prev) => prev.map((p) => {
+          if (p.id !== id) return p;
+          const slot = slotOf(p.row, p.col);
+          return { ...p, x: slot.x, y: slot.y, placed: true };
+        }));
+        if (result.puzzleComplete) {
+          setDone(true);
+          props.onComplete({ attempts: 1, hintCount: s.hintCount, accuracyScore: null });
+        }
+      } else {
+        const home = initialRef.current.find((i) => i.id === id);
+        if (home) setPieces((prev) => prev.map((p) => (p.id === id ? { ...p, x: home.x, y: home.y } : p)));
+        setHintFor(result.showHint ? id : null);
+      }
+    };
+    return PanResponder.create({
+      onStartShouldSetPanResponder: () => !doneRef.current,
+      onMoveShouldSetPanResponder: () => !doneRef.current,
+      onPanResponderTerminationRequest: () => false, // keep the drag once started
+      onPanResponderGrant: (_e, g) => {
+        // Refresh the board's window origin at grab time (layout may have moved).
+        rootRef.current?.measureInWindow((x: number, y: number) => { boardOrigin.current = { x, y }; });
+        const c = cellRef.current;
+        const lx = g.x0 - boardOrigin.current.x;
+        const ly = g.y0 - boardOrigin.current.y;
+        const hit = [...piecesRef.current].reverse().find((p) => !p.placed && Math.abs(p.x - lx) < c * 0.7 && Math.abs(p.y - ly) < c * 0.7);
+        dragging.current = hit?.id ?? null;
+      },
+      onPanResponderMove: (_e, g) => {
+        const id = dragging.current;
+        if (!id) return;
+        const lx = g.moveX - boardOrigin.current.x;
+        const ly = g.moveY - boardOrigin.current.y;
+        setPieces((prev) => prev.map((p) => (p.id === id ? { ...p, x: lx, y: ly } : p)));
+      },
+      onPanResponderRelease: (_e, g) => finishDrag(g),
+      onPanResponderTerminate: (_e, g) => finishDrag(g),
+    });
+    // Built ONCE — all dynamic state is read through refs above.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [pieces, done, cell],
-  );
+  }, []);
 
   return (
     <View
