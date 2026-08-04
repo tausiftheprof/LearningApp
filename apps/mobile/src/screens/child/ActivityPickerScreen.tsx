@@ -25,6 +25,16 @@ const GAME_GROUPS = [
 ];
 type GameGroupKey = (typeof GAME_GROUPS)[number]['key'];
 
+/** Colour Your Way tiles reuse the finished COLOURED art (the photo-puzzle
+ *  pictures) as their thumbnail, so the tile reads clearly instead of a faint
+ *  black-and-white outline (owner direction). Keyed by activity id → puzzle key. */
+const COLOUR_TILE_ART: Record<string, string> = {
+  'colour-unicorn-rainbow': 'puzzle-unicorn',
+  'colour-monkey-tree': 'puzzle-monkey',
+  'colour-rabbit-carrot': 'puzzle-rabbit',
+  'colour-whale-waves': 'puzzle-whale',
+};
+
 const SPARK_EMOJI = ['✨', '⭐', '🌟'];
 
 /** A short outward sparkle burst, retriggered whenever `trigger` changes. */
@@ -386,9 +396,15 @@ export function ActivityPickerScreen(props: { category: PickerCategory }): React
           const gamePic = activity.type === 'game' ? gamePictureFor(activity) : undefined;
           // Photo puzzles show their own picture as the tile (not a generic 🧩).
           const puzzleArt = activity.type === 'jigsaw' ? (puzzleArtFor(activity.image) ?? undefined) : undefined;
-          // Line-art colouring scenes show the scene picture as the tile.
-          const sceneArt = activity.type === 'colouring' && activity.mode === 'line-art' ? (sceneArtFor(activity.image) ?? undefined) : undefined;
-          const art = traceArt ?? gameArt ?? gamePic ?? puzzleArt ?? sceneArt;
+          // Colour Your Way tiles show the COLOURED reference picture (the same
+          // finished art used for the photo puzzles) — the B&W line-art was
+          // unclear (owner); the line-art is still what you actually colour.
+          // CBN tiles keep the numbered line-art thumbnail.
+          const isLineArt = activity.type === 'colouring' && activity.mode === 'line-art';
+          const isCbn = activity.type === 'colouring' && /^colour-cbn-/.test(activity.id);
+          const colourTile = isLineArt && !isCbn ? (puzzleArtFor(COLOUR_TILE_ART[activity.id]) ?? undefined) : undefined;
+          const sceneArt = isLineArt ? (sceneArtFor(activity.image) ?? undefined) : undefined;
+          const art = traceArt ?? gameArt ?? gamePic ?? puzzleArt ?? colourTile ?? sceneArt;
           const bare = (isGlyphList || isShapeList) && traceArt != null;
           return (
             <BubbleTile

@@ -1978,13 +1978,19 @@ function renderPicker(category) {
   const DOTDOT_ICON = {
     'draw-dotdot-star': 'shape-star', 'draw-dotdot-triangle': 'trace-triangle', 'draw-dotdot-square': 'trace-square',
   };
+  // Colour Your Way tiles use the finished COLOURED art (the photo-puzzle
+  // pictures) as their thumbnail — the B&W line-art read as unclear (owner).
+  const COLOUR_TILE_ART = {
+    'colour-unicorn-rainbow': 'puzzle-unicorn', 'colour-monkey-tree': 'puzzle-monkey',
+    'colour-rabbit-carrot': 'puzzle-rabbit', 'colour-whale-waves': 'puzzle-whale',
+  };
   ranked.forEach((a, i) => {
     // Prefer the activity's own picture (jigsaw image, sketch to draw over);
     // otherwise use the category illustration from the theme.
     let imgName = null;
     if (a.type === 'jigsaw') imgName = imageNameFromRef(a.image);
     else if (a.type === 'guided-drawing') imgName = imageNameFromRef(a.steps?.[0]?.prompt || '');
-    else if (a.type === 'colouring' && a.mode === 'line-art') imgName = imageNameFromRef(a.image);
+    else if (a.type === 'colouring' && a.mode === 'line-art') imgName = COLOUR_TILE_ART[a.id] || imageNameFromRef(a.image);
     else if (a.type === 'colouring') imgName = (/^colour-([a-z]+)/.exec(a.id) || [])[1] || null;
     else if (category === 'draw-dotdot') imgName = DOTDOT_ICON[a.id] || imageNameFromRef(a.params?.image || '');
     else if (a.type === 'game' && a.template === 'feed-animal') imgName = imageNameFromRef(a.params?.open || '');
