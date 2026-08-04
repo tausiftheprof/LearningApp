@@ -36,6 +36,14 @@ type RegionStroke = { swatch: Swatch; width: number; points: { x: number; y: num
 const GLITTER_BASE = '#F5C8DF';
 const GLITTER_SPECKS = ['#FFFFFF', '#FFE082', '#F8BBD0', '#FFF59D'];
 
+/** Dark or white ink for a number badge, by the badge colour's luminance. */
+function badgeInk(hex: string): string {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.62 ? '#4A3B32' : '#FFFFFF';
+}
+
 /**
  * Colouring player (FR-006, docs/03 S12): tap-fill regions, or brush mode
  * where freehand paint clips inside the tapped region's lines (owner
@@ -799,6 +807,38 @@ function LineArtColouringPlayer(props: {
           <Text accessibilityLiveRegion="polite" style={styles.cbnNote} pointerEvents="none">{note}</Text>
         )}
 
+        {/* Colour-coordinated number badges (owner direction): every numbered
+            space shows a clear badge in that number's colour — including regions
+            the printed art left blank. Retired numbers and filled regions drop
+            their badge; the current number's badges are bold, later ones dimmed. */}
+        {cbnPlan && ready && !done && (
+          <View style={StyleSheet.absoluteFill} pointerEvents="none">
+            {cbnPlan.map((step, si) =>
+              si < cbnStep
+                ? null
+                : step.targets.map((t, ti) =>
+                    cbnFilled.current[si]?.[ti] ? null : (
+                      <View
+                        key={`${si}-${ti}`}
+                        style={[
+                          styles.numBadge,
+                          {
+                            left: ox + t.x * side - 15,
+                            top: oy + t.y * side - 15,
+                            backgroundColor: step.colour,
+                            borderColor: si === cbnStep ? '#4A3B32' : '#FFFFFF',
+                            opacity: si === cbnStep ? 1 : 0.55,
+                          },
+                        ]}
+                      >
+                        <Text style={[styles.numBadgeText, { color: badgeInk(step.colour) }]}>{step.number}</Text>
+                      </View>
+                    ),
+                  ),
+            )}
+          </View>
+        )}
+
         {/* Palette: number-locked for CBN, collapsible for free scenes. */}
         {cbnPlan ? (
           <ScrollView style={styles.panel} contentContainerStyle={styles.panelContent}>
@@ -916,6 +956,12 @@ const styles = StyleSheet.create({
     fontSize: 15, fontWeight: '700', paddingVertical: 6, paddingHorizontal: 16, borderRadius: 999, overflow: 'hidden',
     marginHorizontal: 16, textAlign: 'center',
   },
+  numBadge: {
+    position: 'absolute', width: 30, height: 30, borderRadius: 15, borderWidth: 2,
+    alignItems: 'center', justifyContent: 'center',
+    shadowColor: '#3B2D2D', shadowOpacity: 0.2, shadowRadius: 2, elevation: 2,
+  },
+  numBadgeText: { fontSize: 15, fontWeight: '800' },
   canvasWrap: { flex: 1, margin: 8, borderRadius: 16, overflow: 'hidden', backgroundColor: '#FFFFFF' },
   canvas: { flex: 1 },
   panel: {
