@@ -9,6 +9,40 @@ Status key: `[ ]` open · `[~]` in progress · `[x]` done (move to the bottom or
 
 ## Open
 
+- [ ] **"Colour Your Way" experience upgrade — pattern/gradient/glitter fills (+ optional trace-to-build
+  intro, scene finish).** From an owner reference video (a toddler colouring app) — mock built &
+  approved-for-review as scratchpad artifact `8acdfc90-db42-405b-898b-933b7c92de90` (unicorn, all
+  features live). Goal: make our existing flood-fill **Colour Your Way** feel like the video without a
+  new section — it's an enhancement of the current line-art colouring engine on both surfaces
+  (`renderColouringLineArt` in `demo-shell.html`; `LineArtColouringPlayer` in mobile `ColouringPlayer`).
+  Build-ready spec:
+  - **Pattern fills (the headline, NEW).** Beyond solid colours, a region can be filled with a repeating
+    **texture**: stripes, confetti, leopard/spots, polka, stars, hearts. Implement as a swatch whose
+    "paint" is a tile: on fill, stamp the tile clipped to the flooded region mask (demo: an offscreen
+    canvas tiled + `globalCompositeOperation='source-in'` against the region mask, or an SVG `<pattern>`
+    for the vector path; mobile Skia: `Skia.Shader`/`ImageShader` with `TileMode.Repeat` painted into the
+    flooded mask, mirroring the existing `SkImage` paint-buffer rebuild). Reuse the current BFS flood mask
+    — patterns just change what colour each masked pixel gets.
+  - **Gradient & glitter fills (NEW).** Rainbow **linear gradient** across the region's bbox; **glitter** =
+    base colour + scattered sparkle specks + a gentle shimmer (demo: CSS/animated overlay clipped to mask;
+    mobile: sparkle dots baked into the paint buffer + a subtle animated brightness). We already have
+    rainbow/glitter/glow as *brushes*; this is the same idea as a whole-region *fill*.
+  - **Palette drawer additions.** Add a "patterns" row to the existing right colour rail + full palette
+    grid (both surfaces already have the rail + slide-up grid). No locked/premium swatches — the video's
+    app gates some; ours stays fully free (child-experience rule).
+  - **Decorative spots (NEW authoring).** Optional pre-placed fillable dots on a scene (author as extra
+    small closed regions in the line-art, or `byNumberPlan`-style target points for taps). Nice-to-have.
+  - **Trace-to-build intro (mostly HAVE).** The video builds the outline by tracing dashed parts first —
+    that's essentially our **Guided Drawing** (part-by-part trace→fill). Follow-up: add the sparkle trail
+    to the tracing/guided renderers and optionally chain "build → colour" into one flow.
+  - **Scene finish + cheer (HAVE, combine).** Drop the finished picture onto a themed scene background
+    (scenes already exist for Colour) and fire the existing non-covering Option-B toast + mascot. Don't
+    reintroduce a covering popup.
+  - Suggested slice order: (1) pattern + gradient + glitter fills on the **demo** Colour Your Way (verify
+    headless: fill a region with each, assert the mask pixels changed + zero console errors), (2) mobile
+    Skia port of the same, (3) optional spots + trace sparkle + scene-finish chaining. Start with (1) —
+    highest impact, reuses the whole flood-fill + rail.
+
 - [ ] **Change the Flower icon in the Guided Drawing picker.** The Flower subject
   (`draw-guided-flower`) currently shows its `feed-plant1.png` reference (a potted plant) as the tile
   icon — owner wants a proper flower icon. **Blocked on owner art:** no dedicated cute flower clay
