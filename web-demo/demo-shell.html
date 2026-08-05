@@ -4398,6 +4398,83 @@ function renderGame(activity) {
       const refName = params.image ? imageNameFromRef(params.image) : null;
       let scale = 1, ox = 0, oy = 0, nextIndex = 0, doneAll = false;
 
+      // Owner picture dot-to-dot (Aug 2026): the numbered dots are printed ON the
+      // artwork, so we blit the raster contain-fit, map each stored dot (a
+      // fraction x1000 of the panel) onto that rect, and DON'T stamp our own
+      // numbered circles — just the joining line + a gentle ring on the next dot.
+      if (params.printedDots && refName && RASTER_IMAGES[refName]) {
+        const canvas = el(`<canvas class="stage" aria-label="Join the dots on the picture" style="touch-action:none"></canvas>`);
+        stage.append(canvas);
+        const ctx = canvas.getContext('2d');
+        const im = new Image();
+        let rx = 0, ry = 0, rw = 0, rh = 0, ready = false, t0 = performance.now();
+        const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+        function toScreen(p) { return { x: rx + (p.x / 1000) * rw, y: ry + (p.y / 1000) * rh }; }
+        function layout() {
+          const r = stage.getBoundingClientRect();
+          canvas.width = r.width * devicePixelRatio; canvas.height = r.height * devicePixelRatio;
+          ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+          const ar = (im.naturalWidth || 2) / (im.naturalHeight || 1);
+          if (r.width / r.height > ar) { rh = r.height; rw = rh * ar; } else { rw = r.width; rh = rw / ar; }
+          rx = (r.width - rw) / 2; ry = (r.height - rh) / 2;
+        }
+        function draw() {
+          const r = stage.getBoundingClientRect();
+          ctx.clearRect(0, 0, r.width, r.height);
+          if (ready) ctx.drawImage(im, rx, ry, rw, rh);
+          const lineW = Math.max(4, rw * 0.012);
+          if (nextIndex > 0) {
+            ctx.beginPath();
+            dots.slice(0, nextIndex).forEach((p, i) => { const s = toScreen(p); i ? ctx.lineTo(s.x, s.y) : ctx.moveTo(s.x, s.y); });
+            if (doneAll && params.closed && dots.length > 2) { const s0 = toScreen(dots[0]); ctx.lineTo(s0.x, s0.y); }
+            ctx.strokeStyle = getComputedStyle(document.getElementById('app')).getPropertyValue('--accent').trim() || '#FF8A65';
+            ctx.lineWidth = lineW; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+            ctx.stroke();
+          }
+          // Small green tick on each joined dot.
+          dots.slice(0, nextIndex).forEach((p) => {
+            const s = toScreen(p);
+            ctx.beginPath(); ctx.arc(s.x, s.y, lineW * 0.9, 0, Math.PI * 2);
+            ctx.fillStyle = '#5FBF6A'; ctx.fill();
+          });
+          // Pulsing ring on the NEXT dot so the child knows where to tap.
+          if (!doneAll && dots[nextIndex]) {
+            const s = toScreen(dots[nextIndex]);
+            const pulse = reduce ? 0.5 : (Math.sin((performance.now() - t0) / 320) + 1) / 2;
+            const base = Math.max(14, rw * 0.028);
+            ctx.beginPath(); ctx.arc(s.x, s.y, base + pulse * base * 0.5, 0, Math.PI * 2);
+            ctx.strokeStyle = '#E8483F'; ctx.lineWidth = Math.max(3, rw * 0.008); ctx.stroke();
+          }
+        }
+        function fit() { layout(); draw(); }
+        function loop() { if (doneAll) { draw(); return; } draw(); if (!reduce) requestAnimationFrame(loop); }
+        im.onload = () => { ready = true; fit(); if (reduce) draw(); else requestAnimationFrame(loop); };
+        im.src = RASTER_IMAGES[refName];
+        canvas.addEventListener('pointerdown', (e) => {
+          if (doneAll || !dots.length || !ready) return;
+          const r = canvas.getBoundingClientRect();
+          const x = e.clientX - r.left, y = e.clientY - r.top;
+          const tapR = Math.max(30, rw * 0.06);
+          const target = toScreen(dots[nextIndex]);
+          if (Math.hypot(x - target.x, y - target.y) <= tapR) {
+            nextIndex++;
+            if (nextIndex === 1) say('Find number ' + (nextIndex + 1) + ' next!');
+            if (nextIndex >= dots.length) {
+              doneAll = true; draw();
+              completeActivity(activity, { attempts });
+              stage.append(doneToast());
+              return;
+            }
+            draw();
+          } else if (dots.some((p, i) => i !== nextIndex && Math.hypot(x - toScreen(p).x, y - toScreen(p).y) <= tapR)) {
+            miss();
+          }
+        });
+        requestAnimationFrame(fit);
+        new ResizeObserver(fit).observe(stage);
+        return;
+      }
+
       if (refName && IMAGES[refName]) {
         const ref = el(`<div style="position:absolute;inset:0;display:grid;place-items:center;pointer-events:none;filter:grayscale(1);opacity:0.08"></div>`);
         ref.append(el(imgHtml(refName, 420)));

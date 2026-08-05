@@ -15,6 +15,7 @@ import { ColouringPlayer } from './players/ColouringPlayer';
 import { PuzzlePlayer } from './players/PuzzlePlayer';
 import { GamePlayer } from './players/GamePlayer';
 import { CutAlongPlayer } from './players/CutAlongPlayer';
+import { DotToDotPlayer } from './players/DotToDotPlayer';
 
 /**
  * Activity player shell (docs/03 S10-S14): instruction bar with replay,
@@ -173,7 +174,10 @@ export function ActivityPlayerScreen(props: { activity: Activity }): React.JSX.E
       {activity.type === 'game' && activity.template === 'cut-along' && (
         <CutAlongPlayer key={replayKey} activity={activity} theme={theme} onComplete={complete} onDone={goBack} onReplay={replay} />
       )}
-      {activity.type === 'game' && activity.template !== 'cut-along' && (
+      {activity.type === 'game' && activity.template === 'dot-to-dot' && (
+        <DotToDotPlayer key={replayKey} activity={activity} theme={theme} onComplete={complete} onDone={goBack} onReplay={replay} />
+      )}
+      {activity.type === 'game' && activity.template !== 'cut-along' && activity.template !== 'dot-to-dot' && (
         <GamePlayer key={replayKey} activity={activity} theme={theme} onComplete={complete} onDone={goBack} onReplay={replay} />
       )}
     </View>

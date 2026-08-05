@@ -4,7 +4,7 @@ import { ACTIVITY_CATEGORIES, buildDailyPlan, defaultAccessibilitySettings } fro
 import { useAppStore } from '../../state/appStore';
 import { childTheme } from '../../ui/theme';
 import { HoldToHomeButton, PrimaryButton } from '../../ui/components';
-import { IMPLEMENTED_GAME_TEMPLATES } from './games/registry';
+import { isImplementedGame } from './games/registry';
 
 /**
  * Daily Adventure (FR-020, docs/03 S15): the recipe session as a path of
@@ -19,7 +19,7 @@ export function DailyAdventureScreen(): React.JSX.Element {
   const plan = useMemo(
     () =>
       buildDailyPlan(
-        catalogue.filter((a) => a.type !== 'game' || IMPLEMENTED_GAME_TEMPLATES.includes(a.template)),
+        catalogue.filter((a) => a.type !== 'game' || isImplementedGame(a)),
         {
           ageBand: profile?.ageBand ?? '3-5',
           difficulty: profile?.difficulty ?? 2,

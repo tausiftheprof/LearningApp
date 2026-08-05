@@ -585,7 +585,37 @@ function starDots(cx = 500, cy = 500, outer = 380, inner = 160): Point[] {
   return pts;
 }
 
+/** Owner picture dot-to-dots (Aug 2026): the child connects the dots printed
+ *  ON the artwork itself (a puppy, an elephant), so we store each dot as a
+ *  FRACTION (0..1) of the panel image, carried in the same Point space by
+ *  scaling ×1000. The renderer maps these onto the contain-fitted raster and
+ *  suppresses its own numbered circles (`printedDots`) — the picture already
+ *  prints the numbers; the app just draws the joining line + a "next" ring. */
+function fracDots(pairs: ReadonlyArray<readonly [number, number]>): Point[] {
+  return pairs.map(([fx, fy]) => ({ x: Math.round(fx * 1000), y: Math.round(fy * 1000) }));
+}
+const puppyDots = fracDots([
+  [0.4783, 0.0962], [0.5750, 0.1476], [0.6586, 0.2785], [0.6768, 0.4165], [0.5529, 0.5730],
+  [0.6794, 0.6298], [0.7266, 0.7320], [0.6430, 0.9040], [0.5000, 0.9050], [0.3627, 0.8977],
+]);
+const elephantDots = fracDots([
+  [0.2522, 0.2028], [0.3796, 0.1414], [0.5006, 0.0783], [0.5888, 0.1284], [0.6753, 0.3274],
+  [0.6569, 0.4672], [0.7262, 0.5607], [0.6996, 0.8663], [0.5436, 0.9416], [0.4082, 0.8625],
+]);
+
 const dotToDotActivities: Activity[] = [
+  {
+    type: 'game', id: 'draw-dotdot-puppy', title: 'Puppy', category: 'drawing',
+    ageBands: ['2-3', '3-5', '5-7'], difficulty: 1, motorSkills: ['tapping', 'controlled-movement'],
+    estimatedMinutes: 2, theme: 'animals', locale: 'en-AU', instructionAudio: audio('dot-to-dot'),
+    template: 'dot-to-dot', params: { image: 'images/dotdot-puppy.png', dots: puppyDots, printedDots: true },
+  },
+  {
+    type: 'game', id: 'draw-dotdot-elephant', title: 'Elephant', category: 'drawing',
+    ageBands: ['2-3', '3-5', '5-7'], difficulty: 1, motorSkills: ['tapping', 'controlled-movement'],
+    estimatedMinutes: 2, theme: 'animals', locale: 'en-AU', instructionAudio: audio('dot-to-dot'),
+    template: 'dot-to-dot', params: { image: 'images/dotdot-elephant.png', dots: elephantDots, printedDots: true },
+  },
   {
     type: 'game', id: 'draw-dotdot-whale', title: 'Whale', category: 'drawing',
     ageBands: ['3-5', '5-7'], difficulty: 2, motorSkills: ['tapping', 'controlled-movement'],

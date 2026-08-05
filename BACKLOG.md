@@ -69,6 +69,23 @@ swap in cute art whenever ready.
 
 ## Done
 
+- [x] **Picture dot-to-dots — puppy + elephant (Aug 2026, demo verified; mobile typecheck-clean,
+  on-device rebuild pending).** Owner uploaded one worksheet image with two connect-the-dots panels
+  (a puppy, an elephant), the numbered dots 1→10 printed ON the artwork. Split into
+  `assets/images/dotdot-{puppy,elephant}.png` (seam-detected + verified), and each panel's ten dots
+  detected/measured and stored as fractions×1000 in a new `printedDots` mode on the `dot-to-dot`
+  template (`starterPack.ts`, `fracDots`). New renderer branch (demo `dot-to-dot`) blits the raster
+  contain-fit, maps the stored dots onto that rect, draws the joining line (theme accent) + green ticks
+  + a pulsing ring on the NEXT dot, and — crucially — does NOT stamp its own numbered circles (the
+  picture already prints them). Headless check taps all 10 in order at landscape + portrait: completes
+  with the star burst + non-covering "All done!" toast, zero console errors. **Mobile:** dot-to-dot was
+  previously demo-only (not in `IMPLEMENTED_GAME_TEMPLATES`); added a Skia `DotToDotPlayer` (printed-dots
+  mode only), a `dotArt.ts` require-map, `isImplementedGame()` gate (surfaces only the `printedDots`
+  dot-to-dots so the vector whale/shape ones stay demo-only until a Skia numbered-dot renderer lands),
+  routing in `ActivityPlayerScreen`, and the picker tile picture via `gamePictureFor`. `contentPack.test.ts`
+  enumerates the two printed dot-to-dots. Follow-up (not blocking): port the vector dot-to-dots (whale/
+  star/triangle/square) to mobile — needs Skia text/font for the on-canvas numbers.
+
 - [x] **Tablet-testing feedback round (Aug 2026, typecheck-clean; on-device rebuild pending).** Eight
   items across tracing / puzzles / colouring / cut-along, fixed in shared core + the mobile renderers:
   **Tracing** — small `b`/`p` bowls start on the LEFT at the stem (not the top-middle); `i`/`j` carry a

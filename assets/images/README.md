@@ -15,6 +15,7 @@ placed your own files, then run `node web-demo/build.mjs` for the demo / rebuild
 | `star.svg`, `sun.svg`, `moon.svg` | rewards/stickers, sequences, patterns |
 | `rocket.svg`, `balloon.svg`, `car.svg`, `treehouse.svg` | jigsaws, sequences |
 | `scene-*.png` | Colour section: full-page flood-fill scenes (solar system, rocket, unicorn, monkey, rabbit, whale) |
+| `dotdot-puppy.png`, `dotdot-elephant.png` | Draw section: picture dot-to-dots — the numbered dots are printed on the artwork; the child joins 1→10 (owner art, split from one uploaded worksheet) |
 | `trace-letter-{a..z}.png` | Tracing section: owner clay-art "letter cue" header (capital+small pair) shown above each letter |
 | `trace-number-{1..10}.png` | Tracing section: owner clay-art "number cue" header shown above each number |
 | `trace-{circle,square,triangle,rectangle,oval,pentagon,hexagon,curve,zigzag,line-straight}.png` | Tracing section: owner clay-art "shape cue" header (file named after the activity id) |

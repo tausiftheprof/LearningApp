@@ -5,7 +5,7 @@ import { defaultAccessibilitySettings, recommendActivities, ACTIVITY_CATEGORIES,
 import { useAppStore } from '../../state/appStore';
 import { childTheme } from '../../ui/theme';
 import { HoldToHomeButton } from '../../ui/components';
-import { IMPLEMENTED_GAME_TEMPLATES } from './games/registry';
+import { isImplementedGame } from './games/registry';
 import { tracingArtFor, gameArtFor, sectionIcon } from '../../ui/tracingArt';
 import { puzzleArtFor } from '../../ui/puzzleArt';
 import { gamePictureFor } from '../../ui/cutArt';
@@ -171,9 +171,7 @@ export function ActivityPickerScreen(props: { category: PickerCategory }): React
     return Math.min(maxTile, Math.floor((avail - GAP * (cols - 1)) / Math.max(1, cols)));
   };
 
-  const playable = catalogue.filter(
-    (a) => a.type !== 'game' || IMPLEMENTED_GAME_TEMPLATES.includes(a.template),
-  );
+  const playable = catalogue.filter((a) => a.type !== 'game' || isImplementedGame(a));
   // Tracing splits into Letters / Numbers / Shapes (owner direction).
   const numericSort = (a: Activity, b: Activity) => a.id.localeCompare(b.id, undefined, { numeric: true });
   const tracingOf = (kind: 'letters' | 'numbers' | 'shapes') =>

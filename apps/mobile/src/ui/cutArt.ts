@@ -3,6 +3,8 @@
  * asset basename. Metro only resolves literal require() strings, so every cut
  * picture + the scissors pair is enumerated here (mirrors puzzleArt / uiArt).
  */
+import { dotArtFor } from './dotArt';
+
 const CUT_ART: Record<string, number> = {
   'cut-car': require('../../../../assets/images/cut-car.png'),
   'cut-cake': require('../../../../assets/images/cut-cake.png'),
@@ -37,5 +39,9 @@ export function gamePictureFor(a: {
   if (a.template === 'cut-along') return cutArtFor(typeof params.image === 'string' ? params.image : undefined) ?? undefined;
   if (a.template === 'feed-animal') return cutArtFor(typeof params.open === 'string' ? params.open : undefined) ?? undefined;
   if (a.template === 'number-hop') return cutArtFor('hop-stone') ?? undefined;
+  // Picture dot-to-dots (puppy/elephant) show their own panel on the tile.
+  if (a.template === 'dot-to-dot' && params.printedDots === true) {
+    return dotArtFor(typeof params.image === 'string' ? params.image : undefined) ?? undefined;
+  }
   return undefined;
 }

@@ -50,6 +50,26 @@ describe('starter content pack', () => {
     }
   });
 
+  it('ships picture dot-to-dots with printed dots (owner art, Aug 2026)', () => {
+    const dd = pack.activities.filter((a) => a.type === 'game' && a.template === 'dot-to-dot');
+    const printed = dd.filter((a) => (a as { params: Record<string, unknown> }).params.printedDots === true);
+    expect(printed.map((a) => a.id).sort()).toEqual(['draw-dotdot-elephant', 'draw-dotdot-puppy']);
+    for (const a of printed) {
+      const p = (a as { params: Record<string, unknown> }).params;
+      expect(typeof p.image).toBe('string');
+      expect(p.image as string).toMatch(/^images\/dotdot-[a-z]+\.png$/);
+      // Ten printed dots, each stored as a fraction (0..1) of the panel scaled x1000.
+      const dots = p.dots as Array<{ x: number; y: number }>;
+      expect(dots).toHaveLength(10);
+      for (const d of dots) {
+        expect(d.x).toBeGreaterThanOrEqual(0);
+        expect(d.x).toBeLessThanOrEqual(1000);
+        expect(d.y).toBeGreaterThanOrEqual(0);
+        expect(d.y).toBeLessThanOrEqual(1000);
+      }
+    }
+  });
+
   it('exercises every fine-motor movement in PRD section 7 (FR-011)', () => {
     const skills = new Set(pack.activities.flatMap((a) => a.motorSkills));
     for (const skill of MOTOR_SKILLS) {
