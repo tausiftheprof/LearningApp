@@ -9,6 +9,28 @@ Status key: `[ ]` open · `[~]` in progress · `[x]` done (move to the bottom or
 
 ## Open
 
+- [ ] **Guided Drawing — "zoom & build" step trace (from owner cat worksheet).** Owner reference: a
+  6-step "Cute Cat" guided-drawing worksheet (oval → ears → eyes/nose/mouth → whiskers → body/legs/tail →
+  coloured reveal). Corrected trace mechanic (owner: "it should trace towards the edge, not random spots";
+  "show step 1 only, trace the dotted line, then expand to step 2"). Approved-for-review mock:
+  artifact `64c16821-447e-4223-a4ed-f6d3d9bdd220` (vector cat, all 6 steps live). Requirements the mock
+  nails, to fold into `GuidedDrawingPlayer`/`guidedBuilds.ts` + demo `renderGuidedBuild`:
+  - **The dotted guide IS the object's edge.** Each step's stroke is a real polyline/outline of that part,
+    so tracing follows the edge exactly (never arbitrary points). We already author guided-drawing geometry
+    this way (`guidedBuilds.ts` polylines) — the fix is presentation, not data model.
+  - **One step shown at a time, camera zoom that EXPANDS.** Start zoomed on step 1's part; as each step
+    completes, refit the camera to the bbox of everything drawn so far so the view grows (step 1 tight →
+    step 5 whole figure). New for the renderers (both currently show the whole subject at once).
+  - **Multi-stroke steps trace in order**, previous strokes solid, current dashed + leader dot, upcoming
+    faint. (Matches the existing per-stroke tracing; just grouped by worksheet step + a step caption
+    "Add two ears on top".)
+  - **Coloured reveal as the payoff** (step "N": your cute cat is ready) + confetti — the guided-drawing
+    completion, non-covering.
+  - Content note: worksheet subjects can be authored as vector (like the cat) OR the owner supplies the
+    6-frame raster and we trace corridors over each frame. Vector is preferred (edge-exact, themeable).
+  - This is the TRACE half; the unicorn mock (`8acdfc90`) is the COLOUR half. A full subject could chain
+    zoom-build-trace → colour.
+
 - [ ] **"Colour Your Way" experience upgrade — pattern/gradient/glitter fills (+ optional trace-to-build
   intro, scene finish).** From an owner reference video (a toddler colouring app) — mock built &
   approved-for-review as scratchpad artifact `8acdfc90-db42-405b-898b-933b7c92de90` (unicorn, all
