@@ -183,6 +183,19 @@ is hash-verified and revocable; the schema is structurally incapable of
 expressing link-outs, chat, or free-text collection — that's a deliberate safety property, not an
 oversight, so don't loosen the schema to "just add a field" without checking docs/07-09.
 
+**In-flight mocks / owner explorations (Aug 2026 — details + status in `BACKLOG.md`):**
+- **Memory Windows** (a `match-pairs`/`memory-cards` game): owner pushed a `Memory game - *` window-art
+  family — one **closed door** (shut, no character/clue) + one **open** image per character on the *same*
+  frame (only the character behind the open doors changes). Two window styles: peach/green (Original +
+  Ocean themes) and purple/yellow (Aussie animals). Interactive mock lives at `scratchpad/memory.html`
+  (artifact `65db2dcb-…`) with 3 themes × 3 levels (3/4/6 pairs). Art gaps before a real build: **whale**
+  (Original) and **quokka** (Aussie, a Bear stands in) are missing; extra unused art on hand incl. a
+  bird-theme set + yellow/orange closed-door colourways. Not yet wired into the content pack / players.
+- **Guided Drawing "trace-to-build then colour" is PARKED — do NOT build** unless the owner explicitly
+  reopens it. Multiple mocks (vector cat + a reveal-based one on the owner's real `Guided drawing - *`
+  worksheets) didn't land; owner said "park it, I don't want it built." The colour half (unicorn mock
+  `8acdfc90`, "Colour Your Way pattern fills") stays separate and live.
+
 **Section structure inside doors** (owner direction, July 2026): **Colour** opens a two-door
 chooser — "Colour by Numbers" (`colour-cbn-*`, owner pages with the number key printed in the art)
 vs "Colour Your Way" (the free flood-fill scenes) — split by id prefix in the picker. **Draw**'s
