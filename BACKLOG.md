@@ -9,20 +9,29 @@ Status key: `[ ]` open · `[~]` in progress · `[x]` done (move to the bottom or
 
 ## Open
 
-- [ ] **Memory Windows game — mock built, awaiting owner sign-off (Aug 2026).** Owner supplied a
-  "Memory game - *" window-art family (peach/green arched window for Original + Ocean; purple/yellow
-  window for Aussie animals): one **closed door** image (shut doors, no character/clue) + one **open**
-  image per character (same frame, doors open, character behind). Interactive mock published as artifact
-  `65db2dcb-8d67-4754-9839-420a91c88fad` (`scratchpad/memory.html`): 3 themes × 3 levels (Easy 3 / Medium 4 /
-  Hard 6 pairs), tap-to-open windows (closed↔open cross-fade on the **same** frame — only the character
-  changes), two-open-at-once lock, match-stays / mismatch-closes, shuffle on start/restart, WebAudio
-  pop/match/win sounds + confetti, back + restart, no text on cards, pastel/responsive. **All three sets
-  now complete (6 friends each):** owner supplied the **whale** (`Memory game - sea theme - whale open.png`,
-  peach frame → Original) and clarified the **quokka** was mis-named "Bear" (renamed to
-  `Memory game - Australian animal theme - quokka.png`). Extra art on hand not in the 3 requested sets:
-  bird-theme flamingo/owl/parrot/penguin, and yellow/orange closed-door colourways (a possible 4th set).
-  To build for real: it's the `match-pairs`/`memory-cards` template — add the window-art sets to the
-  content pack + wire the closed/open image pair per card in the demo + mobile players.
+- [ ] **Memory Windows game — build for real (mock approved, Aug 2026).** A window memory-match game on
+  the owner's `Memory game - *` art. Mechanic (nailed in the mock, artifact
+  `65db2dcb-8d67-4754-9839-420a91c88fad`, `scratchpad/memory.html`): each card is a **window** — all cards
+  show the **closed door** (shut doors, NO character/symbol/clue); tapping cross-fades to the **same frame,
+  doors open, character behind** (frame/doors/hinges/colours/dimensions/position identical between closed
+  and open — only the character changes). Rules: two open at a time, taps locked during the check,
+  match → stays open, mismatch → closes after ~1s, positions shuffled on every start/restart. Levels:
+  **Easy 3 / Medium 4 / Hard 6 pairs**. Gentle WebAudio (peek / match / win) + confetti celebration on
+  all-matched; large touch targets, smooth animations, back + restart, no ads / no text on cards; pastel +
+  responsive (phone/tablet). It's the `match-pairs` / `memory-cards` template — add the window-art sets to
+  the content pack (each theme = one closed-door image + 6 character opens) and wire the closed/open image
+  **pair per card** in the demo (`demo-shell.html` `memoryGame`) + mobile (`GamePlayer`/registry).
+
+  **Window styles (frame must stay consistent within a theme):**
+  - **Peach/green arched window** — `Memory game - closed door.png` (closed). Used by Original + Ocean.
+  - **Purple/yellow window** — `Memory game - Australian animal theme - closed door.png` (closed). Used by Aussie.
+  - Spare closed-door **colourways** (purple-style, different door colour): `Memory game - Purple/Yellow/orange closed door.png` — could theme a future set.
+
+  **Themes / character art (all `Memory game - …` in `assets/images/`):**
+  - ✅ **Original** (peach/green) — sun, apple, `bird theme - butterfly`, `sea theme - whale open`, turtle, rocket. **Complete (6).**
+  - ✅ **Ocean** (peach/green) — `sea theme -` dolphin, octopus, sea horse, star fish, crab, shark. **Complete (6).**
+  - ✅ **Aussie Animals** (purple/yellow) — `Australian animal theme -` koala, kangaroo, wombat, platypus, echidna, quokka (was mis-named "Bear", now renamed). **Complete (6).**
+  - ⏳ **Bird theme** (peach/green) — LEFTOVER art on hand: `bird theme -` flamingo, owl, parrot, penguin (4). Butterfly is already used by Original. **Needs 2 more birds** (or reuse butterfly) to make a full 6-pair set — otherwise Hard caps at 4 pairs. Confirm with owner whether Bird becomes a 4th shippable theme.
 
 - [ ] **[PARKED — owner: do NOT build] Guided Drawing "trace-to-build then colour".** Several mock
   iterations (vector cat `64c16821`; reveal-based on the owner's real cat worksheet — final `scratchpad/
