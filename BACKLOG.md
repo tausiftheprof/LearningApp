@@ -16,13 +16,13 @@ Status key: `[ ]` open · `[~]` in progress · `[x]` done (move to the bottom or
   `65db2dcb-8d67-4754-9839-420a91c88fad` (`scratchpad/memory.html`): 3 themes × 3 levels (Easy 3 / Medium 4 /
   Hard 6 pairs), tap-to-open windows (closed↔open cross-fade on the **same** frame — only the character
   changes), two-open-at-once lock, match-stays / mismatch-closes, shuffle on start/restart, WebAudio
-  pop/match/win sounds + confetti, back + restart, no text on cards, pastel/responsive. **Art gaps to
-  close before building for real:** Original is missing a **whale** window (butterfly exists as
-  "bird theme - butterfly", peach frame — fine to use); Aussie is missing a **quokka** (a **Bear**
-  currently stands in). Extra art on hand not in the 3 requested sets: bird-theme flamingo/owl/parrot/
-  penguin, and yellow/orange closed-door colourways. To build for real: it's the `match-pairs`/`memory-cards`
-  template — add the window-art sets to the content pack + wire the closed/open image pair per card in the
-  demo + mobile players.
+  pop/match/win sounds + confetti, back + restart, no text on cards, pastel/responsive. **All three sets
+  now complete (6 friends each):** owner supplied the **whale** (`Memory game - sea theme - whale open.png`,
+  peach frame → Original) and clarified the **quokka** was mis-named "Bear" (renamed to
+  `Memory game - Australian animal theme - quokka.png`). Extra art on hand not in the 3 requested sets:
+  bird-theme flamingo/owl/parrot/penguin, and yellow/orange closed-door colourways (a possible 4th set).
+  To build for real: it's the `match-pairs`/`memory-cards` template — add the window-art sets to the
+  content pack + wire the closed/open image pair per card in the demo + mobile players.
 
 - [ ] **[PARKED — owner: do NOT build] Guided Drawing "trace-to-build then colour".** Several mock
   iterations (vector cat `64c16821`; reveal-based on the owner's real cat worksheet — final `scratchpad/

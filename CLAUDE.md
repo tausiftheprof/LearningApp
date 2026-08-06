@@ -188,9 +188,10 @@ oversight, so don't loosen the schema to "just add a field" without checking doc
   family — one **closed door** (shut, no character/clue) + one **open** image per character on the *same*
   frame (only the character behind the open doors changes). Two window styles: peach/green (Original +
   Ocean themes) and purple/yellow (Aussie animals). Interactive mock lives at `scratchpad/memory.html`
-  (artifact `65db2dcb-…`) with 3 themes × 3 levels (3/4/6 pairs). Art gaps before a real build: **whale**
-  (Original) and **quokka** (Aussie, a Bear stands in) are missing; extra unused art on hand incl. a
-  bird-theme set + yellow/orange closed-door colourways. Not yet wired into the content pack / players.
+  (artifact `65db2dcb-…`) with 3 themes × 3 levels (3/4/6 pairs). All three sets are complete (6 friends
+  each) — the **whale** shipped (`sea theme - whale open`, used in Original) and the **quokka** was
+  mis-named "Bear" (renamed to `… - quokka.png`); extra unused art on hand incl. a bird-theme set +
+  yellow/orange closed-door colourways. Not yet wired into the content pack / players.
 - **Guided Drawing "trace-to-build then colour" is PARKED — do NOT build** unless the owner explicitly
   reopens it. Multiple mocks (vector cat + a reveal-based one on the owner's real `Guided drawing - *`
   worksheets) didn't land; owner said "park it, I don't want it built." The colour half (unicorn mock
