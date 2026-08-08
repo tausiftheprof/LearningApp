@@ -282,6 +282,26 @@
   .bubble-wrap.card .bubble:active { transform: scale(.96); }
   .bubble-wrap.card .bubble-label { max-width: 100%; }
   @media (prefers-reduced-motion: reduce) { .bubble-wrap.card { animation: none; } }
+  /* Section page (Candy-Clouds design): title + subtitle, then coloured section
+     headings each above a horizontal carousel of BIG pastel cards + pill badges. */
+  .section-page { flex: 1; overflow-y: auto; display: flex; flex-direction: column; }
+  .sp-top { display: flex; align-items: center; gap: 8px; padding: 8px 14px 0; }
+  .sp-title { font-size: clamp(27px, 5.4vw, 40px); font-weight: 800; text-align: center; color: var(--accent, #7c3aed); margin: 8px 0 2px; line-height: 1.05; }
+  .sp-sub { text-align: center; font-size: clamp(14px, 2.5vw, 18px); font-weight: 700; color: color-mix(in srgb, var(--accent, #c2438a) 80%, #6a4a5a); margin: 0 0 8px; padding: 0 16px; }
+  .car-sec { margin: 8px 0 2px; }
+  .car-head { font-size: clamp(19px, 3.2vw, 25px); font-weight: 800; margin: 4px 0 6px; padding: 0 clamp(16px, 4vw, 26px); }
+  .carousel { display: flex; gap: clamp(14px, 3vw, 24px); overflow-x: auto; scroll-snap-type: x proximity; padding: 6px clamp(16px, 4vw, 26px) 16px; -webkit-overflow-scrolling: touch; }
+  .carousel::-webkit-scrollbar { height: 9px; }
+  .carousel::-webkit-scrollbar-thumb { background: color-mix(in srgb, var(--accent, #a98bff) 32%, transparent); border-radius: 9px; }
+  .pcard { scroll-snap-align: start; flex: 0 0 clamp(190px, 52vw, 244px); text-align: left; border: none; border-radius: 28px; background: var(--pc, #FFD7E8); box-shadow: 0 6px 16px rgba(74,59,50,.16); padding: clamp(12px, 2.6vw, 16px); cursor: pointer; font-family: inherit; overflow: hidden; animation: cardPop .5s ease both; transition: transform .16s ease, box-shadow .16s ease; }
+  .pcard:hover { transform: translateY(-3px); box-shadow: 0 12px 24px rgba(74,59,50,.24); }
+  .pcard:active { transform: scale(.97); }
+  .pcard .pv { width: 100%; height: clamp(112px, 30vw, 146px); border-radius: 20px; background: #fff; box-shadow: inset 0 0 0 4px rgba(255,255,255,.6); display: grid; place-items: center; overflow: hidden; margin-bottom: 11px; }
+  .pcard .pv .lg-img { width: 100% !important; height: 100% !important; object-fit: contain !important; border-radius: 0 !important; }
+  .pcard .pv .emoji { font-size: clamp(52px, 13vw, 72px); }
+  .pcard .tt { font-size: clamp(17px, 2.8vw, 21px); font-weight: 800; margin: 0 0 8px; color: var(--tile-ink, #4A3B32); line-height: 1.12; }
+  .pcard .pl { display: inline-block; background: rgba(255,255,255,.72); color: var(--accent, #7c3aed); border-radius: 999px; padding: 4px 13px; font-size: 13px; font-weight: 800; }
+  @media (prefers-reduced-motion: reduce) { .pcard { animation: none; } }
   .sec-toggle { margin-left: auto; border: 2px solid rgba(74,59,50,.15); background: #fff; color: var(--tile-ink, #4A3B32); font-family: inherit; font-weight: 800; font-size: 13px; padding: 8px 14px; border-radius: 999px; cursor: pointer; box-shadow: 0 3px 8px rgba(74,59,50,.12); }
 
   /* ---- Rewards section (owner-approved mock): star jar, trophies, sticker book, certificate ---- */
@@ -1753,24 +1773,31 @@ function renderDrawSections() {
 
 /** Colour chooser (owner direction, July 2026): two doors — Colour by Numbers
  *  (guided, number-keyed pages) and Colour Your Way (free flood-fill scenes). */
+// Colour section page (Candy-Clouds design): one scrollable page with a title,
+// subtitle, and two coloured carousels — Colour by Numbers, Colour Your Way.
+const PCARD_PASTEL = ['#FFD7E8', '#FFE4C2', '#E3D6FB', '#CFE9FF', '#D8F5DC', '#FFF3B8'];
+const COLOUR_TILE_ART = {
+  'colour-unicorn-rainbow': 'puzzle-unicorn', 'colour-monkey-tree': 'puzzle-monkey',
+  'colour-rabbit-carrot': 'puzzle-rabbit', 'colour-whale-waves': 'puzzle-whale',
+};
 function renderColourSections() {
   setStatus('Colour sections', ['content pack colouring']);
-  const top = el(`<div class="topbar"></div>`);
-  top.append(holdToHomeButton(() => navigate({ name: 'home' })), el(`<div class="hello">How shall we colour?</div>`));
-  const grid = el(`<div class="bubble-grid glyph-grid"></div>`);
-  const sections = [
-    { key: 'colour-bynum', label: 'Colour by Numbers', glyph: '🔢', icon: 'sec-colour-bynum' },
-    { key: 'colour-yourway', label: 'Colour Your Way', glyph: '🌈', icon: 'sec-colour-yourway' },
-  ];
-  sections.forEach((sct, i) => {
-    const iconHtml = (RASTER_IMAGES[sct.icon] && !highContrast())
-      ? `<span class="tile-illo" aria-hidden="true">${imgHtml(sct.icon, 74, 'filter:drop-shadow(0 6px 9px rgba(74,59,50,.28))')}</span>`
-      : `<span class="glyph-big" aria-hidden="true">${sct.glyph}</span>`;
-    grid.append(bubbleTile(iconHtml, sct.label, tiles()[(i + 1) % tiles().length], () => {
-      speak(sct.label); navigate({ name: 'picker', category: sct.key });
-    }));
-  });
-  app.append(top, grid);
+  const numericSort = (a, b) => a.id.localeCompare(b.id, undefined, { numeric: true });
+  const colouring = state.catalogue.filter((a) => a.type === 'colouring');
+  const cbn = colouring.filter((a) => /^colour-cbn-/.test(a.id)).sort(numericSort);
+  const cyw = colouring.filter((a) => !/^colour-cbn-/.test(a.id)).sort(numericSort);
+  const thumb = (a) => a.mode === 'line-art'
+    ? (COLOUR_TILE_ART[a.id] || imageNameFromRef(a.image))
+    : (/^colour-([a-z]+)/.exec(a.id) || [])[1];
+  const cbnPill = (a) => { const n = new Set((a.byNumberPlan || []).map((p) => p.number)).size; return n ? n + ' colours' : 'By number'; };
+  const go = (a) => { speak(a.title); if (guardScreenTime()) navigate({ name: 'activity', activity: a, from: 'picker', pickerCategory: 'colouring' }); };
+
+  const page = el(`<div class="section-page"></div>`);
+  const top = el(`<div class="sp-top"></div>`); top.append(holdToHomeButton(() => navigate({ name: 'home' })));
+  page.append(top, el(`<div class="sp-title">Colour</div>`), el(`<div class="sp-sub">Colour by numbers, or colour your own way.</div>`));
+  if (cbn.length) page.append(carouselSec('Colour by Numbers', '#E8994A', cbn.map((a, i) => pcard({ imgName: thumb(a), emoji: '🔢', title: a.title, pill: cbnPill(a), pastel: PCARD_PASTEL[i % PCARD_PASTEL.length], onClick: () => go(a) }))));
+  if (cyw.length) page.append(carouselSec('Colour Your Way', '#7C3AED', cyw.map((a, i) => pcard({ imgName: thumb(a), emoji: '🌈', title: a.title, pill: 'Colour it in', pastel: PCARD_PASTEL[(i + 2) % PCARD_PASTEL.length], onClick: () => go(a) }))));
+  app.append(page);
 }
 
 // Little Games groups (owner direction, July 2026): the flat games list is
@@ -1867,6 +1894,25 @@ function bubbleTile(iconHtml, label, colourCss, onClick, showLabel = true, bare 
     onClick();
   };
   return wrap;
+}
+
+// Big pastel card for the redesigned section pages (Candy-Clouds design): a white
+// preview inset (activity art or emoji), a title, and a small pill badge.
+function pcard({ imgName, emoji, title, pill, pastel, onClick }) {
+  const hasPic = imgName && (IMAGES[imgName] || RASTER_IMAGES[imgName]) && !highContrast();
+  const pv = hasPic ? imgHtml(imgName, 240) : `<span class="emoji">${emoji || '🎨'}</span>`;
+  const card = el(`<button class="pcard" style="--pc:${pastel}" aria-label="${title}"><div class="pv">${pv}</div><div class="tt">${title}</div>${pill ? `<span class="pl">${pill}</span>` : ''}</button>`);
+  card.onclick = () => { const r = card.getBoundingClientRect(); sparkleBurst(r.left + r.width / 2, r.top + 60, 6); onClick(); };
+  return card;
+}
+// One coloured section heading above a horizontal card carousel.
+function carouselSec(headText, headColour, cards) {
+  const sec = el(`<div class="car-sec"></div>`);
+  sec.append(el(`<div class="car-head" style="color:${headColour}">${headText}</div>`));
+  const car = el(`<div class="carousel"></div>`);
+  cards.forEach((c) => car.append(c));
+  sec.append(car);
+  return sec;
 }
 
 function renderPicker(category) {
