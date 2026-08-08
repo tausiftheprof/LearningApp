@@ -33,6 +33,38 @@ Status key: `[ ]` open · `[~]` in progress · `[x]` done (move to the bottom or
   - ✅ **Aussie Animals** (purple/yellow) — `Australian animal theme -` koala, kangaroo, wombat, platypus, echidna, quokka (was mis-named "Bear", now renamed). **Complete (6).**
   - ⏳ **Bird theme** (peach/green) — LEFTOVER art on hand: `bird theme -` flamingo, owl, parrot, penguin (4). Butterfly is already used by Original. **Needs 2 more birds** (or reuse butterfly) to make a full 6-pair set — otherwise Hard caps at 4 pairs. Confirm with owner whether Bird becomes a 4th shippable theme.
 
+- [ ] **Patterns & Sorting games — build for real (mock delivered, Aug 2026).** Two toddler/preschool
+  games on the owner's `Pattern - *` and `Sort in order - *` art. Interactive mock: `scratchpad/patterns.html`
+  (built from `scratchpad/patterns.tpl.html`; last file sent to owner `fd0b8bfd-…`; earlier shareable artifact
+  `d8671708-9766-4135-a3d6-7867b071b0c9`, 403-blocked on republish). Both templates: large touch targets,
+  smooth pointer drag with `position:fixed` in-place drag (NO re-parenting — re-parenting mid-gesture drops
+  pointer capture → needs a second tap), snap-to-slot, gentle timed hints, WebAudio pop/yes/no/win + confetti,
+  **no timers / no penalties / no fail state** (wrong drop springs home).
+  - **Patterns (`sequence`/new `pattern-fill` template): drag the answer into the gap.** Each source image is
+    a self-contained puzzle — a sequence with a missing tile (drop-zone overlaid on the printed "?" box) plus
+    3 answer options below. The child drags the correct option chip into the gap; correct → snaps in + reward
+    + auto-advance to the next pattern; wrong → springs home + hint pulse on gap & correct chip. Verified
+    answers (correct option index): ladybug AAB→leaf (0), leaf→leaf (0), shapes colour+shape→red triangle (0),
+    growing-plant→budding plant (0), rocket rotation up→right→down→**left** (2), stars count 1-2-3-**4**-5 (0).
+    Gap is authored per pattern as `[gapX,gapY,w,h]` fractions of the board crop; the drop-zone is an opaque
+    cream dashed tile (covers the navy "?" box) sized ×1.18 to guarantee coverage.
+  - **Sort & Order (`drag-sort`): drag shuffled growth cards into numbered boxes 1→4.** Four sequences —
+    Frog (eggs→tadpole→froglet→frog), Sunflower, Acorn tree, Butterfly — cards shuffled into a tray, drag each
+    to its correct numbered box; correct → locks in + box turns green; wrong → springs home; completing 4 →
+    "Perfect order!" + **auto-advance to the next sequence**. Card→target maps are verified (in `patterns.html`
+    data): Frog `[2,0,1,3]`, Sunflower `[3,0,1,2]`, Acorn `[2,1,3,0]`, Butterfly `[2,0,3,1]`.
+  - **Art / borders.** Sort-card navy frames are auto-removed by `scratchpad/deframe-patterns.mjs` (detects a
+    navy ring in all four edge strips → crops a 6% inset inside the card box, keeping the tinted interior +
+    subject). **Owner to resend borderless (transparent bg, one item per file):** the **leaf**, **shapes**, and
+    **growing-plant** pattern *option* chips still carry navy frames the auto-remover can't safely strip (cream
+    interiors, no protective tint). ladybug/rocket/stars options are clean.
+  - **To ship in-app:** add `drag-sort` multi-page + the pattern-answer-into-gap mechanic to the content pack
+    (`starterPack.ts`), gate the templates in both `IMPLEMENTED_TEMPLATES` (demo) / `IMPLEMENTED_GAME_TEMPLATES`
+    (mobile), wire under the **Patterns** and **Sort & Match** Little-Games groups, and port the renderer to
+    `demo-shell.html` + a mobile Skia/RN player. Advanced pattern types requested but not yet mocked
+    (movement/growth/rotation/counting/mirror/missing-middle) map to extra `Pattern - *` art already on hand
+    (Bunny=missing-middle, Rocket 2/3/4=movement, Beatle/pumpkin/Seedsac=colour, shapes 2-5).
+
 - [ ] **[PARKED — owner: do NOT build] Guided Drawing "trace-to-build then colour".** Several mock
   iterations (vector cat `64c16821`; reveal-based on the owner's real cat worksheet — final `scratchpad/
   guided-cat.html`, sent as a file) did **not** capture the reference-video feel to the owner's satisfaction.
