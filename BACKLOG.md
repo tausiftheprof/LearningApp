@@ -33,7 +33,14 @@ Status key: `[ ]` open · `[~]` in progress · `[x]` done (move to the bottom or
   - ✅ **Aussie Animals** (purple/yellow) — `Australian animal theme -` koala, kangaroo, wombat, platypus, echidna, quokka (was mis-named "Bear", now renamed). **Complete (6).**
   - ⏳ **Bird theme** (peach/green) — LEFTOVER art on hand: `bird theme -` flamingo, owl, parrot, penguin (4). Butterfly is already used by Original. **Needs 2 more birds** (or reuse butterfly) to make a full 6-pair set — otherwise Hard caps at 4 pairs. Confirm with owner whether Bird becomes a 4th shippable theme.
 
-- [ ] **Patterns & Sorting games — build for real (mock delivered, Aug 2026).** Two toddler/preschool
+- [~] **Patterns & Sorting games — build for real (mock delivered, Aug 2026).** **SORT half SHIPPED in
+  the demo (Aug 2026):** four `sort-order-*` activities (frog / sunflower / acorn / butterfly life cycles)
+  on the owner's growth-stage art — deframed + rounded into `assets/images/sort-<name>-1..4.png` (correct
+  order), added as `ordered: true` drag-sort with a `stages` array, rendered as numbered boxes 1→4 + shuffled
+  cards (demo `drag-sort` renderer stages branch), surfaced under **Little Games → Sort & Match** with the
+  final-stage tile art + "Put in order" pill. Typecheck + 162 core tests green. **Still to do:** the PATTERN
+  half (below) — blocked on borderless leaf/shapes/growing-plant option art — and the mobile port of the sort
+  games. Two toddler/preschool
   games on the owner's `Pattern - *` and `Sort in order - *` art. Interactive mock: `scratchpad/patterns.html`
   (built from `scratchpad/patterns.tpl.html`; last file sent to owner `fd0b8bfd-…`; earlier shareable artifact
   `d8671708-9766-4135-a3d6-7867b071b0c9`, 403-blocked on republish). Both templates: large touch targets,
