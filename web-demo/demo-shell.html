@@ -270,6 +270,18 @@
   .bubble.bare .glyph-big { filter: drop-shadow(0 4px 5px rgba(74,59,50,0.18)); }
   /* roomier grid for floating glyphs so they don't look squished */
   .bubble-grid.glyph-grid { grid-template-columns: repeat(auto-fit, minmax(128px, 184px)); gap: clamp(22px, 4.5vw, 44px) clamp(16px, 3.5vw, 34px); padding: 16px 10px 26px; }
+  /* Card tiles (Candy-Clouds inner-page redesign): non-bare tiles render as
+     pastel rounded cards with a white preview inset + title below, matching the
+     approved design; bare tiles (floating tracing glyphs) keep the old look. */
+  .bubble-grid:not(.glyph-grid) { grid-template-columns: repeat(auto-fit, minmax(148px, 208px)); gap: clamp(12px, 2.6vw, 20px); padding: 8px 8px 22px; }
+  .bubble-wrap.card { background: var(--bub, #FFD7E8); border-radius: 24px; padding: 12px 11px 11px; box-shadow: 0 6px 15px rgba(74,59,50,.14); gap: 9px; overflow: hidden; animation: cardPop .5s ease both; transition: transform .16s ease, box-shadow .16s ease; }
+  .bubble-wrap.card:hover { transform: translateY(-3px); box-shadow: 0 12px 22px rgba(74,59,50,.22); }
+  .bubble-wrap.card .bubble { width: 100%; aspect-ratio: 4 / 3; border-radius: 16px; background: #fff; box-shadow: inset 0 0 0 4px rgba(255,255,255,.55), 0 2px 6px rgba(74,59,50,.09); animation: none; }
+  .bubble-wrap.card .bubble::before { display: none; }
+  .bubble-wrap.card .bubble:hover { transform: none; }
+  .bubble-wrap.card .bubble:active { transform: scale(.96); }
+  .bubble-wrap.card .bubble-label { max-width: 100%; }
+  @media (prefers-reduced-motion: reduce) { .bubble-wrap.card { animation: none; } }
   .sec-toggle { margin-left: auto; border: 2px solid rgba(74,59,50,.15); background: #fff; color: var(--tile-ink, #4A3B32); font-family: inherit; font-weight: 800; font-size: 13px; padding: 8px 14px; border-radius: 999px; cursor: pointer; box-shadow: 0 3px 8px rgba(74,59,50,.12); }
 
   /* ---- Rewards section (owner-approved mock): star jar, trophies, sticker book, certificate ---- */
@@ -1450,7 +1462,7 @@ function bubbleTile(iconHtml, label, colourCss, onClick, showLabel = true, bare 
   // `bare` drops the coloured circle so the art floats (owner: tracing glyphs),
   // keeping the bob / pop / sparkle.
   const labelHtml = showLabel ? `<div class="bubble-label">${label}</div>` : '';
-  const wrap = el(`<div class="bubble-wrap"><button class="bubble${bare ? ' bare' : ''}" aria-label="${label}" style="--bub:${colourCss}">${iconHtml}</button>${labelHtml}</div>`);
+  const wrap = el(`<div class="bubble-wrap${bare ? '' : ' card'}" style="--bub:${colourCss}"><button class="bubble${bare ? ' bare' : ''}" aria-label="${label}" style="--bub:${colourCss}">${iconHtml}</button>${labelHtml}</div>`);
   const btn = wrap.querySelector('.bubble');
   const i = Math.floor(Math.random() * 4);
   btn.style.setProperty('--bd', (3.6 + i * 0.5).toFixed(1) + 's');
