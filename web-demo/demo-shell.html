@@ -1392,6 +1392,7 @@ function thumbFor(a, category) {
   else if (a.type === 'game' && a.template === 'cut-along') imgName = imageNameFromRef(a.params?.image || '');
   else if (a.type === 'game' && a.template === 'number-hop') imgName = 'hop-stone';
   else if (a.type === 'game' && a.template === 'drag-sort' && Array.isArray(a.params?.stages)) imgName = imageNameFromRef(a.params.stages[a.params.stages.length - 1]);
+  else if (a.type === 'game' && (a.template === 'memory-cards' || a.template === 'match-pairs') && a.params?.door && Array.isArray(a.params?.images)) imgName = a.params.images[0];
   else if (a.type === 'tracing' && !highContrast() && RASTER_IMAGES[a.id]) imgName = a.id;
   const has = (n) => Boolean(n && (IMAGES[n] || RASTER_IMAGES[n]));
   if (!has(imgName)) imgName = null;
@@ -1406,6 +1407,7 @@ function pillFor(a, category) {
   if (a.type === 'colouring') return 'Colour it in';
   if (a.type === 'guided-drawing') return a.steps && a.steps.length > 1 ? 'Trace & colour' : 'Free draw';
   if (a.type === 'game' && a.template === 'drag-sort' && Array.isArray(a.params?.stages)) return 'Put in order';
+  if (a.type === 'game' && (a.template === 'memory-cards' || a.template === 'match-pairs') && a.params?.door) { const n = a.params?.pairs; return n ? n + ' pairs' : 'Find the pairs'; }
   if (a.type === 'tracing') return 'Trace it';
   if (a.type === 'game' && a.template === 'dot-to-dot') { const n = a.params?.dots?.length || a.params?.fracDots?.length; return n ? n + ' dots' : 'Dot to dot'; }
   return 'Play';
@@ -1477,7 +1479,7 @@ function renderColourSections() {
 const GAME_GROUPS = [
   // `labelled` art has the group name baked into the picture (owner clay tiles),
   // so the tile hides its separate text label and floats bare (no coloured bubble).
-  { key: 'games-sort', label: 'Sort & Match', glyph: '🧩', img: 'sort-and-match-with-label', labelled: true, has: (a) => a.template === 'drag-sort' || a.template === 'match-pairs' || a.template === 'shadow-match' || a.template === 'letter-match' },
+  { key: 'games-sort', label: 'Sort & Match', glyph: '🧩', img: 'sort-and-match-with-label', labelled: true, has: (a) => a.template === 'drag-sort' || a.template === 'match-pairs' || a.template === 'memory-cards' || a.template === 'shadow-match' || a.template === 'letter-match' },
   { key: 'games-tap', label: 'Tap & Count', glyph: '🔢', img: 'tap-and-count-with-label', labelled: true, has: (a) => a.template === 'pop-bubbles' || a.template === 'tap-target' || a.template === 'counting' || a.template === 'number-hop' || a.template === 'odd-one-out' },
   { key: 'games-patterns', label: 'Patterns', glyph: '🔁', img: 'patterns-with-label', labelled: true, has: (a) => a.template === 'sequence' || a.template === 'pattern-complete' },
   { key: 'games-hands', label: 'Busy Hands', glyph: '✂️', img: 'cut-scissors-open', has: (a) => a.template === 'feed-animal' || a.template === 'cut-along' || a.template === 'stack-blocks' || a.template === 'reveal-wipe' },
@@ -4660,6 +4662,48 @@ function renderGame(activity) {
   };
 
   function memoryGame(faceUp) {
+    // Window memory (owner art): every card shows the SAME closed door; tapping
+    // cross-fades to the same frame with the doors open and a character behind.
+    // Match two of the same character. `params.door` = shared closed-door image.
+    if (params.door) {
+      const src = (n) => RASTER_IMAGES[n] || IMAGES[n] || '';
+      const chars = Array.isArray(params.images) ? params.images : [];
+      const pairs = Math.min(params.pairs || chars.length, chars.length);
+      const deck = [...chars.slice(0, pairs), ...chars.slice(0, pairs)].map((name, i) => ({ id: i, name }));
+      for (let i = deck.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [deck[i], deck[j]] = [deck[j], deck[i]]; }
+      const openCards = [], matched = new Set(); let lock = false;
+      const total = deck.length, cols = total <= 6 ? 3 : 4;
+      const grid = el(`<div style="display:grid;grid-template-columns:repeat(${cols},1fr);gap:clamp(6px,1.6vw,14px);width:100%;max-width:${cols * 150}px;margin:auto;padding:12px;place-content:center"></div>`);
+      stage.append(grid);
+      const nodes = deck.map((card) => {
+        const c = el(`<button aria-label="Window" style="position:relative;aspect-ratio:1;border:none;border-radius:16px;background:transparent;cursor:pointer;padding:0;overflow:hidden;transition:transform .18s"><img alt="" src="${src(params.door)}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;transition:opacity .3s"><img alt="" src="${src(card.name)}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;opacity:0;transition:opacity .3s"></button>`);
+        c.onclick = () => flip(card, c);
+        grid.append(c);
+        return c;
+      });
+      const render = () => deck.forEach((card, i) => {
+        const isOpen = faceUp || openCards.some((o) => o.card.id === card.id) || matched.has(card.id);
+        const imgs = nodes[i].querySelectorAll('img');
+        imgs[0].style.opacity = isOpen ? 0 : 1; imgs[1].style.opacity = isOpen ? 1 : 0;
+        nodes[i].style.transform = matched.has(card.id) ? 'scale(0.94)' : '';
+      });
+      const flip = (card) => {
+        if (lock || matched.has(card.id) || openCards.some((o) => o.card.id === card.id)) return;
+        openCards.push({ card }); render();
+        if (openCards.length === 2) {
+          lock = true;
+          const [a, b] = openCards;
+          if (a.card.name === b.card.name) {
+            setTimeout(() => { matched.add(a.card.id); matched.add(b.card.id); openCards.length = 0; lock = false; render(); say(LH.pickFeedback('completed')); if (matched.size === deck.length) finish(); }, 450);
+          } else {
+            miss();
+            setTimeout(() => { openCards.length = 0; lock = false; render(); }, 950);
+          }
+        }
+      };
+      render();
+      return;
+    }
     const names = Array.isArray(params.images) ? params.images : ['dolphin', 'whale', 'unicorn', 'dinosaur'];
     const pairs = Math.min(params.pairs || names.length, names.length);
     const deck = [...names.slice(0, pairs), ...names.slice(0, pairs)].map((name, i) => ({ id: i, name }))

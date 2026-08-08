@@ -9,7 +9,18 @@ Status key: `[ ]` open · `[~]` in progress · `[x]` done (move to the bottom or
 
 ## Open
 
-- [ ] **Memory Windows game — build for real (mock approved, Aug 2026).** A window memory-match game on
+- [~] **Memory Windows game — build for real (mock approved, Aug 2026).** **SHIPPED in the demo (Aug 2026):**
+  20 window images processed into clean `mem-*` keys (2 closed doors + 18 characters; messy originals `git rm`'d,
+  spare bird/colourway art kept), six `memory-cards` activities (`mem-friends`/`mem-sea`/`mem-aussie`, easy 3
+  pairs + full 6 pairs) added to the pack, and a window branch in the demo `memoryGame` renderer: every card
+  shows the shared closed door, tapping cross-fades to the same frame with doors open + character behind, match
+  two of a kind (locks green, mismatch recloses ~1s), finish fires the star burst/chime. Surfaced under Little
+  Games → Sort & Match (added `memory-cards` to the group) with a character tile + "N pairs" pill. Typecheck +
+  162 core tests green; headless-verified matching all pairs completes with zero console errors. **Still to do:**
+  difficulty picker polish (currently separate easy/full tiles), the leftover **Bird theme** set, and the mobile
+  port. Original mechanic notes below.
+
+  A window memory-match game on
   the owner's `Memory game - *` art. Mechanic (nailed in the mock, artifact
   `65db2dcb-8d67-4754-9839-420a91c88fad`, `scratchpad/memory.html`): each card is a **window** — all cards
   show the **closed door** (shut doors, NO character/symbol/clue); tapping cross-fades to the **same frame,
