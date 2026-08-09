@@ -184,22 +184,54 @@ expressing link-outs, chat, or free-text collection — that's a deliberate safe
 oversight, so don't loosen the schema to "just add a field" without checking docs/07-09.
 
 **In-flight mocks / owner explorations (Aug 2026 — details + status in `BACKLOG.md`):**
-- **Memory Windows** (a `match-pairs`/`memory-cards` game): owner pushed a `Memory game - *` window-art
-  family — one **closed door** (shut, no character/clue) + one **open** image per character on the *same*
-  frame (only the character behind the open doors changes). Two window styles: peach/green (Original +
-  Ocean themes) and purple/yellow (Aussie animals). Interactive mock lives at `scratchpad/memory.html`
-  (artifact `65db2dcb-…`) with 3 themes × 3 levels (3/4/6 pairs). All three sets are complete (6 friends
-  each) — the **whale** shipped (`sea theme - whale open`, used in Original) and the **quokka** was
-  mis-named "Bear" (renamed to `… - quokka.png`); extra unused art on hand incl. a bird-theme set +
-  yellow/orange closed-door colourways. Not yet wired into the content pack / players.
+- **Memory Windows** (`memory-cards`) — **SHIPPED in the demo (Aug 2026).** Owner window art processed into
+  clean `mem-*` keys (2 shared closed doors `mem-door-peach`/`mem-door-aussie` + 18 character "open" images,
+  each padded to a common square so the frame stays put closed↔open; messy `Memory game - *` originals
+  `git rm`'d — spare bird-theme + yellow/orange colourway art kept). Six `memory-cards` activities —
+  `mem-friends`/`mem-sea`/`mem-aussie`, each easy (3 pairs) + full (6 pairs) — carry `params.door` (shared
+  closed-image key) + `params.images` (character open keys; **plain asset keys, not `images/…` refs**). The
+  demo `memoryGame` renderer has a **window branch** keyed on `params.door`: every card shows the closed door,
+  a tap cross-fades to the same frame with doors open + character behind, match two of a kind (locks in,
+  mismatch recloses ~1s), finish fires the star burst/chime. The grid **fills the stage** — card size AND
+  column count are computed from the real stage rect (fewest cols that maximise the square card for the current
+  aspect), re-fit on resize via a `ResizeObserver` (owner: "adapt to screen size, this looks tiny"). Under
+  **Little Games → Sort & Match** with a character tile + "N pairs" pill. Mobile port + a level picker + the
+  leftover bird-theme set are follow-ups (`BACKLOG.md`).
+- **Patterns & Sorting** — **Sort half SHIPPED (demo, Aug 2026); Pattern half blocked on art.** Four
+  `sort-order-*` "put in order" activities (frog / sunflower / acorn→tree / butterfly life cycles): the owner's
+  `Sort in order - *` sheets were extracted into `assets/images/sort-<name>-1..4.png` (deframed + rounded, in
+  **correct growth order**) and added as `ordered: true` drag-sort with a `params.stages` array (image refs in
+  order). The demo `drag-sort` renderer gained a **stages branch**: numbered boxes 1→N across the top + shuffled
+  cards below, drag each to its box (shared `makeDraggable`/`placeItem`; right drop locks green, wrong springs
+  home). Under **Little Games → Sort & Match** (the `games-sort` predicate now accepts ordered drag-sort +
+  `memory-cards`) with the final-stage picture as the tile + "Put in order" pill. The **Pattern** half
+  (drag-the-answer-into-the-gap on the owner's `Pattern - *` art) is **blocked on borderless leaf/shapes/
+  growing-plant option art** — mock `scratchpad/patterns.html`; ladybug/rocket/stars options are already clean.
 - **Guided Drawing "trace-to-build then colour" is PARKED — do NOT build** unless the owner explicitly
   reopens it. Multiple mocks (vector cat + a reveal-based one on the owner's real `Guided drawing - *`
   worksheets) didn't land; owner said "park it, I don't want it built." The colour half (unicorn mock
   `8acdfc90`, "Colour Your Way pattern fills") stays separate and live.
 
-**Section structure inside doors** (owner direction, July 2026): **Colour** opens a two-door
-chooser — "Colour by Numbers" (`colour-cbn-*`, owner pages with the number key printed in the art)
-vs "Colour Your Way" (the free flood-fill scenes) — split by id prefix in the picker. **Draw**'s
+**Inner-page redesign — Candy-Clouds carousel section pages** (owner design, Aug 2026): every door after Home
+(**Colour / Tracing / Draw / Little Games / Puzzles / Think & Solve**) now renders as ONE scrollable **section
+page** — a big themed title + subtitle, then, per sub-section, a **coloured heading over a horizontal card
+carousel** of large (~240px) pastel cards (white preview inset + title + a small pill badge). This **replaced the
+old chooser→separate-grid navigation** (sub-lists are inline carousel rows now — no intermediate picker; the old
+`renderPicker` grid path for `tracing-*`/`colour-*`/`games-*`/`draw-*` sub-categories is dead). Shared demo
+helpers: `renderSectionPage({title,sub,rows})`, `carouselSec(head,colour,cards)`,
+`pcard({imgName,emoji,title,pill,pastel,onClick})`, `thumbFor(a)` (activity→tile image), `pillFor(a)` (short
+badge), and `renderLeafSection(cat,…)` for single-row doors (Puzzles, Think & Solve); the icon maps
+(`GAME_EMOJI`/`GAME_ICON`/`DOTDOT_ICON`/`COLOUR_TILE_ART`) were **hoisted to module scope** so the picker and the
+carousels share them. Kept from the old app (do NOT let the imported design override these): the **clay home/back
+buttons** and the **non-covering completion** — the design's covering "Great job!" card is deliberately NOT used.
+Card previews fit ANY aspect via a **flex box + `max-width/height:100%; width/height:auto`** (tall number glyphs
+and wide letter pairs both show fully — don't revert to `width/height:100%`, which overflowed and cropped tall
+art). Theme-tinted title/accents; **tracing letter/number/shape tiles keep their floating clay-glyph look** (bare,
+not carded). (Demo done; the **mobile** picker is still the bubble grid — port pending.)
+
+**Section structure inside doors** (owner direction, July 2026; now rendered as carousel rows per the redesign
+above): **Colour** shows two rows — "Colour by Numbers" (`colour-cbn-*`, owner pages with the number key printed
+in the art) and "Colour Your Way" (the free flood-fill scenes), split by id prefix. **Draw**'s
 "Blank Canvas" tile skips the intermediate picker and opens `draw-free-board` directly; the free
 board's controls follow the owner-approved "Magic drawer" layout (right colour rail with a white
 selected ring, slim bar of crayon/paint/eraser/🪄 wand, floating size pod, wand-opened drawer with
@@ -209,11 +241,13 @@ activity uses `preschool`; 5-7 gets Little Games + Think & Solve. **Tracing show
 but both pickers route the 2-3 band **straight to the Shapes list** (no chooser, no back button —
 back would loop); Letters/Numbers/My Name are 3-5+.
 
-**Little Games splits into four groups** (owner direction, July 2026): the `toddler` door opens a
-chooser (`renderGameSections`) — **Sort & Match**, **Tap & Count**, **Patterns**, **Busy Hands** —
-each a `games-*` sub-category listing only its own games (with a back button to the chooser). Group
+**Little Games splits into four groups** (owner direction, July 2026; now one carousel section page per the
+redesign above): the `toddler` door opens `renderGameSections` — **Sort & Match**, **Tap & Count**, **Patterns**,
+**Busy Hands** — as **four coloured carousel rows on one page** (no more chooser→sub-list step). Group
 membership is a template predicate in the `GAME_GROUPS` array (demo `demo-shell.html`); empty groups
-(the youngest band) are hidden. This mirrors the Tracing/Colour/Draw chooser pattern. **Sort by
+(the youngest band) are hidden. **Sort & Match** now also carries the `memory-cards` **Memory Windows** games and
+the `ordered` **Sort-in-order** drag-sorts (its predicate = `drag-sort || match-pairs || memory-cards ||
+shadow-match || letter-match`). **Sort by
 colour** is now three leveled multi-page activities (`toddler-sort-colour` 2-bucket, `sort-colour-three`,
 `sort-colour-four`), each running **five pages back-to-back** via a `params.pages` array on the
 `drag-sort` template — finish a page and the next appears (progress dots + a confetti beat between),
