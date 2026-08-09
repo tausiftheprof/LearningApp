@@ -4672,15 +4672,35 @@ function renderGame(activity) {
       const deck = [...chars.slice(0, pairs), ...chars.slice(0, pairs)].map((name, i) => ({ id: i, name }));
       for (let i = deck.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [deck[i], deck[j]] = [deck[j], deck[i]]; }
       const openCards = [], matched = new Set(); let lock = false;
-      const total = deck.length, cols = total <= 6 ? 3 : 4;
-      const grid = el(`<div style="display:grid;grid-template-columns:repeat(${cols},1fr);gap:clamp(6px,1.6vw,14px);width:100%;max-width:${cols * 150}px;margin:auto;padding:12px;place-content:center"></div>`);
+      const total = deck.length;
+      const grid = el(`<div style="display:grid;place-content:center;width:100%;height:100%;box-sizing:border-box"></div>`);
       stage.append(grid);
       const nodes = deck.map((card) => {
-        const c = el(`<button aria-label="Window" style="position:relative;aspect-ratio:1;border:none;border-radius:16px;background:transparent;cursor:pointer;padding:0;overflow:hidden;transition:transform .18s"><img alt="" src="${src(params.door)}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;transition:opacity .3s"><img alt="" src="${src(card.name)}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;opacity:0;transition:opacity .3s"></button>`);
+        const c = el(`<button aria-label="Window" style="position:relative;border:none;border-radius:16px;background:transparent;cursor:pointer;padding:0;overflow:hidden;transition:transform .18s"><img alt="" src="${src(params.door)}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;transition:opacity .3s"><img alt="" src="${src(card.name)}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;opacity:0;transition:opacity .3s"></button>`);
         c.onclick = () => flip(card, c);
         grid.append(c);
         return c;
       });
+      // Adapt the card size to the actual stage: fill it, fitting both width and
+      // height for the deck's rows/cols, and re-fit on resize (owner: too tiny).
+      const layout = () => {
+        const R = stage.getBoundingClientRect();
+        if (!R.width || !R.height) return;
+        const gap = Math.max(8, Math.round(Math.min(R.width, R.height) * 0.022));
+        const pad = Math.max(10, Math.round(Math.min(R.width, R.height) * 0.03));
+        // Pick the column count that makes the (square) cards biggest for this
+        // stage aspect — fewer columns on a tall phone, more on a wide tablet.
+        let best = { size: 0, cols: Math.min(total, 3) };
+        for (let c = 2; c <= Math.min(total, 6); c++) {
+          const rws = Math.ceil(total / c);
+          const s = Math.min((R.width - pad * 2 - gap * (c - 1)) / c, (R.height - pad * 2 - gap * (rws - 1)) / rws);
+          if (s > best.size) best = { size: s, cols: c };
+        }
+        const size = Math.max(64, Math.floor(best.size));
+        grid.style.gap = gap + 'px';
+        grid.style.gridTemplateColumns = `repeat(${best.cols}, ${size}px)`;
+        nodes.forEach((n) => { n.style.width = size + 'px'; n.style.height = size + 'px'; });
+      };
       const render = () => deck.forEach((card, i) => {
         const isOpen = faceUp || openCards.some((o) => o.card.id === card.id) || matched.has(card.id);
         const imgs = nodes[i].querySelectorAll('img');
@@ -4702,6 +4722,8 @@ function renderGame(activity) {
         }
       };
       render();
+      requestAnimationFrame(layout);
+      try { new ResizeObserver(layout).observe(stage); } catch (_) { window.addEventListener('resize', layout); }
       return;
     }
     const names = Array.isArray(params.images) ? params.images : ['dolphin', 'whale', 'unicorn', 'dinosaur'];
